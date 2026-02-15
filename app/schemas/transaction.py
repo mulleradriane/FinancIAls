@@ -1,31 +1,33 @@
 from __future__ import annotations
-from pydantic import BaseModel, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, condecimal
 from uuid import UUID
 import datetime
 from decimal import Decimal
-from app.models.transaction import NecessityType
 from app.schemas.category import Category
+
+
+# 🔹 Tipo decimal alinhado com o banco (Numeric(12,2))
+AmountDecimal = condecimal(max_digits=12, decimal_places=2)
+
 
 class TransactionBase(BaseModel):
     description: str
-    location: str | None = None
     category_id: UUID
-    amount: Decimal
+    amount: AmountDecimal
     date: datetime.date
-    necessity: NecessityType
-    payment_method: str
+
 
 class TransactionCreate(TransactionBase):
     pass
 
+
 class TransactionUpdate(BaseModel):
     description: str | None = None
-    location: str | None = None
     category_id: UUID | None = None
-    amount: Decimal | None = None
+    amount: AmountDecimal | None = None
     date: datetime.date | None = None
-    necessity: NecessityType | None = None
-    payment_method: str | None = None
+
 
 class Transaction(TransactionBase):
     id: UUID
