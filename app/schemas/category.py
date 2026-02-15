@@ -1,0 +1,19 @@
+from pydantic import BaseModel, ConfigDict
+from uuid import UUID
+from app.models.category import CategoryType
+
+class CategoryBase(BaseModel):
+    name: str
+    type: CategoryType
+
+class CategoryCreate(CategoryBase):
+    pass
+
+class CategoryUpdate(BaseModel):
+    name: str | None = None
+    type: CategoryType | None = None
+
+class Category(CategoryBase):
+    id: UUID
+
+    model_config = ConfigDict(from_attributes=True)
