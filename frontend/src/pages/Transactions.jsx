@@ -32,7 +32,7 @@ const Transactions = () => {
 
   return (
     <div className="transactions-page">
-      <h1>FinancIAls</h1>
+      <h1>Transactions</h1>
       <TransactionForm categories={categories} onTransactionCreated={fetchTransactions} />
       <hr />
       <TransactionList transactions={transactions} />
