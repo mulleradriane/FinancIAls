@@ -3,14 +3,15 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.crud.transaction import transaction as crud_transaction
-from app.schemas.transaction import Transaction, TransactionCreate, TransactionUpdate
+from app.schemas.transaction import Transaction, TransactionCreate, TransactionUpdate, UnifiedTransactionCreate
 from app.core.database import get_db
+from app.services.transaction_service import create_unified_transaction
 
 router = APIRouter()
 
 @router.post("/", response_model=Transaction)
-def create_transaction(obj_in: TransactionCreate, db: Session = Depends(get_db)):
-    return crud_transaction.create(db, obj_in=obj_in)
+def create_transaction(obj_in: UnifiedTransactionCreate, db: Session = Depends(get_db)):
+    return create_unified_transaction(db, obj_in=obj_in)
 
 @router.get("/", response_model=List[Transaction])
 def read_transactions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
