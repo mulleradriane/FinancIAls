@@ -1,42 +1,68 @@
-#root {
-  max-width: 1280px;
+.App {
+  max-width: 800px;
   margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  padding: 20px;
+  font-family: Arial, sans-serif;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.transaction-form {
+  margin-bottom: 30px;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.transaction-form h2 {
+  margin-top: 0;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.transaction-form div {
+  margin-bottom: 10px;
 }
 
-.card {
-  padding: 2em;
+.transaction-form label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
 }
 
-.read-the-docs {
-  color: #888;
+.transaction-form input, .transaction-form select {
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.transaction-form button {
+  padding: 10px 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.transaction-form button:hover {
+  background-color: #0056b3;
+}
+
+.transaction-list table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.transaction-list th, .transaction-list td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.transaction-list th {
+  background-color: #f2f2f2;
+}
+
+hr {
+  margin: 40px 0;
+  border: 0;
+  border-top: 1px solid #eee;
 }
