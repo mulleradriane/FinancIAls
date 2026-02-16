@@ -1,68 +1,24 @@
-.App {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-  font-family: Arial, sans-serif;
-}
+/* Global styles for components */
 
-.transaction-form {
+.category-form, .transaction-form {
   margin-bottom: 30px;
   padding: 20px;
   border: 1px solid #ddd;
   border-radius: 8px;
-  background-color: #f9f9f9;
+  background-color: #fff;
+  max-width: 600px;
 }
 
-.transaction-form h2 {
+.category-form h2, .transaction-form h2 {
   margin-top: 0;
 }
 
-.transaction-form div {
-  margin-bottom: 10px;
-}
-
-.transaction-form label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
-}
-
-.transaction-form input, .transaction-form select {
-  width: 100%;
-  padding: 8px;
-  box-sizing: border-box;
-}
-
-.transaction-form button {
-  padding: 10px 15px;
+button[type="submit"] {
   background-color: #007bff;
   color: white;
   border: none;
-  border-radius: 4px;
-  cursor: pointer;
 }
 
-.transaction-form button:hover {
+button[type="submit"]:hover {
   background-color: #0056b3;
-}
-
-.transaction-list table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.transaction-list th, .transaction-list td {
-  border: 1px solid #ddd;
-  padding: 8px;
-  text-align: left;
-}
-
-.transaction-list th {
-  background-color: #f2f2f2;
-}
-
-hr {
-  margin: 40px 0;
-  border: 0;
-  border-top: 1px solid #eee;
 }

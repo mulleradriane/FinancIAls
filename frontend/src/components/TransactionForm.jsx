@@ -34,7 +34,7 @@ const TransactionForm = ({ categories, onTransactionCreated }) => {
     <div className="transaction-form">
       <h2>New Transaction</h2>
       <form onSubmit={handleSubmit}>
-        <div>
+        <div className="form-group">
           <label htmlFor="description">Description:</label>
           <input
             id="description"
@@ -44,7 +44,7 @@ const TransactionForm = ({ categories, onTransactionCreated }) => {
             required
           />
         </div>
-        <div>
+        <div className="form-group">
           <label htmlFor="amount">Amount:</label>
           <input
             id="amount"
@@ -55,7 +55,7 @@ const TransactionForm = ({ categories, onTransactionCreated }) => {
             required
           />
         </div>
-        <div>
+        <div className="form-group">
           <label htmlFor="date">Date:</label>
           <input
             id="date"
@@ -65,7 +65,7 @@ const TransactionForm = ({ categories, onTransactionCreated }) => {
             required
           />
         </div>
-        <div>
+        <div className="form-group">
           <label htmlFor="category">Category:</label>
           <select
             id="category"
