@@ -1,10 +1,10 @@
 from __future__ import annotations
-
 from pydantic import BaseModel, ConfigDict, condecimal
 from uuid import UUID
 import datetime
 from decimal import Decimal
 from app.schemas.category import Category
+from app.models.recurring_expense import RecurringType, FrequencyType
 
 
 # 🔹 Tipo decimal alinhado com o banco (Numeric(12,2))
@@ -16,10 +16,23 @@ class TransactionBase(BaseModel):
     category_id: UUID
     amount: AmountDecimal
     date: datetime.date
+    recurring_expense_id: UUID | None = None
+    installment_number: int | None = None
 
 
 class TransactionCreate(TransactionBase):
     pass
+
+
+class UnifiedTransactionCreate(BaseModel):
+    description: str
+    category_id: UUID
+    amount: AmountDecimal
+    date: datetime.date
+    is_recurring: bool = False
+    recurring_type: RecurringType | None = None
+    frequency: FrequencyType | None = None
+    total_installments: int | None = None
 
 
 class TransactionUpdate(BaseModel):
@@ -27,6 +40,8 @@ class TransactionUpdate(BaseModel):
     category_id: UUID | None = None
     amount: AmountDecimal | None = None
     date: datetime.date | None = None
+    recurring_expense_id: UUID | None = None
+    installment_number: int | None = None
 
 
 class Transaction(TransactionBase):

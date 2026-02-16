@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Numeric, Date, DateTime, ForeignKey
+from sqlalchemy import Column, String, Numeric, Date, DateTime, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -19,6 +19,13 @@ class Transaction(Base):
     amount = Column(Numeric(12, 2), nullable=False)
     date = Column(Date, nullable=False)
 
+    recurring_expense_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("recurring_expenses.id"),
+        nullable=True
+    )
+    installment_number = Column(Integer, nullable=True)
+
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now()
@@ -31,3 +38,4 @@ class Transaction(Base):
     deleted_at = Column(DateTime(timezone=True), nullable=True)
 
     category = relationship("Category")
+    recurring_expense = relationship("RecurringExpense", back_populates="transactions")

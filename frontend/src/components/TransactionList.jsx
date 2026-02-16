@@ -1,25 +1,79 @@
 import React from 'react';
+import {
+  ShoppingCart,
+  CreditCard,
+  Tag,
+  Calendar,
+  Coffee,
+  Car,
+  Home,
+  CheckCircle,
+  HelpCircle
+} from 'lucide-react';
 
 const TransactionList = ({ transactions }) => {
+  const getIcon = (description) => {
+    const desc = description.toLowerCase();
+    if (desc.includes('food') || desc.includes('almoço') || desc.includes('jantar')) return <Coffee size={16} color="#666" />;
+    if (desc.includes('uber') || desc.includes('gasolina') || desc.includes('transporte')) return <Car size={16} color="#666" />;
+    if (desc.includes('aluguel') || desc.includes('casa')) return <Home size={16} color="#666" />;
+    if (desc.includes('assinatura') || desc.includes('netflix') || desc.includes('spotify')) return <CheckCircle size={16} color="#666" />;
+    return <ShoppingCart size={16} color="#666" />;
+  };
+
+  const getCategoryColor = (name) => {
+    const colors = {
+      'Alimentação': '#ff4d4d',
+      'Transporte': '#33cc33',
+      'Lazer': '#ff9900',
+      'Saúde': '#3399ff',
+      'Educação': '#9933ff',
+      'Moradia': '#663300',
+    };
+    return colors[name] || '#666666';
+  };
+
   return (
     <div className="transaction-list">
-      <h2>Transactions</h2>
-      <table>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr>
-            <th>Description</th>
-            <th>Amount</th>
-            <th>Date</th>
-            <th>Category</th>
+          <tr style={{ borderBottom: '2px solid #eee' }}>
+            <th style={{ textAlign: 'left', padding: '12px' }}>Descrição</th>
+            <th style={{ textAlign: 'left', padding: '12px' }}>Categoria</th>
+            <th style={{ textAlign: 'left', padding: '12px' }}>Data</th>
+            <th style={{ textAlign: 'right', padding: '12px' }}>Valor</th>
           </tr>
         </thead>
         <tbody>
           {transactions.map((t) => (
-            <tr key={t.id}>
-              <td>{t.description}</td>
-              <td>${parseFloat(t.amount).toFixed(2)}</td>
-              <td>{new Date(t.date).toLocaleDateString()}</td>
-              <td>{t.category ? t.category.name : 'No Category'}</td>
+            <tr key={t.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+              <td style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {getIcon(t.description)}
+                <span>{t.description}</span>
+                {t.installment_number && (
+                  <span style={{ fontSize: '0.8rem', color: '#999', marginLeft: '5px' }}>
+                    ({t.installment_number})
+                  </span>
+                )}
+              </td>
+              <td style={{ padding: '12px' }}>
+                <span style={{
+                  backgroundColor: getCategoryColor(t.category?.name),
+                  color: 'white',
+                  padding: '4px 10px',
+                  borderRadius: '12px',
+                  fontSize: '0.85rem',
+                  fontWeight: '500'
+                }}>
+                  {t.category ? t.category.name : 'Sem Categoria'}
+                </span>
+              </td>
+              <td style={{ padding: '12px', color: '#666' }}>
+                {new Date(t.date).toLocaleDateString('pt-BR')}
+              </td>
+              <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600' }}>
+                R$ {parseFloat(t.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
             </tr>
           ))}
         </tbody>
