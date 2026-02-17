@@ -45,6 +45,13 @@ const TransactionList = ({ transactions }) => {
           </tr>
         </thead>
         <tbody>
+          {transactions.length === 0 && (
+            <tr>
+              <td colSpan="4" style={{ textAlign: 'center', padding: '50px', color: '#666' }}>
+                Nenhuma transação encontrada.
+              </td>
+            </tr>
+          )}
           {transactions.map((t) => (
             <tr key={t.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
               <td style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>

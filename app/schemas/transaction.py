@@ -18,6 +18,7 @@ class TransactionBase(BaseModel):
     date: datetime.date
     recurring_expense_id: UUID | None = None
     installment_number: int | None = None
+    account_id: UUID | None = None
 
 
 class TransactionCreate(TransactionBase):
@@ -29,6 +30,7 @@ class UnifiedTransactionCreate(BaseModel):
     category_id: UUID
     amount: AmountDecimal
     date: datetime.date
+    account_id: UUID | None = None
     is_recurring: bool = False
     recurring_type: RecurringType | None = None
     frequency: FrequencyType | None = None

@@ -7,6 +7,7 @@ class InvestmentBase(BaseModel):
     date: datetime.date
     amount: Decimal
     description: str | None = None
+    account_id: UUID | None = None
 
 class InvestmentCreate(InvestmentBase):
     pass

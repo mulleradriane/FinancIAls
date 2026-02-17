@@ -9,6 +9,7 @@ class IncomeBase(BaseModel):
     amount: Decimal
     date: datetime.date
     type: IncomeType
+    account_id: UUID | None = None
 
 class IncomeCreate(IncomeBase):
     pass
