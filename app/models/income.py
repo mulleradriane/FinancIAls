@@ -1,6 +1,7 @@
 import uuid
-from sqlalchemy import Column, String, Numeric, Date, Enum
+from sqlalchemy import Column, String, Numeric, Date, Enum, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 import enum
 
@@ -16,3 +17,6 @@ class Income(Base):
     amount = Column(Numeric(12, 2), nullable=False)
     date = Column(Date, nullable=False)
     type = Column(Enum(IncomeType), nullable=False)
+    account_id = Column(UUID(as_uuid=True), ForeignKey("accounts.id"), nullable=True)
+
+    account = relationship("Account", back_populates="incomes")

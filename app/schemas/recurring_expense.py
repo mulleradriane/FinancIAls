@@ -14,6 +14,7 @@ class RecurringExpenseBase(BaseModel):
     total_installments: int | None = None
     start_date: datetime.date
     active: bool = True
+    account_id: UUID | None = None
 
 class RecurringExpenseCreate(RecurringExpenseBase):
     pass

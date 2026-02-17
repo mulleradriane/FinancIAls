@@ -18,43 +18,32 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create RecurringType enum
-    recurring_type = sa.Enum('subscription', 'installment', name='recurringtype')
-    recurring_type.create(op.get_bind())
-
     # Add columns to recurring_expenses
-    op.add_column('recurring_expenses', sa.Column('type', sa.Enum('subscription', 'installment', name='recurringtype'), nullable=False, server_default='subscription'))
-    op.add_column('recurring_expenses', sa.Column('total_installments', sa.Integer(), nullable=True))
-
-    # Make frequency nullable in recurring_expenses
-    op.alter_column('recurring_expenses', 'frequency',
-               existing_type=postgresql.ENUM('monthly', 'yearly', name='frequencytype'),
+    with op.batch_alter_table('recurring_expenses', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('type', sa.Enum('subscription', 'installment', name='recurringtype'), nullable=False, server_default='subscription'))
+        batch_op.add_column(sa.Column('total_installments', sa.Integer(), nullable=True))
+        batch_op.alter_column('frequency',
+               existing_type=sa.Enum('monthly', 'yearly', name='frequencytype'),
                nullable=True)
 
     # Add columns to transactions
-    op.add_column('transactions', sa.Column('recurring_expense_id', sa.UUID(), nullable=True))
-    op.add_column('transactions', sa.Column('installment_number', sa.Integer(), nullable=True))
-
-    # Add foreign key constraint
-    op.create_foreign_key('fk_transaction_recurring_expense', 'transactions', 'recurring_expenses', ['recurring_expense_id'], ['id'])
+    with op.batch_alter_table('transactions', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('recurring_expense_id', sa.UUID(), nullable=True))
+        batch_op.add_column(sa.Column('installment_number', sa.Integer(), nullable=True))
+        batch_op.create_foreign_key('fk_transaction_recurring_expense', 'recurring_expenses', ['recurring_expense_id'], ['id'])
 
 
 def downgrade() -> None:
     # Remove foreign key constraint
-    op.drop_constraint('fk_transaction_recurring_expense', 'transactions', type_='foreignkey')
-
-    # Remove columns from transactions
-    op.drop_column('transactions', 'installment_number')
-    op.drop_column('transactions', 'recurring_expense_id')
-
-    # Make frequency non-nullable (might fail if there are nulls, but this is for completeness)
-    op.alter_column('recurring_expenses', 'frequency',
-               existing_type=postgresql.ENUM('monthly', 'yearly', name='frequencytype'),
-               nullable=False)
+    with op.batch_alter_table('transactions', schema=None) as batch_op:
+        batch_op.drop_constraint('fk_transaction_recurring_expense', type_='foreignkey')
+        batch_op.drop_column('installment_number')
+        batch_op.drop_column('recurring_expense_id')
 
     # Remove columns from recurring_expenses
-    op.drop_column('recurring_expenses', 'total_installments')
-    op.drop_column('recurring_expenses', 'type')
-
-    # Drop RecurringType enum
-    sa.Enum(name='recurringtype').drop(op.get_bind())
+    with op.batch_alter_table('recurring_expenses', schema=None) as batch_op:
+        batch_op.alter_column('frequency',
+               existing_type=sa.Enum('monthly', 'yearly', name='frequencytype'),
+               nullable=False)
+        batch_op.drop_column('total_installments')
+        batch_op.drop_column('type')

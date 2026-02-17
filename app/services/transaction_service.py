@@ -15,7 +15,8 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate):
             description=obj_in.description,
             category_id=obj_in.category_id,
             amount=obj_in.amount,
-            date=obj_in.date
+            date=obj_in.date,
+            account_id=obj_in.account_id
         )
         return crud_transaction.create(db, obj_in=transaction_in)
 
@@ -28,7 +29,8 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate):
         frequency=obj_in.frequency,
         total_installments=obj_in.total_installments,
         start_date=obj_in.date,
-        active=True
+        active=True,
+        account_id=obj_in.account_id
     )
     db_recurring = crud_recurring_expense.create(db, obj_in=recurring_in)
 
@@ -60,7 +62,8 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate):
                 amount=current_installment_amount,
                 date=installment_date,
                 recurring_expense_id=db_recurring.id,
-                installment_number=i
+                installment_number=i,
+                account_id=obj_in.account_id
             )
             db_transaction = crud_transaction.create(db, obj_in=transaction_in)
             if i == 1:
@@ -73,6 +76,7 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate):
             category_id=obj_in.category_id,
             amount=obj_in.amount,
             date=obj_in.date,
-            recurring_expense_id=db_recurring.id
+            recurring_expense_id=db_recurring.id,
+            account_id=obj_in.account_id
         )
         return crud_transaction.create(db, obj_in=transaction_in)

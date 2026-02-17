@@ -37,5 +37,12 @@ class Transaction(Base):
     )
     deleted_at = Column(DateTime(timezone=True), nullable=True)
 
+    account_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("accounts.id"),
+        nullable=True
+    )
+
     category = relationship("Category")
     recurring_expense = relationship("RecurringExpense", back_populates="transactions")
+    account = relationship("Account", back_populates="transactions")
