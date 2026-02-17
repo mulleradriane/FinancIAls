@@ -36,16 +36,28 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate):
     if obj_in.recurring_type == RecurringType.installment:
         num_installments = obj_in.total_installments or 1
         # Treat input amount as TOTAL value and divide it
-        installment_amount = Decimal(str(obj_in.amount)) / Decimal(str(num_installments))
+        total_amount = Decimal(str(obj_in.amount))
+
+        # Calculate base installment amount rounded to 2 decimal places
+        base_installment = (total_amount / Decimal(str(num_installments))).quantize(Decimal("0.00"))
+
+        # Calculate the difference due to rounding
+        total_calculated = base_installment * Decimal(str(num_installments))
+        difference = total_amount - total_calculated
 
         first_transaction = None
         for i in range(1, num_installments + 1):
+            # Add the difference to the first installment
+            current_installment_amount = base_installment
+            if i == 1:
+                current_installment_amount += difference
+
             # Calculate date for each installment (monthly)
             installment_date = obj_in.date + relativedelta(months=i-1)
             transaction_in = TransactionCreate(
                 description=f"{obj_in.description} ({i}/{num_installments})",
                 category_id=obj_in.category_id,
-                amount=installment_amount,
+                amount=current_installment_amount,
                 date=installment_date,
                 recurring_expense_id=db_recurring.id,
                 installment_number=i

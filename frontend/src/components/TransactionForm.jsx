@@ -3,20 +3,39 @@ import api from '../api/api';
 
 const TransactionForm = ({ categories, onTransactionCreated, onClose }) => {
   const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
-  const [date, setDate] = useState('');
+  const [displayAmount, setDisplayAmount] = useState('');
+  const [amount, setAmount] = useState(0);
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [categoryId, setCategoryId] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringType, setRecurringType] = useState('subscription');
   const [totalInstallments, setTotalInstallments] = useState('');
   const [frequency, setFrequency] = useState('monthly');
 
+  const handleAmountChange = (e) => {
+    const value = e.target.value.replace(/\D/g, '');
+    if (value === '') {
+      setDisplayAmount('');
+      setAmount(0);
+      return;
+    }
+    const intValue = parseInt(value, 10);
+    setAmount(intValue / 100);
+
+    const formatted = new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(intValue / 100);
+
+    setDisplayAmount(formatted);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const payload = {
         description,
-        amount: parseFloat(amount),
+        amount: amount,
         date,
         category_id: categoryId,
         is_recurring: isRecurring,
@@ -28,8 +47,9 @@ const TransactionForm = ({ categories, onTransactionCreated, onClose }) => {
 
       // Reset form
       setDescription('');
-      setAmount('');
-      setDate('');
+      setDisplayAmount('');
+      setAmount(0);
+      setDate(new Date().toISOString().split('T')[0]);
       setCategoryId('');
       setIsRecurring(false);
 
@@ -62,10 +82,10 @@ const TransactionForm = ({ categories, onTransactionCreated, onClose }) => {
           <label htmlFor="amount">Valor:</label>
           <input
             id="amount"
-            type="number"
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            type="text"
+            placeholder="R$ 0,00"
+            value={displayAmount}
+            onChange={handleAmountChange}
             required
           />
         </div>
