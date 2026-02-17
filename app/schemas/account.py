@@ -8,11 +8,12 @@ class AccountBase(BaseModel):
     type: AccountType
 
 class AccountCreate(AccountBase):
-    pass
+    initial_balance: Decimal = Decimal(0)
 
 class AccountUpdate(BaseModel):
     name: str | None = None
     type: AccountType | None = None
+    current_balance: Decimal | None = None
 
 class Account(AccountBase):
     id: UUID

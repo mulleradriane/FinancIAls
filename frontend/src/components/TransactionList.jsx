@@ -8,10 +8,12 @@ import {
   Car,
   Home,
   CheckCircle,
-  HelpCircle
+  HelpCircle,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 
-const TransactionList = ({ transactions }) => {
+const TransactionList = ({ transactions, onEdit, onDelete }) => {
   const getIcon = (description) => {
     const desc = description.toLowerCase();
     if (desc.includes('food') || desc.includes('almoço') || desc.includes('jantar')) return <Coffee size={16} color="#666" />;
@@ -42,6 +44,7 @@ const TransactionList = ({ transactions }) => {
             <th style={{ textAlign: 'left', padding: '12px' }}>Categoria</th>
             <th style={{ textAlign: 'left', padding: '12px' }}>Data</th>
             <th style={{ textAlign: 'right', padding: '12px' }}>Valor</th>
+            <th style={{ textAlign: 'center', padding: '12px' }}>Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -80,6 +83,24 @@ const TransactionList = ({ transactions }) => {
               </td>
               <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600' }}>
                 R$ {parseFloat(t.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+              <td style={{ padding: '12px', textAlign: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                  <button
+                    onClick={() => onEdit(t)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}
+                    title="Editar"
+                  >
+                    <Pencil size={18} />
+                  </button>
+                  <button
+                    onClick={() => onDelete(t.id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545' }}
+                    title="Excluir"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
               </td>
             </tr>
           ))}

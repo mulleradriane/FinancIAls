@@ -1,12 +1,22 @@
 import React, { useState } from 'react';
 import api from '../api/api';
 
-const TransactionForm = ({ categories, onTransactionCreated, onClose }) => {
-  const [description, setDescription] = useState('');
-  const [displayAmount, setDisplayAmount] = useState('');
-  const [amount, setAmount] = useState(0);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [categoryId, setCategoryId] = useState('');
+const TransactionForm = ({ categories, accounts, transaction, onTransactionCreated, onClose }) => {
+  const [description, setDescription] = useState(transaction ? transaction.description : '');
+  const [amount, setAmount] = useState(transaction ? transaction.amount : 0);
+  const [displayAmount, setDisplayAmount] = useState(transaction ?
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(transaction.amount) : ''
+  );
+  const [date, setDate] = useState(transaction ? transaction.date : new Date().toISOString().split('T')[0]);
+  const [categoryId, setCategoryId] = useState(transaction ? transaction.category_id : '');
+  const [accountId, setAccountId] = useState(transaction ? transaction.account_id : (accounts && accounts.length > 0 ? accounts[0].id : ''));
+
+  React.useEffect(() => {
+    if (!transaction && accounts && accounts.length > 0 && !accountId) {
+      setAccountId(accounts[0].id);
+    }
+  }, [accounts, transaction, accountId]);
+
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringType, setRecurringType] = useState('subscription');
   const [totalInstallments, setTotalInstallments] = useState('');
@@ -33,17 +43,29 @@ const TransactionForm = ({ categories, onTransactionCreated, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const payload = {
-        description,
-        amount: amount,
-        date,
-        category_id: categoryId,
-        is_recurring: isRecurring,
-        recurring_type: isRecurring ? recurringType : null,
-        total_installments: isRecurring && recurringType === 'installment' ? parseInt(totalInstallments) : null,
-        frequency: isRecurring && recurringType === 'subscription' ? frequency : null,
-      };
-      await api.post('/transactions/', payload);
+      if (transaction) {
+        const payload = {
+          description,
+          amount: amount,
+          date,
+          category_id: categoryId,
+          account_id: accountId,
+        };
+        await api.put(`/transactions/${transaction.id}`, payload);
+      } else {
+        const payload = {
+          description,
+          amount: amount,
+          date,
+          category_id: categoryId,
+          account_id: accountId,
+          is_recurring: isRecurring,
+          recurring_type: isRecurring ? recurringType : null,
+          total_installments: isRecurring && recurringType === 'installment' ? parseInt(totalInstallments) : null,
+          frequency: isRecurring && recurringType === 'subscription' ? frequency : null,
+        };
+        await api.post('/transactions/', payload);
+      }
 
       // Reset form
       setDescription('');
@@ -116,18 +138,36 @@ const TransactionForm = ({ categories, onTransactionCreated, onClose }) => {
           </select>
         </div>
 
-        <div className="form-group toggle-group">
-          <label className="switch-label">
-            <input
-              type="checkbox"
-              checked={isRecurring}
-              onChange={(e) => setIsRecurring(e.target.checked)}
-            />
-            É uma despesa recorrente/parcelada?
-          </label>
+        <div className="form-group">
+          <label htmlFor="account">Conta/Carteira:</label>
+          <select
+            id="account"
+            value={accountId}
+            onChange={(e) => setAccountId(e.target.value)}
+            required
+          >
+            <option value="">Selecione uma conta</option>
+            {accounts.map((acc) => (
+              <option key={acc.id} value={acc.id}>
+                {acc.name} ({new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(acc.balance)})
+              </option>
+            ))}
+          </select>
         </div>
 
-        {isRecurring && (
+        {!transaction && (
+          <div className="form-group toggle-group">
+            <label className="switch-label">
+              <input
+                type="checkbox"
+                checked={isRecurring}
+                onChange={(e) => setIsRecurring(e.target.checked)}
+              />
+              É uma despesa recorrente/parcelada?
+            </label>
+          </div>
+        )}
+        {isRecurring && !transaction && (
           <div className="recurring-options">
             <div className="form-group">
               <label htmlFor="recurringType">Tipo:</label>

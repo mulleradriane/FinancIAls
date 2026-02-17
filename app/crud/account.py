@@ -11,8 +11,107 @@ from app.models.transfer import Transfer
 from app.models.category import Category, CategoryType
 from app.schemas.account import AccountCreate, AccountUpdate
 from decimal import Decimal
+from datetime import date
 
 class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
+    def create(self, db: Session, *, obj_in: AccountCreate) -> Account:
+        db_obj = Account(
+            name=obj_in.name,
+            type=obj_in.type
+        )
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+
+        if obj_in.initial_balance > 0:
+            # Create or find adjustment category (income type)
+            category = db.scalar(
+                select(Category).filter(
+                    Category.name == "Ajuste de Saldo",
+                    Category.type == CategoryType.income
+                )
+            )
+            if not category:
+                category = Category(name="Ajuste de Saldo", type=CategoryType.income)
+                db.add(category)
+                db.commit()
+                db.refresh(category)
+
+            initial_adjustment = Transaction(
+                description="Saldo Inicial",
+                amount=obj_in.initial_balance,
+                date=date.today(),
+                category_id=category.id,
+                account_id=db_obj.id
+            )
+            db.add(initial_adjustment)
+            db.commit()
+
+        return db_obj
+
+    def update(self, db: Session, *, db_obj: Account, obj_in: AccountUpdate | dict) -> Account:
+        if isinstance(obj_in, dict):
+            update_data = obj_in
+        else:
+            update_data = obj_in.model_dump(exclude_unset=True)
+
+        current_balance_input = update_data.pop("current_balance", None)
+
+        updated_obj = super().update(db, db_obj=db_obj, obj_in=update_data)
+
+        if current_balance_input is not None:
+            actual_balance = self.get_balance(db, db_obj.id)
+            diff = Decimal(str(current_balance_input)) - actual_balance
+
+            if diff != 0:
+                if diff > 0:
+                    category = db.scalar(
+                        select(Category).filter(
+                            Category.name == "Ajuste de Saldo",
+                            Category.type == CategoryType.income
+                        )
+                    )
+                    if not category:
+                        category = Category(name="Ajuste de Saldo", type=CategoryType.income)
+                        db.add(category)
+                        db.commit()
+                        db.refresh(category)
+
+                    adjustment = Transaction(
+                        description="Ajuste de Saldo",
+                        amount=diff,
+                        date=date.today(),
+                        category_id=category.id,
+                        account_id=db_obj.id
+                    )
+                    db.add(adjustment)
+                else:
+                    # diff < 0, need an expense transaction
+                    category = db.scalar(
+                        select(Category).filter(
+                            Category.name == "Ajuste de Saldo",
+                            Category.type == CategoryType.expense
+                        )
+                    )
+                    if not category:
+                        category = Category(name="Ajuste de Saldo", type=CategoryType.expense)
+                        db.add(category)
+                        db.commit()
+                        db.refresh(category)
+
+                    adjustment = Transaction(
+                        description="Ajuste de Saldo",
+                        amount=abs(diff),
+                        date=date.today(),
+                        category_id=category.id,
+                        account_id=db_obj.id
+                    )
+                    db.add(adjustment)
+
+                db.commit()
+
+        return updated_obj
+
     def get_with_balance(self, db: Session, id: UUID) -> Optional[Account]:
         account = db.get(Account, id)
         if account:
