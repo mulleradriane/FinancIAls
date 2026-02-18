@@ -18,10 +18,42 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
 } from 'recharts';
 import Modal from '../components/Modal';
 import TransactionForm from '../components/TransactionForm';
+
+const VariationBadge = ({ value, type }) => {
+  if (value === 0) return null;
+
+  const isPositive = value > 0;
+  let isGood = isPositive;
+  if (type === 'expense') isGood = !isPositive;
+  if (type === 'balance') isGood = isPositive;
+
+  const color = isGood ? '#28a745' : '#dc3545';
+  const icon = isPositive ? '↑' : '↓';
+
+  return (
+    <span style={{
+      fontSize: '0.75rem',
+      fontWeight: 'bold',
+      color: color,
+      backgroundColor: `${color}15`,
+      padding: '2px 6px',
+      borderRadius: '4px',
+      marginLeft: '8px',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '2px'
+    }}>
+      {icon} {Math.abs(value).toFixed(1)}%
+    </span>
+  );
+};
 
 const Dashboard = () => {
   const [data, setData] = useState(null);
@@ -74,36 +106,45 @@ const Dashboard = () => {
       }}>
         <div className="card" style={cardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: '#666', fontSize: '14px' }}>Saldo Atual</span>
+            <span style={{ color: 'var(--sidebar-text)', fontSize: '14px' }}>Saldo Atual</span>
             <Wallet size={20} color="#007bff" />
           </div>
-          <h2 style={{ margin: '10px 0', fontSize: '24px', color: data.current_balance >= 0 ? '#28a745' : '#dc3545' }}>
-            {formatCurrency(data.current_balance)}
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', marginTop: '10px' }}>
+            <h2 style={{ margin: 0, fontSize: '24px', color: data.current_balance >= 0 ? '#28a745' : '#dc3545' }}>
+              {formatCurrency(data.current_balance)}
+            </h2>
+            <VariationBadge value={data.balance_variation} type="balance" />
+          </div>
         </div>
 
         <div className="card" style={cardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: '#666', fontSize: '14px' }}>Receitas do Mês</span>
+            <span style={{ color: 'var(--sidebar-text)', fontSize: '14px' }}>Receitas do Mês</span>
             <ArrowUpCircle size={20} color="#28a745" />
           </div>
-          <h2 style={{ margin: '10px 0', fontSize: '24px', color: '#28a745' }}>
-            {formatCurrency(data.monthly_income)}
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', marginTop: '10px' }}>
+            <h2 style={{ margin: 0, fontSize: '24px', color: '#28a745' }}>
+              {formatCurrency(data.monthly_income)}
+            </h2>
+            <VariationBadge value={data.income_variation} type="income" />
+          </div>
         </div>
 
         <div className="card" style={cardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: '#666', fontSize: '14px' }}>Despesas do Mês</span>
+            <span style={{ color: 'var(--sidebar-text)', fontSize: '14px' }}>Despesas do Mês</span>
             <ArrowDownCircle size={20} color="#dc3545" />
           </div>
-          <h2 style={{ margin: '10px 0', fontSize: '24px', color: '#dc3545' }}>
-            {formatCurrency(data.monthly_expenses)}
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', marginTop: '10px' }}>
+            <h2 style={{ margin: 0, fontSize: '24px', color: '#dc3545' }}>
+              {formatCurrency(data.monthly_expenses)}
+            </h2>
+            <VariationBadge value={data.expenses_variation} type="expense" />
+          </div>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '30px', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '30px', alignItems: 'start', marginBottom: '30px' }}>
         {/* Gráfico Principal */}
         <div className="card" style={{ ...cardStyle, height: '400px' }}>
           <h3 style={{ marginBottom: '20px' }}>Receitas vs Despesas (6 meses)</h3>
@@ -125,9 +166,78 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Gráfico de Pizza */}
+        <div className="card" style={{ ...cardStyle, height: '400px' }}>
+          <h3 style={{ marginBottom: '20px' }}>Gastos por Categoria</h3>
+          <div style={{ width: '100%', height: '300px' }}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={Object.entries(data.expenses_by_category).map(([name, value]) => ({
+                    name,
+                    value: Math.abs(parseFloat(value))
+                  }))}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {Object.entries(data.expenses_by_category).map(([name], index) => {
+                    const category = categories.find(c => c.name === name);
+                    return <Cell key={`cell-${index}`} fill={category?.color || '#888'} />;
+                  })}
+                </Pie>
+                <Tooltip formatter={(value) => formatCurrency(value)} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '30px', alignItems: 'start' }}>
+        {/* Top Categorias */}
+        <div className="card" style={cardStyle}>
+          <h3 style={{ marginBottom: '20px' }}>Top 5 Categorias de Despesa</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {Object.entries(data.expenses_by_category)
+              .sort((a, b) => parseFloat(b[1]) - parseFloat(a[1]))
+              .slice(0, 5)
+              .map(([name, value], index) => {
+                const category = categories.find(c => c.name === name);
+                const percentage = (parseFloat(value) / parseFloat(data.monthly_expenses)) * 100;
+                return (
+                  <div key={index}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>{category?.icon || '💰'}</span>
+                        <span style={{ fontWeight: '500' }}>{name}</span>
+                      </div>
+                      <span style={{ fontWeight: 'bold' }}>{formatCurrency(value)}</span>
+                    </div>
+                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--sidebar-hover)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          width: `${percentage}%`,
+                          height: '100%',
+                          backgroundColor: category?.color || '#007bff',
+                          borderRadius: '4px'
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            {Object.keys(data.expenses_by_category).length === 0 && (
+              <p style={{ color: 'var(--sidebar-text)', textAlign: 'center', padding: '20px' }}>Nenhuma despesa este mês.</p>
+            )}
+          </div>
+        </div>
+
         {/* Atalhos Rápidos */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <h3 style={{ margin: 0 }}>Atalhos Rápidos</h3>
+          <h3 style={{ margin: 0 }}>Ações</h3>
           <button
             onClick={() => setIsModalOpen(true)}
             style={actionButtonStyle('#007bff')}

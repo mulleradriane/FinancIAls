@@ -4,34 +4,35 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 
 const Relatorios = () => {
   const [summary, setSummary] = useState(null);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
 
-  const fetchSummary = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/summary/month', {
-        params: { year, month }
-      });
-      setSummary(response.data);
+      const [summaryRes, categoriesRes] = await Promise.all([
+        api.get('/summary/month', { params: { year, month } }),
+        api.get('/categories/')
+      ]);
+      setSummary(summaryRes.data);
+      setCategories(categoriesRes.data);
     } catch (error) {
-      console.error('Error fetching monthly summary:', error);
+      console.error('Error fetching reporting data:', error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSummary();
+    fetchData();
   }, [year, month]);
-
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
 
   const chartData = summary ? Object.entries(summary.expenses_by_category).map(([name, value]) => ({
     name,
-    value: parseFloat(value)
+    value: Math.abs(parseFloat(value))
   })) : [];
 
   const formatCurrency = (value) => {
@@ -84,9 +85,10 @@ const Relatorios = () => {
                       dataKey="value"
                       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     >
-                      {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
+                      {chartData.map((entry, index) => {
+                        const category = categories.find(c => c.name === entry.name);
+                        return <Cell key={`cell-${index}`} fill={category?.color || '#888'} />;
+                      })}
                     </Pie>
                     <Tooltip formatter={(value) => formatCurrency(value)} />
                     <Legend />
