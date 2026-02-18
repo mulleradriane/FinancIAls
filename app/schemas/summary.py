@@ -52,5 +52,8 @@ class NetWorthData(BaseModel):
     total_accounts: Decimal
     total_investments: Decimal
     total_debts: Decimal
+    total_assets: Decimal
+    total_liabilities: Decimal
     net_worth: Decimal
+    allocation: Dict[str, Decimal]
     history: List[NetWorthHistory] = []
