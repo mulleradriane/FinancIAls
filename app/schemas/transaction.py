@@ -44,6 +44,7 @@ class TransactionUpdate(BaseModel):
     date: datetime.date | None = None
     recurring_expense_id: UUID | None = None
     installment_number: int | None = None
+    account_id: UUID | None = None
 
 
 class Transaction(TransactionBase):
@@ -65,6 +66,7 @@ class UnifiedTransactionResponse(BaseModel):
     is_transfer: bool = False
     installment_number: int | None = None
     account_name: str | None = None
+    account_type: str | None = None
     # For transfers, we might want to know from/to names in the response
     from_account_name: str | None = None
     to_account_name: str | None = None

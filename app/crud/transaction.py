@@ -133,6 +133,15 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
 
         return unified_list[:limit]
 
+    def get_unique_descriptions(self, db: Session) -> List[str]:
+        result = db.execute(
+            select(Transaction.description)
+            .filter(Transaction.deleted_at == None)
+            .distinct()
+            .order_by(Transaction.description)
+        ).all()
+        return [r[0] for r in result]
+
     def get_suggestion(self, db: Session, description: str) -> Optional[Transaction]:
         return db.scalars(
             select(Transaction)
