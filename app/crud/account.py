@@ -1,7 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_, delete
 from app.crud.base import CRUDBase
 from app.models.account import Account
 from app.models.transaction import Transaction
@@ -127,6 +127,23 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
         for account in accounts:
             account.balance = self.get_balance(db, account.id)
         return accounts
+
+    def remove(self, db: Session, *, id: UUID) -> Optional[Account]:
+        obj = db.get(Account, id)
+        if obj:
+            # Delete associated transfers
+            db.execute(
+                delete(Transfer).where(
+                    or_(
+                        Transfer.from_account_id == id,
+                        Transfer.to_account_id == id
+                    )
+                )
+            )
+            # Delete the account
+            db.delete(obj)
+            db.commit()
+        return obj
 
     def get_balance(self, db: Session, account_id: UUID) -> Decimal:
         incomes = db.scalar(

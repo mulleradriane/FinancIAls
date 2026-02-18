@@ -82,8 +82,9 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
         onClose();
       }
     } catch (error) {
-      console.error('Error creating transaction:', error);
-      alert('Error creating transaction. Check the console for details.');
+      console.error('Error saving transaction:', error);
+      const detail = error.response?.data?.detail || 'Erro ao salvar transação.';
+      alert(detail);
     }
   };
 

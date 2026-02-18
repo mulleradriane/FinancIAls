@@ -10,12 +10,15 @@ import {
   CheckCircle,
   HelpCircle,
   Pencil,
-  Trash2
+  Trash2,
+  ArrowLeftRight
 } from 'lucide-react';
 
 const TransactionList = ({ transactions, onEdit, onDelete }) => {
-  const getIcon = (description) => {
-    const desc = description.toLowerCase();
+  const getIcon = (t) => {
+    if (t.is_transfer) return <ArrowLeftRight size={16} color="#007bff" />;
+
+    const desc = (t.description || '').toLowerCase();
     if (desc.includes('food') || desc.includes('almoço') || desc.includes('jantar')) return <Coffee size={16} color="#666" />;
     if (desc.includes('uber') || desc.includes('gasolina') || desc.includes('transporte')) return <Car size={16} color="#666" />;
     if (desc.includes('aluguel') || desc.includes('casa')) return <Home size={16} color="#666" />;
@@ -40,6 +43,7 @@ const TransactionList = ({ transactions, onEdit, onDelete }) => {
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ borderBottom: '2px solid #eee' }}>
+            <th style={{ textAlign: 'left', padding: '12px' }}>Conta</th>
             <th style={{ textAlign: 'left', padding: '12px' }}>Descrição</th>
             <th style={{ textAlign: 'left', padding: '12px' }}>Categoria</th>
             <th style={{ textAlign: 'left', padding: '12px' }}>Data</th>
@@ -50,15 +54,18 @@ const TransactionList = ({ transactions, onEdit, onDelete }) => {
         <tbody>
           {transactions.length === 0 && (
             <tr>
-              <td colSpan="4" style={{ textAlign: 'center', padding: '50px', color: '#666' }}>
+              <td colSpan="6" style={{ textAlign: 'center', padding: '50px', color: '#666' }}>
                 Nenhuma transação encontrada.
               </td>
             </tr>
           )}
-          {transactions.map((t) => (
-            <tr key={t.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+          {transactions.map((t, index) => (
+            <tr key={`${t.id}-${t.account_name}-${index}`} style={{ borderBottom: '1px solid #f5f5f5' }}>
+              <td style={{ padding: '12px', color: '#666', fontSize: '0.9rem' }}>
+                {t.account_name}
+              </td>
               <td style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {getIcon(t.description)}
+                {getIcon(t)}
                 <span>{t.description}</span>
                 {t.installment_number && (
                   <span style={{ fontSize: '0.8rem', color: '#999', marginLeft: '5px' }}>
@@ -68,14 +75,14 @@ const TransactionList = ({ transactions, onEdit, onDelete }) => {
               </td>
               <td style={{ padding: '12px' }}>
                 <span style={{
-                  backgroundColor: getCategoryColor(t.category?.name),
+                  backgroundColor: t.is_transfer ? '#6c757d' : getCategoryColor(t.category_name),
                   color: 'white',
                   padding: '4px 10px',
                   borderRadius: '12px',
                   fontSize: '0.85rem',
                   fontWeight: '500'
                 }}>
-                  {t.category ? t.category.name : 'Sem Categoria'}
+                  {t.category_name}
                 </span>
               </td>
               <td style={{ padding: '12px', color: '#666' }}>
@@ -86,15 +93,17 @@ const TransactionList = ({ transactions, onEdit, onDelete }) => {
               </td>
               <td style={{ padding: '12px', textAlign: 'center' }}>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                  {!t.is_transfer && (
+                    <button
+                      onClick={() => onEdit(t)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}
+                      title="Editar"
+                    >
+                      <Pencil size={18} />
+                    </button>
+                  )}
                   <button
-                    onClick={() => onEdit(t)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}
-                    title="Editar"
-                  >
-                    <Pencil size={18} />
-                  </button>
-                  <button
-                    onClick={() => onDelete(t.id)}
+                    onClick={() => onDelete(t)}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545' }}
                     title="Excluir"
                   >

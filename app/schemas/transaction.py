@@ -54,3 +54,19 @@ class Transaction(TransactionBase):
     category: Category | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UnifiedTransactionResponse(BaseModel):
+    id: UUID
+    description: str | None = None
+    amount: AmountDecimal
+    date: datetime.date
+    category_name: str
+    is_transfer: bool = False
+    installment_number: int | None = None
+    account_name: str | None = None
+    # For transfers, we might want to know from/to names in the response
+    from_account_name: str | None = None
+    to_account_name: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)

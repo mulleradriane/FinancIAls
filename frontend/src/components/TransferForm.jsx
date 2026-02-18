@@ -51,7 +51,8 @@ const TransferForm = ({ accounts, onTransferCreated, onClose }) => {
       }
     } catch (error) {
       console.error('Error creating transfer:', error);
-      alert('Erro ao realizar transferência.');
+      const detail = error.response?.data?.detail || 'Erro ao realizar transferência.';
+      alert(detail);
     }
   };
 

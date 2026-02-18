@@ -54,7 +54,8 @@ const Contas = () => {
         fetchAccounts();
       } catch (error) {
         console.error('Error deleting account:', error);
-        alert('Erro ao excluir conta.');
+        const detail = error.response?.data?.detail || 'Erro ao excluir conta.';
+        alert(detail);
       }
     }
   };
