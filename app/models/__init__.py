@@ -5,3 +5,4 @@ from app.models.income import Income, IncomeType
 from app.models.investment import Investment
 from app.models.account import Account, AccountType
 from app.models.transfer import Transfer
+from app.models.balance_history import BalanceHistory

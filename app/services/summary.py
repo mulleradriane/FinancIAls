@@ -3,7 +3,8 @@ from sqlalchemy import extract, func, select
 from app.models.transaction import Transaction
 from app.models.income import Income
 from app.models.investment import Investment
-from app.models.account import AccountType
+from app.models.account import Account, AccountType
+from app.models.balance_history import BalanceHistory
 from app.models.category import Category, CategoryType
 from app.crud.account import account as crud_account
 from app.schemas.summary import MonthlySummary, YearlySummary, DashboardData, DashboardChartData, CashFlowDay, TopTransaction, NetWorthData, NetWorthHistory
@@ -178,8 +179,16 @@ class SummaryService:
         total_accounts = Decimal(0)
         total_investments = Decimal(0)
         total_debts = Decimal(0)
+        total_assets = Decimal(0)
+        total_liabilities = Decimal(0)
+
+        allocation = {}
 
         for acc in accounts:
+            # Map type for allocation
+            type_label = acc.type.value
+            allocation[type_label] = allocation.get(type_label, Decimal(0)) + acc.balance
+
             if acc.type in [AccountType.wallet, AccountType.bank, AccountType.savings]:
                 total_accounts += acc.balance
             elif acc.type == AccountType.investment:
@@ -187,36 +196,58 @@ class SummaryService:
             elif acc.type == AccountType.credit_card:
                 total_debts += acc.balance
 
+            # Assets vs Liabilities
+            if acc.balance > 0:
+                total_assets += acc.balance
+            else:
+                total_liabilities += abs(acc.balance)
+
         # Legacy investments
         total_legacy_investments = db.scalar(select(func.sum(Investment.amount))) or Decimal(0)
         total_investments += total_legacy_investments
+        total_assets += total_legacy_investments
+        allocation["investimento"] = allocation.get("investimento", Decimal(0)) + total_legacy_investments
 
         # Historical data (Last 6 months)
         history = []
         month_names_pt = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
         today = date.today()
 
+        all_accounts = db.scalars(select(Account)).all()
+
         for i in range(5, -1, -1):
             d = today - relativedelta(months=i)
-            last_day = (d + relativedelta(months=1)).replace(day=1) - timedelta(days=1)
+            last_day_of_month = (d + relativedelta(months=1)).replace(day=1) - timedelta(days=1)
 
-            h_income = db.scalar(select(func.sum(Income.amount)).filter(Income.date <= last_day)) or Decimal(0)
-            h_expenses = db.scalar(
-                select(func.sum(Transaction.amount))
-                .join(Category)
-                .filter(Category.type == CategoryType.expense, Transaction.deleted_at == None, Transaction.date <= last_day)
-            ) or Decimal(0)
+            total_at_date = Decimal(0)
+            for acc in all_accounts:
+                balance_at_date = db.scalar(
+                    select(BalanceHistory.balance)
+                    .filter(BalanceHistory.account_id == acc.id, BalanceHistory.date <= last_day_of_month)
+                    .order_by(BalanceHistory.date.desc())
+                    .limit(1)
+                )
+
+                if balance_at_date is None:
+                    # Se não tem histórico até essa data, vamos assumir 0
+                    # (ou poderíamos tentar calcular o saldo retroativamente, mas é complexo)
+                    balance_at_date = Decimal(0)
+
+                total_at_date += balance_at_date
 
             history.append(NetWorthHistory(
-                month=month_names_pt[last_day.month - 1],
-                value=h_income - h_expenses
+                month=month_names_pt[last_day_of_month.month - 1],
+                value=total_at_date
             ))
 
         return NetWorthData(
             total_accounts=total_accounts,
             total_investments=total_investments,
             total_debts=total_debts,
-            net_worth=total_accounts + total_investments + total_debts,
+            total_assets=total_assets,
+            total_liabilities=total_liabilities,
+            net_worth=total_assets - total_liabilities,
+            allocation=allocation,
             history=history
         )
 

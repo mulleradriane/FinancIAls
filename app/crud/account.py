@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, func, or_, delete
 from app.crud.base import CRUDBase
 from app.models.account import Account
+from app.models.balance_history import BalanceHistory
 from app.models.transaction import Transaction
 from app.models.income import Income
 from app.models.investment import Investment
@@ -24,7 +25,9 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
         db.commit()
         db.refresh(db_obj)
 
-        if obj_in.initial_balance > 0:
+        initial_balance = obj_in.initial_balance or Decimal(0)
+
+        if initial_balance > 0:
             # Create or find adjustment category (income type)
             category = db.scalar(
                 select(Category).filter(
@@ -40,13 +43,15 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
 
             initial_adjustment = Transaction(
                 description="Saldo Inicial",
-                amount=obj_in.initial_balance,
+                amount=initial_balance,
                 date=date.today(),
                 category_id=category.id,
                 account_id=db_obj.id
             )
             db.add(initial_adjustment)
             db.commit()
+
+        self._record_history(db, db_obj.id, initial_balance)
 
         return db_obj
 
@@ -111,7 +116,30 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
 
                 db.commit()
 
+            # Record history snapshot
+            new_balance = self.get_balance(db, db_obj.id)
+            self._record_history(db, db_obj.id, new_balance)
+
         return updated_obj
+
+    def _record_history(self, db: Session, account_id: UUID, balance: Decimal):
+        today = date.today()
+        history = db.scalar(
+            select(BalanceHistory).filter(
+                BalanceHistory.account_id == account_id,
+                BalanceHistory.date == today
+            )
+        )
+        if history:
+            history.balance = balance
+        else:
+            history = BalanceHistory(
+                account_id=account_id,
+                balance=balance,
+                date=today
+            )
+            db.add(history)
+        db.commit()
 
     def get_with_balance(self, db: Session, id: UUID) -> Optional[Account]:
         account = db.get(Account, id)
