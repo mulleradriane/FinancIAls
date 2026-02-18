@@ -32,6 +32,10 @@ class DashboardData(BaseModel):
     current_balance: Decimal
     monthly_income: Decimal
     monthly_expenses: Decimal
+    income_variation: float
+    expenses_variation: float
+    balance_variation: float
+    expenses_by_category: Dict[str, Decimal]
     chart_data: List[DashboardChartData]
 
 class YearlySummary(BaseModel):

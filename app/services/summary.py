@@ -101,6 +101,7 @@ class SummaryService:
 
     def get_dashboard_data(self, db: Session) -> DashboardData:
         today = date.today()
+        prev_month_date = today - relativedelta(months=1)
 
         # Current Balance (Soma dos saldos de todas as contas)
         accounts = crud_account.get_multi_with_balance(db)
@@ -108,6 +109,16 @@ class SummaryService:
 
         # Monthly Data
         monthly_summary = self.get_monthly_summary(db, today.year, today.month)
+        prev_monthly_summary = self.get_monthly_summary(db, prev_month_date.year, prev_month_date.month)
+
+        def calc_variation(current, previous):
+            if previous == 0:
+                return 100.0 if current > 0 else 0.0
+            return float(((current - previous) / previous) * 100)
+
+        income_variation = calc_variation(monthly_summary.total_income, prev_monthly_summary.total_income)
+        expenses_variation = calc_variation(monthly_summary.total_expenses, prev_monthly_summary.total_expenses)
+        balance_variation = calc_variation(monthly_summary.balance, prev_monthly_summary.balance)
 
         # Chart Data (Last 6 months)
         chart_data = []
@@ -125,6 +136,15 @@ class SummaryService:
                 )
             ) or Decimal(0)
 
+            m_income += db.scalar(
+                select(func.sum(Transaction.amount)).join(Category).filter(
+                    extract('year', Transaction.date) == d.year,
+                    extract('month', Transaction.date) == d.month,
+                    Category.type == CategoryType.income,
+                    Transaction.deleted_at == None
+                )
+            ) or Decimal(0)
+
             # Monthly Expenses for this specific month
             m_expenses = db.scalar(
                 select(func.sum(Transaction.amount)).join(Category).filter(
@@ -137,14 +157,18 @@ class SummaryService:
 
             chart_data.append(DashboardChartData(
                 month=month_name,
-                income=m_income,
-                expenses=m_expenses
+                income=abs(m_income),
+                expenses=abs(m_expenses)
             ))
 
         return DashboardData(
             current_balance=current_balance,
             monthly_income=monthly_summary.total_income,
             monthly_expenses=monthly_summary.total_expenses,
+            income_variation=income_variation,
+            expenses_variation=expenses_variation,
+            balance_variation=balance_variation,
+            expenses_by_category=monthly_summary.expenses_by_category,
             chart_data=chart_data
         )
 
