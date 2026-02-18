@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -8,6 +8,7 @@ from app.core.database import get_db
 from sqlalchemy import select, func
 from app.models.income import Income
 from app.models.recurring_expense import RecurringExpense as RecurringExpenseModel, RecurringType
+from app.models.category import CategoryType
 from decimal import Decimal
 
 router = APIRouter()
@@ -53,8 +54,13 @@ def create_recurring_expense(obj_in: RecurringExpenseCreate, db: Session = Depen
     return crud_recurring_expense.create(db, obj_in=obj_in)
 
 @router.get("/", response_model=List[RecurringExpense])
-def read_recurring_expenses(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return crud_recurring_expense.get_multi(db, skip=skip, limit=limit)
+def read_recurring_expenses(
+    category_type: Optional[CategoryType] = None,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    return crud_recurring_expense.get_multi(db, skip=skip, limit=limit, category_type=category_type)
 
 @router.get("/{id}", response_model=RecurringExpense)
 def read_recurring_expense(id: UUID, db: Session = Depends(get_db)):
@@ -76,3 +82,10 @@ def delete_recurring_expense(id: UUID, db: Session = Depends(get_db)):
     if not db_obj:
         raise HTTPException(status_code=404, detail="Recurring expense not found")
     return crud_recurring_expense.remove(db, id=id)
+
+@router.post("/{id}/terminate", response_model=RecurringExpense)
+def terminate_recurring_expense(id: UUID, db: Session = Depends(get_db)):
+    db_obj = crud_recurring_expense.get(db, id=id)
+    if not db_obj:
+        raise HTTPException(status_code=404, detail="Recurring expense not found")
+    return crud_recurring_expense.terminate(db, id=id)
