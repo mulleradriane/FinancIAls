@@ -3,9 +3,10 @@
 .category-form, .transaction-form {
   margin-bottom: 30px;
   padding: 20px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background-color: #fff;
+  background-color: var(--card-bg);
+  color: var(--text-color);
   max-width: 600px;
 }
 

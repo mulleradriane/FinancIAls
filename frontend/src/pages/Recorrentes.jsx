@@ -89,8 +89,8 @@ const Recorrentes = () => {
   };
 
   return (
-    <div className="recorrentes-page" style={{ padding: '20px', backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
-      <div style={{ display: 'flex', borderBottom: '1px solid #ddd', marginBottom: '20px' }}>
+    <div className="recorrentes-page" style={{ padding: '20px', backgroundColor: 'var(--bg-color)', minHeight: '100vh' }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '20px' }}>
         <button
           onClick={() => setActiveTab('despesas')}
           style={{
@@ -123,14 +123,16 @@ const Recorrentes = () => {
 
       {/* Hero Section */}
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: 'var(--card-bg)',
+        border: '1px solid var(--border-color)',
         borderRadius: '12px',
         padding: '20px',
         display: 'flex',
         alignItems: 'center',
         gap: '40px',
         marginBottom: '30px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+        boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+        color: 'var(--text-color)'
       }}>
         <DonutChart percentage={summary.commitment_percentage} />
         <div>
@@ -176,7 +178,7 @@ const Recorrentes = () => {
               const endDateStr = endDate.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
 
               return (
-                <div key={item.id} style={{ backgroundColor: 'white', borderRadius: '12px', padding: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                <div key={item.id} style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', color: 'var(--text-color)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                       <div style={{ backgroundColor: '#f0f4ff', padding: '8px', borderRadius: '8px' }}>
@@ -235,7 +237,7 @@ const Recorrentes = () => {
           <h3 style={{ marginBottom: '15px' }}>Assinaturas</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             {subscriptions.map(item => (
-              <div key={item.id} style={{ backgroundColor: 'white', borderRadius: '12px', padding: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+              <div key={item.id} style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', color: 'var(--text-color)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     <div style={{ backgroundColor: '#f0f0f0', padding: '8px', borderRadius: '8px' }}>

@@ -79,7 +79,7 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
-          style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
         />
       </div>
       <div className="form-group" style={{ marginBottom: '15px' }}>
@@ -89,7 +89,7 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
           value={type}
           onChange={(e) => setType(e.target.value)}
           required
-          style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
         >
           <option value="carteira">Carteira (Dinheiro)</option>
           <option value="banco">Banco (Corrente)</option>
@@ -108,7 +108,7 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
             placeholder="R$ 0,00"
             value={displayInitialBalance}
             onChange={(e) => handleBalanceChange(e, setInitialBalance, setDisplayInitialBalance)}
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+            style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
           />
         </div>
       ) : (
@@ -120,9 +120,9 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
             placeholder="R$ 0,00"
             value={displayCurrentBalance}
             onChange={(e) => handleBalanceChange(e, setCurrentBalance, setDisplayCurrentBalance)}
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+            style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
           />
-          <small style={{ color: '#666' }}>Alterar o saldo gerará uma transação de ajuste.</small>
+          <small style={{ color: 'var(--sidebar-text)' }}>Alterar o saldo gerará uma transação de ajuste.</small>
         </div>
       )}
 

@@ -30,25 +30,7 @@ const TransactionList = ({ transactions, onEdit, onDelete }) => {
 
   const getIcon = (t) => {
     if (t.is_transfer) return <ArrowLeftRight size={16} color="#007bff" />;
-
-    const desc = (t.description || '').toLowerCase();
-    if (desc.includes('food') || desc.includes('almoço') || desc.includes('jantar')) return <Coffee size={16} color="#666" />;
-    if (desc.includes('uber') || desc.includes('gasolina') || desc.includes('transporte')) return <Car size={16} color="#666" />;
-    if (desc.includes('aluguel') || desc.includes('casa')) return <Home size={16} color="#666" />;
-    if (desc.includes('assinatura') || desc.includes('netflix') || desc.includes('spotify')) return <CheckCircle size={16} color="#666" />;
-    return <ShoppingCart size={16} color="#666" />;
-  };
-
-  const getCategoryColor = (name) => {
-    const colors = {
-      'Alimentação': '#ff4d4d',
-      'Transporte': '#33cc33',
-      'Lazer': '#ff9900',
-      'Saúde': '#3399ff',
-      'Educação': '#9933ff',
-      'Moradia': '#663300',
-    };
-    return colors[name] || '#666666';
+    return <span style={{ fontSize: '1.2rem' }}>{t.category_icon || '💰'}</span>;
   };
 
   return (
@@ -73,8 +55,8 @@ const TransactionList = ({ transactions, onEdit, onDelete }) => {
             </tr>
           )}
           {transactions.map((t, index) => (
-            <tr key={`${t.id}-${t.account_name}-${index}`} style={{ borderBottom: '1px solid #f5f5f5' }}>
-              <td style={{ padding: '12px', color: '#666', fontSize: '0.9rem' }}>
+            <tr key={`${t.id}-${t.account_name}-${index}`} style={{ borderBottom: '1px solid var(--border-color)' }}>
+              <td style={{ padding: '12px', color: 'var(--sidebar-text)', fontSize: '0.9rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                   {getAccountIcon(t.account_type)}
                   <span>{t.account_name}</span>
@@ -91,7 +73,7 @@ const TransactionList = ({ transactions, onEdit, onDelete }) => {
               </td>
               <td style={{ padding: '12px' }}>
                 <span style={{
-                  backgroundColor: t.is_transfer ? '#6c757d' : getCategoryColor(t.category_name),
+                  backgroundColor: t.is_transfer ? '#6c757d' : (t.category_color || '#666666'),
                   color: 'white',
                   padding: '4px 10px',
                   borderRadius: '12px',
@@ -101,7 +83,7 @@ const TransactionList = ({ transactions, onEdit, onDelete }) => {
                   {t.category_name}
                 </span>
               </td>
-              <td style={{ padding: '12px', color: '#666' }}>
+              <td style={{ padding: '12px', color: 'var(--sidebar-text)' }}>
                 {new Date(t.date).toLocaleDateString('pt-BR')}
               </td>
               <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600' }}>
@@ -112,7 +94,7 @@ const TransactionList = ({ transactions, onEdit, onDelete }) => {
                   {!t.is_transfer && (
                     <button
                       onClick={() => onEdit(t)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-color)', opacity: 0.7 }}
                       title="Editar"
                     >
                       <Pencil size={18} />

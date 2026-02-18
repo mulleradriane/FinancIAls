@@ -159,11 +159,12 @@ const Dashboard = () => {
 };
 
 const cardStyle = {
-  backgroundColor: 'white',
+  backgroundColor: 'var(--card-bg)',
   padding: '20px',
   borderRadius: '12px',
   boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-  border: '1px solid #eee'
+  border: '1px solid var(--border-color)',
+  color: 'var(--text-color)'
 };
 
 const actionButtonStyle = (color) => ({

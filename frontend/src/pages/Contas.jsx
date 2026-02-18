@@ -109,13 +109,14 @@ const Contas = () => {
             key={account.id}
             style={{
               padding: '20px',
-              border: '1px solid #ddd',
-              borderRadius: '8px',
-              backgroundColor: 'white',
+              border: '1px solid var(--border-color)',
+              borderRadius: '12px',
+              backgroundColor: 'var(--card-bg)',
               boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
               display: 'flex',
               flexDirection: 'column',
-              gap: '15px'
+              gap: '15px',
+              color: 'var(--text-color)'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -125,7 +126,7 @@ const Contas = () => {
                 </div>
                 <div>
                   <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{account.name}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#666', textTransform: 'capitalize' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--sidebar-text)', textTransform: 'capitalize' }}>
                     {account.type.replace('_', ' ')}
                   </div>
                 </div>
@@ -133,7 +134,7 @@ const Contas = () => {
               <div style={{ display: 'flex', gap: '5px' }}>
                 <button
                   onClick={() => handleEdit(account)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', padding: '5px' }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-color)', opacity: 0.7, padding: '5px' }}
                   title="Editar"
                 >
                   <Pencil size={18} />
@@ -149,7 +150,7 @@ const Contas = () => {
             </div>
 
             <div style={{ marginTop: '5px' }}>
-              <div style={{ fontSize: '0.9rem', color: '#666' }}>Saldo Atual</div>
+              <div style={{ fontSize: '0.9rem', color: 'var(--sidebar-text)' }}>Saldo Atual</div>
               <div style={{
                 fontSize: '1.5rem',
                 fontWeight: 'bold',

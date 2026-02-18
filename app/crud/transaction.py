@@ -74,6 +74,8 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
                 amount=t.amount,
                 date=t.date,
                 category_name=t.category.name if t.category else "Sem Categoria",
+                category_icon=t.category.icon if t.category else "💰",
+                category_color=t.category.color if t.category else "#666666",
                 is_transfer=False,
                 installment_number=t.installment_number,
                 account_name=t.account.name if t.account else "Sem Conta",

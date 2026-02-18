@@ -68,7 +68,7 @@ const Relatorios = () => {
         <div>Carregando...</div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
-          <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+          <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
             <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Despesas por Categoria</h3>
             <div style={{ width: '100%', height: '300px' }}>
               {chartData.length > 0 ? (
@@ -100,11 +100,11 @@ const Relatorios = () => {
             </div>
           </div>
 
-          <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+          <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
             <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Maiores Gastos do Mês</h3>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ borderBottom: '2px solid #eee', textAlign: 'left' }}>
+                <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
                   <th style={{ padding: '10px' }}>Descrição</th>
                   <th style={{ padding: '10px' }}>Categoria</th>
                   <th style={{ padding: '10px', textAlign: 'right' }}>Valor</th>
@@ -112,10 +112,10 @@ const Relatorios = () => {
               </thead>
               <tbody>
                 {summary?.top_transactions.map((t, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid #f9f9f9' }}>
+                  <tr key={i} style={{ borderBottom: '1px solid var(--border-color)' }}>
                     <td style={{ padding: '10px' }}>{t.description}</td>
                     <td style={{ padding: '10px' }}>
-                      <span style={{ fontSize: '0.8rem', backgroundColor: '#e9ecef', padding: '2px 8px', borderRadius: '10px' }}>
+                      <span style={{ fontSize: '0.8rem', backgroundColor: 'var(--table-header-bg)', padding: '2px 8px', borderRadius: '10px' }}>
                         {t.category_name}
                       </span>
                     </td>
@@ -133,22 +133,22 @@ const Relatorios = () => {
             </table>
           </div>
 
-          <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
-             <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                <div style={{ color: '#666', fontSize: '0.9rem' }}>Total de Receitas</div>
+          <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
+             <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                <div style={{ color: 'var(--sidebar-text)', fontSize: '0.9rem' }}>Total de Receitas</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#28a745' }}>{formatCurrency(summary?.total_income || 0)}</div>
              </div>
-             <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                <div style={{ color: '#666', fontSize: '0.9rem' }}>Total de Despesas</div>
+             <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                <div style={{ color: 'var(--sidebar-text)', fontSize: '0.9rem' }}>Total de Despesas</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#dc3545' }}>{formatCurrency(summary?.total_expenses || 0)}</div>
              </div>
-             <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                <div style={{ color: '#666', fontSize: '0.9rem' }}>Total Investido</div>
+             <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                <div style={{ color: 'var(--sidebar-text)', fontSize: '0.9rem' }}>Total Investido</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#007bff' }}>{formatCurrency(summary?.total_invested || 0)}</div>
              </div>
-             <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                <div style={{ color: '#666', fontSize: '0.9rem' }}>Saldo Líquido</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: (summary?.balance || 0) >= 0 ? '#212529' : '#dc3545' }}>
+             <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                <div style={{ color: 'var(--sidebar-text)', fontSize: '0.9rem' }}>Saldo Líquido</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: (summary?.balance || 0) >= 0 ? 'var(--text-color)' : '#dc3545' }}>
                   {formatCurrency(summary?.balance || 0)}
                 </div>
              </div>

@@ -33,14 +33,14 @@ const FluxoCaixa = () => {
   return (
     <div className="cash-flow-page" style={{ padding: '20px' }}>
       <h1>Fluxo de Caixa (Projeção Mensal)</h1>
-      <p style={{ color: '#666', marginBottom: '30px' }}>
+      <p style={{ color: 'var(--sidebar-text)', marginBottom: '30px' }}>
         Acompanhe a evolução do seu saldo dia a dia com base nas entradas e saídas previstas.
       </p>
 
-      <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+      <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
-            <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+            <tr style={{ backgroundColor: 'var(--table-header-bg)', borderBottom: '2px solid var(--border-color)' }}>
               <th style={{ padding: '15px' }}>Data</th>
               <th style={{ padding: '15px' }}>Entradas</th>
               <th style={{ padding: '15px' }}>Saídas</th>
@@ -50,7 +50,7 @@ const FluxoCaixa = () => {
           </thead>
           <tbody>
             {cashFlow.map((day, index) => (
-              <tr key={index} style={{ borderBottom: '1px solid #eee', backgroundColor: day.balance < 0 ? '#fff5f5' : 'transparent' }}>
+              <tr key={index} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: day.balance < 0 ? 'rgba(220, 53, 69, 0.1)' : 'transparent' }}>
                 <td style={{ padding: '15px', fontWeight: '500' }}>
                   {formatDate(day.date)}
                   {day.date === new Date().toISOString().split('T')[0] && (
@@ -63,7 +63,7 @@ const FluxoCaixa = () => {
                 <td style={{ padding: '15px', color: '#dc3545' }}>
                   {day.expense > 0 ? `- ${formatCurrency(day.expense)}` : '-'}
                 </td>
-                <td style={{ padding: '15px', fontWeight: 'bold', color: day.balance >= 0 ? '#212529' : '#dc3545' }}>
+                <td style={{ padding: '15px', fontWeight: 'bold', color: day.balance >= 0 ? 'var(--text-color)' : '#dc3545' }}>
                   {formatCurrency(day.balance)}
                 </td>
                 <td style={{ padding: '15px' }}>

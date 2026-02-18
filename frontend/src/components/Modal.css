@@ -12,7 +12,8 @@
 }
 
 .modal-content {
-  background-color: white;
+  background-color: var(--modal-bg);
+  color: var(--text-color);
   padding: 20px;
   border-radius: 8px;
   width: 500px;
@@ -27,7 +28,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
   padding-bottom: 10px;
 }
 
@@ -40,11 +41,12 @@
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #666;
+  color: var(--text-color);
+  opacity: 0.7;
 }
 
 .close-button:hover {
-  color: #000;
+  opacity: 1;
   background-color: transparent;
   border-color: transparent;
 }

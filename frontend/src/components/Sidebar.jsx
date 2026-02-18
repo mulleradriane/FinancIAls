@@ -8,11 +8,15 @@ import {
   TrendingUp,
   RefreshCw,
   Tags,
-  FileText
+  FileText,
+  Sun,
+  Moon
 } from 'lucide-react';
 import './Sidebar.css';
+import { useTheme } from '../context/ThemeContext';
 
 function Sidebar() {
+  const { theme, toggleTheme } = useTheme();
   const menuItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
     { path: '/transactions', label: 'Transações', icon: ArrowRightLeft },
@@ -45,6 +49,27 @@ function Sidebar() {
           ))}
         </ul>
       </nav>
+
+      <div style={{ marginTop: 'auto', padding: '20px', borderTop: '1px solid var(--border-color)' }}>
+        <button
+          onClick={toggleTheme}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            width: '100%',
+            padding: '10px',
+            borderRadius: '8px',
+            border: '1px solid var(--border-color)',
+            backgroundColor: 'var(--card-bg)',
+            color: 'var(--text-color)',
+            cursor: 'pointer'
+          }}
+        >
+          {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+          <span>{theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}</span>
+        </button>
+      </div>
     </aside>
   );
 }
