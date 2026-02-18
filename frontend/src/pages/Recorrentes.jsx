@@ -8,7 +8,9 @@ import {
   TrendingDown,
   TrendingUp,
   Package,
-  Tv
+  Tv,
+  Trash2,
+  Square
 } from 'lucide-react';
 
 const Recorrentes = () => {
@@ -23,8 +25,9 @@ const Recorrentes = () => {
 
   const fetchData = async () => {
     try {
+      const categoryType = activeTab === 'despesas' ? 'expense' : 'income';
       const [expensesRes, summaryRes] = await Promise.all([
-        api.get('/recurring-expenses/'),
+        api.get(`/recurring-expenses/?category_type=${categoryType}`),
         api.get('/recurring-expenses/summary')
       ]);
       setRecurringExpenses(expensesRes.data);
@@ -36,10 +39,34 @@ const Recorrentes = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [activeTab]);
 
   const installments = recurringExpenses.filter(e => e.type === 'installment');
   const subscriptions = recurringExpenses.filter(e => e.type === 'subscription');
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Deseja realmente excluir esta recorrência? Todas as transações (passadas e futuras) vinculadas a ela serão apagadas.')) {
+      try {
+        await api.delete(`/recurring-expenses/${id}`);
+        fetchData();
+      } catch (error) {
+        console.error('Error deleting recurrence:', error);
+        alert('Erro ao excluir recorrência.');
+      }
+    }
+  };
+
+  const handleTerminate = async (id) => {
+    if (window.confirm('Deseja realmente encerrar esta recorrência? As transações passadas serão mantidas, mas as futuras serão apagadas.')) {
+      try {
+        await api.post(`/recurring-expenses/${id}/terminate`);
+        fetchData();
+      } catch (error) {
+        console.error('Error terminating recurrence:', error);
+        alert('Erro ao encerrar recorrência.');
+      }
+    }
+  };
 
   // Simple Donut Chart Component
   const DonutChart = ({ percentage }) => {
@@ -157,7 +184,23 @@ const Recorrentes = () => {
                         <div style={{ fontSize: '0.8rem', color: '#999' }}>{item.category?.name}</div>
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
+                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
+                      <div style={{ display: 'flex', gap: '5px' }}>
+                        <button
+                          onClick={() => handleTerminate(item.id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6c757d', padding: '2px' }}
+                          title="Encerrar"
+                        >
+                          <Square size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '2px' }}
+                          title="Excluir"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                       <div style={{ fontWeight: 'bold' }}>R$ {parseFloat(item.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
                       <div style={{ fontSize: '0.75rem', color: '#999' }}>Fim em {endDateStr}</div>
                     </div>
@@ -200,7 +243,23 @@ const Recorrentes = () => {
                       <div style={{ fontSize: '0.8rem', color: '#999' }}>{item.frequency === 'monthly' ? 'Mensal' : 'Anual'}</div>
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
+                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
+                    <div style={{ display: 'flex', gap: '5px' }}>
+                      <button
+                        onClick={() => handleTerminate(item.id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6c757d', padding: '2px' }}
+                        title="Encerrar"
+                      >
+                        <Square size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '2px' }}
+                        title="Excluir"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                     <div style={{ fontWeight: 'bold' }}>R$ {parseFloat(item.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
                   </div>
                 </div>
