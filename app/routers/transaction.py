@@ -34,6 +34,10 @@ def read_transactions(
         end_date=end_date
     )
 
+@router.get("/descriptions/", response_model=List[str])
+def read_unique_descriptions(db: Session = Depends(get_db)):
+    return crud_transaction.get_unique_descriptions(db)
+
 @router.get("/suggest/", response_model=TransactionUpdate)
 def suggest_transaction(description: str, db: Session = Depends(get_db)):
     t = crud_transaction.get_suggestion(db, description=description)

@@ -21,6 +21,8 @@ const TransactionList = ({ transactions, onEdit, onDelete }) => {
     switch (type) {
       case 'carteira': return <Wallet size={14} title="Carteira" />;
       case 'banco': return <Landmark size={14} title="Banco (Débito/Pix)" />;
+      case 'poupanca': return <Tag size={14} title="Poupança" />;
+      case 'investimento': return <Tag size={14} title="Investimento" />;
       case 'cartao_credito': return <CreditCard size={14} title="Cartão de Crédito" />;
       default: return <Landmark size={14} title="Conta" />;
     }

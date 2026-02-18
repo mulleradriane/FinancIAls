@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 
 const TransactionForm = ({ categories, accounts, transaction, onTransactionCreated, onClose }) => {
   const [description, setDescription] = useState(transaction ? transaction.description : '');
+  const [suggestions, setSuggestions] = useState([]);
   const [amount, setAmount] = useState(transaction ? transaction.amount : 0);
   const [displayAmount, setDisplayAmount] = useState(transaction ?
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(transaction.amount) : ''
@@ -16,26 +17,45 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
     if (!transaction && accounts && accounts.length > 0 && !accountId) {
       setAccountId(accounts[0].id);
     }
+    fetchSuggestions();
   }, [accounts, transaction, accountId]);
+
+  const fetchSuggestions = async () => {
+    try {
+      const response = await api.get('/transactions/descriptions/');
+      setSuggestions(response.data);
+    } catch (error) {
+      console.error('Error fetching descriptions:', error);
+    }
+  };
 
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringType, setRecurringType] = useState('subscription');
   const [totalInstallments, setTotalInstallments] = useState('');
   const [frequency, setFrequency] = useState('monthly');
 
-  const handleDescriptionBlur = async () => {
-    if (!description || transaction) return;
+  const handleDescriptionChange = (val) => {
+    setDescription(val);
+    if (suggestions.includes(val)) {
+      applySuggestion(val);
+    }
+  };
 
+  const applySuggestion = async (desc) => {
+    if (!desc || transaction) return;
     try {
-      const response = await api.get(`/transactions/suggest/?description=${description}`);
+      const response = await api.get(`/transactions/suggest/?description=${desc}`);
       if (response.data) {
         if (response.data.category_id) setCategoryId(response.data.category_id);
         if (response.data.account_id) setAccountId(response.data.account_id);
       }
     } catch (error) {
-      // Ignore 404s, just means no suggestion found
       console.log('No suggestion found for this description');
     }
+  };
+
+  const handleDescriptionBlur = () => {
+    applySuggestion(description);
   };
 
   const handleAmountChange = (e) => {
@@ -113,11 +133,18 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
           <input
             id="description"
             type="text"
+            list="description-suggestions"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => handleDescriptionChange(e.target.value)}
             onBlur={handleDescriptionBlur}
             required
+            autoComplete="off"
           />
+          <datalist id="description-suggestions">
+            {suggestions.map((s, i) => (
+              <option key={i} value={s} />
+            ))}
+          </datalist>
         </div>
         <div className="form-group">
           <label htmlFor="amount">Valor:</label>
