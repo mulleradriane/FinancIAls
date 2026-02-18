@@ -8,6 +8,7 @@ from app.models.transaction import Transaction
 from app.models.income import Income
 from app.models.investment import Investment
 from app.models.transfer import Transfer
+from app.models.recurring_expense import RecurringExpense
 from app.models.category import Category, CategoryType
 from app.schemas.account import AccountCreate, AccountUpdate
 from decimal import Decimal
@@ -139,6 +140,10 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
                         Transfer.to_account_id == id
                     )
                 )
+            )
+            # Delete associated recurring expenses
+            db.execute(
+                delete(RecurringExpense).where(RecurringExpense.account_id == id)
             )
             # Delete the account
             db.delete(obj)
