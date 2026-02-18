@@ -37,8 +37,9 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
         onClose();
       }
     } catch (error) {
-      console.error('Error creating account:', error);
-      alert('Erro ao criar conta.');
+      console.error('Error saving account:', error);
+      const detail = error.response?.data?.detail || 'Erro ao salvar conta.';
+      alert(detail);
     }
   };
 

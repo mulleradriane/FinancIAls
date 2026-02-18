@@ -22,3 +22,10 @@ def read_transfer(id: UUID, db: Session = Depends(get_db)):
     if not db_obj:
         raise HTTPException(status_code=404, detail="Transfer not found")
     return db_obj
+
+@router.delete("/{id}", response_model=Transfer)
+def delete_transfer(id: UUID, db: Session = Depends(get_db)):
+    db_obj = crud_transfer.get(db, id=id)
+    if not db_obj:
+        raise HTTPException(status_code=404, detail="Transfer not found")
+    return crud_transfer.remove(db, id=id)

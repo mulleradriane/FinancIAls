@@ -50,14 +50,17 @@ const Transactions = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Tem certeza que deseja excluir esta transação?')) {
+  const handleDelete = async (transaction) => {
+    const type = transaction.is_transfer ? 'transferência' : 'transação';
+    if (window.confirm(`Tem certeza que deseja excluir esta ${type}?`)) {
       try {
-        await api.delete(`/transactions/${id}`);
+        const endpoint = transaction.is_transfer ? '/transfers' : '/transactions';
+        await api.delete(`${endpoint}/${transaction.id}`);
         fetchTransactions();
       } catch (error) {
-        console.error('Error deleting transaction:', error);
-        alert('Erro ao excluir transação.');
+        console.error(`Error deleting ${type}:`, error);
+        const detail = error.response?.data?.detail || `Erro ao excluir ${type}.`;
+        alert(detail);
       }
     }
   };
