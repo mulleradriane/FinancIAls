@@ -1,118 +1,141 @@
 import React from 'react';
 import {
-  ShoppingCart,
-  CreditCard,
-  Tag,
-  Calendar,
-  Coffee,
-  Car,
-  Home,
-  CheckCircle,
-  HelpCircle,
+  MoreVertical,
   Pencil,
   Trash2,
   ArrowLeftRight,
   Landmark,
-  Wallet
+  Wallet,
+  CreditCard,
+  Tag
 } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const TransactionList = ({ transactions, onEdit, onDelete }) => {
   const getAccountIcon = (type) => {
+    const iconProps = { size: 12, className: "text-muted-foreground" };
     switch (type) {
-      case 'carteira': return <Wallet size={14} title="Carteira" />;
-      case 'banco': return <Landmark size={14} title="Banco (Débito/Pix)" />;
-      case 'poupanca': return <Tag size={14} title="Poupança" />;
-      case 'investimento': return <Tag size={14} title="Investimento" />;
-      case 'cartao_credito': return <CreditCard size={14} title="Cartão de Crédito" />;
-      default: return <Landmark size={14} title="Conta" />;
+      case 'carteira': return <Wallet {...iconProps} />;
+      case 'banco': return <Landmark {...iconProps} />;
+      case 'poupanca': return <Tag {...iconProps} />;
+      case 'investimento': return <Tag {...iconProps} />;
+      case 'cartao_credito': return <CreditCard {...iconProps} />;
+      default: return <Landmark {...iconProps} />;
     }
   };
 
   const getIcon = (t) => {
-    if (t.is_transfer) return <ArrowLeftRight size={16} color="#007bff" />;
-    return <span style={{ fontSize: '1.2rem' }}>{t.category_icon || '💰'}</span>;
+    if (t.is_transfer) return <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full"><ArrowLeftRight size={18} className="text-blue-600 dark:text-blue-400" /></div>;
+    return (
+      <div
+        className="w-10 h-10 flex items-center justify-center rounded-full text-lg border bg-secondary/30"
+        style={{ borderColor: `${t.category_color}40` }}
+      >
+        {t.category_icon || '💰'}
+      </div>
+    );
   };
 
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(amount);
+  };
+
+  if (transactions.length === 0) {
+    return (
+      <Card className="p-12 text-center border-dashed">
+        <p className="text-muted-foreground">Nenhuma transação encontrada.</p>
+      </Card>
+    );
+  }
+
   return (
-    <div className="transaction-list">
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ borderBottom: '2px solid #eee' }}>
-            <th style={{ textAlign: 'left', padding: '12px' }}>Conta</th>
-            <th style={{ textAlign: 'left', padding: '12px' }}>Descrição</th>
-            <th style={{ textAlign: 'left', padding: '12px' }}>Categoria</th>
-            <th style={{ textAlign: 'left', padding: '12px' }}>Data</th>
-            <th style={{ textAlign: 'right', padding: '12px' }}>Valor</th>
-            <th style={{ textAlign: 'center', padding: '12px' }}>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {transactions.length === 0 && (
-            <tr>
-              <td colSpan="6" style={{ textAlign: 'center', padding: '50px', color: '#666' }}>
-                Nenhuma transação encontrada.
-              </td>
-            </tr>
-          )}
-          {transactions.map((t, index) => (
-            <tr key={`${t.id}-${t.account_name}-${index}`} style={{ borderBottom: '1px solid var(--border-color)' }}>
-              <td style={{ padding: '12px', color: 'var(--sidebar-text)', fontSize: '0.9rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+    <div className="space-y-3">
+      {transactions.map((t, index) => (
+        <Card
+          key={`${t.id}-${t.account_name}-${index}`}
+          className="p-4 hover:shadow-md transition-all duration-200 group relative overflow-hidden"
+        >
+          <div className="flex items-center gap-4">
+            {getIcon(t)}
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold truncate text-foreground">
+                  {t.description}
+                </span>
+                {t.installment_number && (
+                  <Badge variant="outline" className="text-[10px] h-4 px-1 font-normal">
+                    {t.installment_number}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-3 mt-0.5">
+                <span className="text-xs text-muted-foreground">
+                  {new Date(t.date).toLocaleDateString('pt-BR')}
+                </span>
+                <span className="text-muted-foreground/30">•</span>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   {getAccountIcon(t.account_type)}
                   <span>{t.account_name}</span>
                 </div>
-              </td>
-              <td style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {getIcon(t)}
-                <span>{t.description}</span>
-                {t.installment_number && (
-                  <span style={{ fontSize: '0.8rem', color: '#999', marginLeft: '5px' }}>
-                    ({t.installment_number})
-                  </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end gap-1">
+              <span className={cn(
+                "font-bold text-lg",
+                t.amount < 0 || t.category_name === 'Despesa' ? "text-destructive" : "text-success"
+              )}>
+                {formatCurrency(t.amount)}
+              </span>
+              <Badge
+                variant="secondary"
+                className="text-[10px] h-4 px-1.5 font-medium"
+                style={{
+                  backgroundColor: t.is_transfer ? undefined : `${t.category_color}20`,
+                  color: t.is_transfer ? undefined : t.category_color,
+                  border: t.is_transfer ? undefined : `1px solid ${t.category_color}30`
+                }}
+              >
+                {t.category_name}
+              </Badge>
+            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <MoreVertical size={16} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {!t.is_transfer && (
+                  <DropdownMenuItem onClick={() => onEdit(t)}>
+                    <Pencil size={14} className="mr-2" /> Editar
+                  </DropdownMenuItem>
                 )}
-              </td>
-              <td style={{ padding: '12px' }}>
-                <span style={{
-                  backgroundColor: t.is_transfer ? '#6c757d' : (t.category_color || '#666666'),
-                  color: 'white',
-                  padding: '4px 10px',
-                  borderRadius: '12px',
-                  fontSize: '0.85rem',
-                  fontWeight: '500'
-                }}>
-                  {t.category_name}
-                </span>
-              </td>
-              <td style={{ padding: '12px', color: 'var(--sidebar-text)' }}>
-                {new Date(t.date).toLocaleDateString('pt-BR')}
-              </td>
-              <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600' }}>
-                R$ {parseFloat(t.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </td>
-              <td style={{ padding: '12px', textAlign: 'center' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
-                  {!t.is_transfer && (
-                    <button
-                      onClick={() => onEdit(t)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-color)', opacity: 0.7 }}
-                      title="Editar"
-                    >
-                      <Pencil size={18} />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => onDelete(t)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545' }}
-                    title="Excluir"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                <DropdownMenuItem
+                  onClick={() => onDelete(t)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 size={14} className="mr-2" /> Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </Card>
+      ))}
     </div>
   );
 };
