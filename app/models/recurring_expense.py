@@ -26,7 +26,7 @@ class RecurringExpense(Base):
     total_installments = Column(Integer, nullable=True)
     start_date = Column(Date, nullable=False)
     active = Column(Boolean, default=True)
-    account_id = Column(UUID(as_uuid=True), ForeignKey("accounts.id"), nullable=True)
+    account_id = Column(UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="CASCADE"), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
