@@ -37,7 +37,7 @@ const Patrimonio = () => {
   return (
     <div className="net-worth-page" style={{ padding: '20px' }}>
       <h1>Patrimônio</h1>
-      <p style={{ color: '#666', marginBottom: '30px' }}>
+      <p style={{ color: 'var(--sidebar-text)', marginBottom: '30px' }}>
         Visão consolidada dos seus ativos e passivos.
       </p>
 
@@ -64,7 +64,7 @@ const Patrimonio = () => {
             <TrendingUp color="#28a745" /> Ativos
           </h3>
 
-          <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ backgroundColor: 'var(--card-bg)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Wallet color="#007bff" />
               <div>
@@ -74,7 +74,7 @@ const Patrimonio = () => {
             </div>
           </div>
 
-          <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ backgroundColor: 'var(--card-bg)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Briefcase color="#17a2b8" />
               <div>
@@ -91,7 +91,7 @@ const Patrimonio = () => {
             <TrendingDown color="#dc3545" /> Passivos
           </h3>
 
-          <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ backgroundColor: 'var(--card-bg)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <CreditCard color="#dc3545" />
               <div>
@@ -109,7 +109,7 @@ const Patrimonio = () => {
       </div>
 
       {/* Evolution Chart */}
-      <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+      <div style={{ backgroundColor: 'var(--card-bg)', padding: '25px', borderRadius: '8px', border: '1px solid var(--border-color)', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
         <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Evolução do Patrimônio (6 meses)</h3>
         <div style={{ width: '100%', height: '300px' }}>
           <ResponsiveContainer width="100%" height="100%">

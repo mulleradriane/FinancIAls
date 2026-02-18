@@ -11,12 +11,14 @@ import Recorrentes from './pages/Recorrentes';
 import Relatorios from './pages/Relatorios';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import './App.css';
 
-function App() {
+function AppContent() {
+  const { theme } = useTheme();
   return (
     <Router>
-      <ToastContainer position="top-right" autoClose={3000} />
+      <ToastContainer position="top-right" autoClose={3000} theme={theme} />
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
@@ -30,6 +32,14 @@ function App() {
         </Route>
       </Routes>
     </Router>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
 

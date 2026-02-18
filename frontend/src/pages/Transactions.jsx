@@ -148,26 +148,26 @@ const Transactions = () => {
       </div>
 
       {/* Resumo Rápido */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
-        <div style={{ background: '#e8f5e9', padding: '20px', borderRadius: '8px', borderLeft: '5px solid #2e7d32' }}>
-          <div style={{ fontSize: '0.9rem', color: '#2e7d32' }}>Total Entradas</div>
-          <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#1b5e20' }}>{formatCurrency(totals.incomes)}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+        <div style={{ backgroundColor: 'var(--card-bg)', padding: '20px', borderRadius: '12px', borderLeft: '6px solid #28a745', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+          <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '5px' }}>Total Entradas</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#28a745' }}>{formatCurrency(totals.incomes)}</div>
         </div>
-        <div style={{ background: '#ffebee', padding: '20px', borderRadius: '8px', borderLeft: '5px solid #c62828' }}>
-          <div style={{ fontSize: '0.9rem', color: '#c62828' }}>Total Saídas</div>
-          <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#b71c1c' }}>{formatCurrency(totals.expenses)}</div>
+        <div style={{ backgroundColor: 'var(--card-bg)', padding: '20px', borderRadius: '12px', borderLeft: '6px solid #dc3545', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+          <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '5px' }}>Total Saídas</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#dc3545' }}>{formatCurrency(totals.expenses)}</div>
         </div>
-        <div style={{ background: '#e3f2fd', padding: '20px', borderRadius: '8px', borderLeft: '5px solid #1565c0' }}>
-          <div style={{ fontSize: '0.9rem', color: '#1565c0' }}>Saldo do Período</div>
-          <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#0d47a1' }}>{formatCurrency(totals.incomes - totals.expenses)}</div>
+        <div style={{ backgroundColor: 'var(--card-bg)', padding: '20px', borderRadius: '12px', borderLeft: '6px solid #007bff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+          <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '5px' }}>Saldo do Período</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#007bff' }}>{formatCurrency(totals.incomes - totals.expenses)}</div>
         </div>
       </div>
 
       {/* Barra de Filtros */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'flex-end', marginBottom: '30px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'flex-end', marginBottom: '30px', padding: '20px', backgroundColor: 'var(--card-bg)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          <label htmlFor="filter-period" style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Período:</label>
-          <select id="filter-period" value={period} onChange={(e) => setPeriod(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}>
+          <label htmlFor="filter-period" style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>Período:</label>
+          <select id="filter-period" value={period} onChange={(e) => setPeriod(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}>
             <option value="month">Mês Atual</option>
             <option value="30days">Últimos 30 dias</option>
             <option value="60days">Últimos 60 dias</option>
@@ -179,33 +179,33 @@ const Transactions = () => {
         {period === 'custom' && (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <label htmlFor="filter-start-date" style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Início:</label>
-              <input id="filter-start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }} />
+              <label htmlFor="filter-start-date" style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>Início:</label>
+              <input id="filter-start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <label htmlFor="filter-end-date" style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Fim:</label>
-              <input id="filter-end-date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }} />
+              <label htmlFor="filter-end-date" style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>Fim:</label>
+              <input id="filter-end-date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }} />
             </div>
           </>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          <label htmlFor="filter-account" style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Conta:</label>
-          <select id="filter-account" value={accountId} onChange={(e) => setAccountId(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}>
+          <label htmlFor="filter-account" style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>Conta:</label>
+          <select id="filter-account" value={accountId} onChange={(e) => setAccountId(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}>
             <option value="">Todas as Contas</option>
             {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
           </select>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          <label htmlFor="filter-category" style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Categoria:</label>
-          <select id="filter-category" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}>
+          <label htmlFor="filter-category" style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>Categoria:</label>
+          <select id="filter-category" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}>
             <option value="">Todas as Categorias</option>
             {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
           </select>
         </div>
 
-        <button onClick={clearFilters} style={{ padding: '8px 15px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', cursor: 'pointer' }}>
+        <button onClick={clearFilters} style={{ padding: '10px 15px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)', cursor: 'pointer' }}>
           Limpar Filtros
         </button>
       </div>

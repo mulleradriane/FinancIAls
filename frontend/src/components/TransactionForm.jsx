@@ -126,7 +126,7 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
   };
 
   return (
-    <div className="transaction-form">
+    <div className="transaction-form" style={{ border: 'none', padding: 0, margin: 0, backgroundColor: 'transparent' }}>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="description">Descrição:</label>
@@ -214,7 +214,7 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
           </div>
         )}
         {isRecurring && !transaction && (
-          <div className="recurring-options">
+          <div className="recurring-options" style={{ backgroundColor: 'var(--table-header-bg)', border: '1px dashed var(--border-color)' }}>
             <div className="form-group">
               <label htmlFor="recurringType">Tipo:</label>
               <select

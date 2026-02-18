@@ -5,6 +5,8 @@ from app.models.category import CategoryType
 class CategoryBase(BaseModel):
     name: str
     type: CategoryType
+    icon: str | None = None
+    color: str | None = None
 
 class CategoryCreate(CategoryBase):
     pass
@@ -12,6 +14,8 @@ class CategoryCreate(CategoryBase):
 class CategoryUpdate(BaseModel):
     name: str | None = None
     type: CategoryType | None = None
+    icon: str | None = None
+    color: str | None = None
 
 class Category(CategoryBase):
     id: UUID

@@ -66,7 +66,7 @@ const TransferForm = ({ accounts, onTransferCreated, onClose }) => {
           value={fromAccountId}
           onChange={(e) => setFromAccountId(e.target.value)}
           required
-          style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
         >
           <option value="">Selecione a conta de origem</option>
           {accounts.map((acc) => (
@@ -84,7 +84,7 @@ const TransferForm = ({ accounts, onTransferCreated, onClose }) => {
           value={toAccountId}
           onChange={(e) => setToAccountId(e.target.value)}
           required
-          style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
         >
           <option value="">Selecione a conta de destino</option>
           {accounts.map((acc) => (
@@ -104,7 +104,7 @@ const TransferForm = ({ accounts, onTransferCreated, onClose }) => {
           value={displayAmount}
           onChange={handleAmountChange}
           required
-          style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
         />
       </div>
 
@@ -116,7 +116,7 @@ const TransferForm = ({ accounts, onTransferCreated, onClose }) => {
           value={date}
           onChange={(e) => setDate(e.target.value)}
           required
-          style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
         />
       </div>
 
@@ -127,7 +127,7 @@ const TransferForm = ({ accounts, onTransferCreated, onClose }) => {
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
         />
       </div>
 
