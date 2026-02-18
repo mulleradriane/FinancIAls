@@ -7,8 +7,10 @@ import { Plus } from 'lucide-react';
 
 const Transactions = () => {
   const [categories, setCategories] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState(null);
 
   const fetchCategories = async () => {
     try {
@@ -16,6 +18,15 @@ const Transactions = () => {
       setCategories(response.data);
     } catch (error) {
       console.error('Error fetching categories:', error);
+    }
+  };
+
+  const fetchAccounts = async () => {
+    try {
+      const response = await api.get('/accounts/');
+      setAccounts(response.data);
+    } catch (error) {
+      console.error('Error fetching accounts:', error);
     }
   };
 
@@ -30,8 +41,26 @@ const Transactions = () => {
 
   useEffect(() => {
     fetchCategories();
+    fetchAccounts();
     fetchTransactions();
   }, []);
+
+  const handleEdit = (transaction) => {
+    setEditingTransaction(transaction);
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Tem certeza que deseja excluir esta transação?')) {
+      try {
+        await api.delete(`/transactions/${id}`);
+        fetchTransactions();
+      } catch (error) {
+        console.error('Error deleting transaction:', error);
+        alert('Erro ao excluir transação.');
+      }
+    }
+  };
 
   return (
     <div className="transactions-page" style={{ padding: '20px' }}>
@@ -55,17 +84,29 @@ const Transactions = () => {
 
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Nova Transação"
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingTransaction(null);
+        }}
+        title={editingTransaction ? "Editar Transação" : "Nova Transação"}
       >
         <TransactionForm
           categories={categories}
+          accounts={accounts}
+          transaction={editingTransaction}
           onTransactionCreated={fetchTransactions}
-          onClose={() => setIsModalOpen(false)}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingTransaction(null);
+          }}
         />
       </Modal>
 
-      <TransactionList transactions={transactions} />
+      <TransactionList
+        transactions={transactions}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
     </div>
   );
 };

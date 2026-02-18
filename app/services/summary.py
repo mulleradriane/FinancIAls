@@ -5,6 +5,7 @@ from app.models.income import Income
 from app.models.investment import Investment
 from app.models.account import AccountType
 from app.models.category import Category, CategoryType
+from app.crud.account import account as crud_account
 from app.schemas.summary import MonthlySummary, YearlySummary, DashboardData, DashboardChartData, CashFlowDay, TopTransaction, NetWorthData, NetWorthHistory
 from decimal import Decimal
 from datetime import date, timedelta
@@ -18,6 +19,16 @@ class SummaryService:
             select(func.sum(Income.amount)).filter(
                 extract('year', Income.date) == year,
                 extract('month', Income.date) == month
+            )
+        ) or Decimal(0)
+
+        # Transações de Receita (Transaction with category.type == income)
+        total_income += db.scalar(
+            select(func.sum(Transaction.amount)).join(Category).filter(
+                extract('year', Transaction.date) == year,
+                extract('month', Transaction.date) == month,
+                Category.type == CategoryType.income,
+                Transaction.deleted_at == None
             )
         ) or Decimal(0)
 
@@ -91,16 +102,9 @@ class SummaryService:
     def get_dashboard_data(self, db: Session) -> DashboardData:
         today = date.today()
 
-        # Current Balance (Total Income - Total Expenses - Total Invested)
-        total_income_all = db.scalar(select(func.sum(Income.amount))) or Decimal(0)
-        total_expenses_all = db.scalar(
-            select(func.sum(Transaction.amount))
-            .join(Category)
-            .filter(Category.type == CategoryType.expense, Transaction.deleted_at == None)
-        ) or Decimal(0)
-        total_invested_all = db.scalar(select(func.sum(Investment.amount))) or Decimal(0)
-
-        current_balance = total_income_all - total_expenses_all - total_invested_all
+        # Current Balance (Soma dos saldos de todas as contas)
+        accounts = crud_account.get_multi_with_balance(db)
+        current_balance = sum((acc.balance for acc in accounts), Decimal(0))
 
         # Monthly Data
         monthly_summary = self.get_monthly_summary(db, today.year, today.month)
@@ -145,7 +149,6 @@ class SummaryService:
         )
 
     def get_net_worth(self, db: Session) -> NetWorthData:
-        from app.crud.account import account as crud_account
         accounts = crud_account.get_multi_with_balance(db)
 
         total_accounts = Decimal(0)
@@ -197,15 +200,25 @@ class SummaryService:
         today = date.today()
         end_of_month = (today + relativedelta(months=1)).replace(day=1) - timedelta(days=1)
 
-        total_income_before = db.scalar(select(func.sum(Income.amount)).filter(Income.date < today)) or Decimal(0)
-        total_expenses_before = db.scalar(
+        accounts = crud_account.get_multi_with_balance(db)
+        total_actual_balance = sum((acc.balance for acc in accounts), Decimal(0))
+
+        # Para o fluxo de caixa, precisamos do saldo no início de hoje.
+        # Subtraímos tudo o que está no banco de hoje em diante para encontrar o ponto de partida.
+        future_income = db.scalar(select(func.sum(Income.amount)).filter(Income.date >= today)) or Decimal(0)
+        future_trans_income = db.scalar(
             select(func.sum(Transaction.amount))
             .join(Category)
-            .filter(Category.type == CategoryType.expense, Transaction.deleted_at == None, Transaction.date < today)
+            .filter(Category.type == CategoryType.income, Transaction.deleted_at == None, Transaction.date >= today)
         ) or Decimal(0)
-        total_invested_before = db.scalar(select(func.sum(Investment.amount)).filter(Investment.date < today)) or Decimal(0)
+        future_expenses = db.scalar(
+            select(func.sum(Transaction.amount))
+            .join(Category)
+            .filter(Category.type == CategoryType.expense, Transaction.deleted_at == None, Transaction.date >= today)
+        ) or Decimal(0)
+        future_investments = db.scalar(select(func.sum(Investment.amount)).filter(Investment.date >= today)) or Decimal(0)
 
-        current_balance = total_income_before - total_expenses_before - total_invested_before
+        current_balance = total_actual_balance - future_income - future_trans_income + future_expenses + future_investments
 
         incomes = db.execute(
             select(Income.date, func.sum(Income.amount).label('amount'))
@@ -234,6 +247,17 @@ class SummaryService:
 
         for row in incomes:
             daily_data[row.date]["income"] += row.amount
+
+        # Também incluir transações do tipo 'income' que não estão no modelo Income
+        trans_incomes = db.execute(
+            select(Transaction.date, func.sum(Transaction.amount).label('amount'))
+            .join(Category)
+            .filter(Category.type == CategoryType.income, Transaction.deleted_at == None, Transaction.date >= today, Transaction.date <= end_of_month)
+            .group_by(Transaction.date)
+        ).all()
+        for row in trans_incomes:
+            daily_data[row.date]["income"] += row.amount
+
         for row in expenses:
             daily_data[row.date]["expense"] += row.amount
         for row in investments:

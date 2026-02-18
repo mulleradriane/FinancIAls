@@ -3,11 +3,12 @@ import api from '../api/api';
 import Modal from '../components/Modal';
 import AccountForm from '../components/AccountForm';
 import TransferForm from '../components/TransferForm';
-import { Plus, ArrowLeftRight, CreditCard, Landmark, Wallet, PiggyBank, Briefcase } from 'lucide-react';
+import { Plus, ArrowLeftRight, CreditCard, Landmark, Wallet, PiggyBank, Briefcase, Pencil, Trash2 } from 'lucide-react';
 
 const Contas = () => {
   const [accounts, setAccounts] = useState([]);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
   const fetchAccounts = async () => {
@@ -41,6 +42,23 @@ const Contas = () => {
     }).format(value);
   };
 
+  const handleEdit = (account) => {
+    setEditingAccount(account);
+    setIsAccountModalOpen(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Tem certeza que deseja excluir esta conta? Todas as transações vinculadas perderão o vínculo.')) {
+      try {
+        await api.delete(`/accounts/${id}`);
+        fetchAccounts();
+      } catch (error) {
+        console.error('Error deleting account:', error);
+        alert('Erro ao excluir conta.');
+      }
+    }
+  };
+
   return (
     <div className="accounts-page" style={{ padding: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
@@ -62,7 +80,10 @@ const Contas = () => {
             <ArrowLeftRight size={20} /> Transferência
           </button>
           <button
-            onClick={() => setIsAccountModalOpen(true)}
+            onClick={() => {
+              setEditingAccount(null);
+              setIsAccountModalOpen(true);
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -94,16 +115,34 @@ const Contas = () => {
               gap: '15px'
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ color: '#007bff' }}>
                   {getAccountIcon(account.type)}
                 </div>
-                <span style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{account.name}</span>
+                <div>
+                  <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{account.name}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#666', textTransform: 'capitalize' }}>
+                    {account.type.replace('_', ' ')}
+                  </div>
+                </div>
               </div>
-              <span style={{ fontSize: '0.85rem', color: '#666', textTransform: 'capitalize' }}>
-                {account.type.replace('_', ' ')}
-              </span>
+              <div style={{ display: 'flex', gap: '5px' }}>
+                <button
+                  onClick={() => handleEdit(account)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', padding: '5px' }}
+                  title="Editar"
+                >
+                  <Pencil size={18} />
+                </button>
+                <button
+                  onClick={() => handleDelete(account.id)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '5px' }}
+                  title="Excluir"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
             </div>
 
             <div style={{ marginTop: '5px' }}>
@@ -127,12 +166,19 @@ const Contas = () => {
 
       <Modal
         isOpen={isAccountModalOpen}
-        onClose={() => setIsAccountModalOpen(false)}
-        title="Nova Conta"
+        onClose={() => {
+          setIsAccountModalOpen(false);
+          setEditingAccount(null);
+        }}
+        title={editingAccount ? "Editar Conta" : "Nova Conta"}
       >
         <AccountForm
+          account={editingAccount}
           onAccountCreated={fetchAccounts}
-          onClose={() => setIsAccountModalOpen(false)}
+          onClose={() => {
+            setIsAccountModalOpen(false);
+            setEditingAccount(null);
+          }}
         />
       </Modal>
 

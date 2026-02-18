@@ -1,21 +1,34 @@
 import React, { useState } from 'react';
 import api from '../api/api';
 
-const AccountForm = ({ onAccountCreated, onClose }) => {
-  const [name, setName] = useState('');
-  const [type, setType] = useState('banco');
+const AccountForm = ({ account, onAccountCreated, onClose }) => {
+  const [name, setName] = useState(account ? account.name : '');
+  const [type, setType] = useState(account ? account.type : 'banco');
+  const [initialBalance, setInitialBalance] = useState(0);
+  const [currentBalance, setCurrentBalance] = useState(account ? account.balance : 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const payload = {
-        name,
-        type,
-      };
-      await api.post('/accounts/', payload);
+      if (account) {
+        const payload = {
+          name,
+          type,
+          current_balance: parseFloat(currentBalance),
+        };
+        await api.put(`/accounts/${account.id}`, payload);
+      } else {
+        const payload = {
+          name,
+          type,
+          initial_balance: parseFloat(initialBalance),
+        };
+        await api.post('/accounts/', payload);
+      }
 
       setName('');
       setType('banco');
+      setInitialBalance(0);
 
       if (onAccountCreated) {
         onAccountCreated();
@@ -58,6 +71,33 @@ const AccountForm = ({ onAccountCreated, onClose }) => {
           <option value="cartao_credito">Cartão de Crédito</option>
         </select>
       </div>
+
+      {!account ? (
+        <div className="form-group" style={{ marginBottom: '15px' }}>
+          <label htmlFor="initialBalance">Saldo Inicial (R$):</label>
+          <input
+            id="initialBalance"
+            type="number"
+            step="0.01"
+            value={initialBalance}
+            onChange={(e) => setInitialBalance(e.target.value)}
+            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          />
+        </div>
+      ) : (
+        <div className="form-group" style={{ marginBottom: '15px' }}>
+          <label htmlFor="currentBalance">Saldo Atual (R$):</label>
+          <input
+            id="currentBalance"
+            type="number"
+            step="0.01"
+            value={currentBalance}
+            onChange={(e) => setCurrentBalance(e.target.value)}
+            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          />
+          <small style={{ color: '#666' }}>Alterar o saldo gerará uma transação de ajuste.</small>
+        </div>
+      )}
 
       <div className="form-actions" style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
         <button type="submit" style={{ backgroundColor: '#007bff', color: 'white', border: 'none', padding: '10px', flex: 1, cursor: 'pointer' }}>

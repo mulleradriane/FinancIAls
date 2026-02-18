@@ -30,7 +30,7 @@ class UnifiedTransactionCreate(BaseModel):
     category_id: UUID
     amount: AmountDecimal
     date: datetime.date
-    account_id: UUID | None = None
+    account_id: UUID
     is_recurring: bool = False
     recurring_type: RecurringType | None = None
     frequency: FrequencyType | None = None
