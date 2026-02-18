@@ -9,11 +9,14 @@ import Contas from './pages/Contas';
 import Patrimonio from './pages/Patrimonio';
 import Recorrentes from './pages/Recorrentes';
 import Relatorios from './pages/Relatorios';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
 function App() {
   return (
     <Router>
+      <ToastContainer position="top-right" autoClose={3000} />
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />

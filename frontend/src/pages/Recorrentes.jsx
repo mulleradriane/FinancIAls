@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/api';
+import { toast } from 'react-toastify';
 import {
   CreditCard,
   RotateCcw,
@@ -48,10 +49,11 @@ const Recorrentes = () => {
     if (window.confirm('Deseja realmente excluir esta recorrência? Todas as transações (passadas e futuras) vinculadas a ela serão apagadas.')) {
       try {
         await api.delete(`/recurring-expenses/${id}`);
+        toast.success('Recorrência excluída!');
         fetchData();
       } catch (error) {
         console.error('Error deleting recurrence:', error);
-        alert('Erro ao excluir recorrência.');
+        toast.error('Erro ao excluir recorrência.');
       }
     }
   };
@@ -60,10 +62,11 @@ const Recorrentes = () => {
     if (window.confirm('Deseja realmente encerrar esta recorrência? As transações passadas serão mantidas, mas as futuras serão apagadas.')) {
       try {
         await api.post(`/recurring-expenses/${id}/terminate`);
+        toast.success('Recorrência encerrada!');
         fetchData();
       } catch (error) {
         console.error('Error terminating recurrence:', error);
-        alert('Erro ao encerrar recorrência.');
+        toast.error('Erro ao encerrar recorrência.');
       }
     }
   };

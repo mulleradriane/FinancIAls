@@ -36,12 +36,31 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
             db.refresh(obj)
         return obj
 
-    def get_unified(self, db: Session, *, skip: int = 0, limit: int = 100) -> List[UnifiedTransactionResponse]:
+    def get_unified(
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        account_id: Optional[UUID] = None,
+        category_id: Optional[UUID] = None,
+        start_date: Optional[datetime.date] = None,
+        end_date: Optional[datetime.date] = None
+    ) -> List[UnifiedTransactionResponse]:
         # Get Transactions
+        query = select(Transaction).filter(Transaction.deleted_at == None)
+
+        if account_id:
+            query = query.filter(Transaction.account_id == account_id)
+        if category_id:
+            query = query.filter(Transaction.category_id == category_id)
+        if start_date:
+            query = query.filter(Transaction.date >= start_date)
+        if end_date:
+            query = query.filter(Transaction.date <= end_date)
+
         transactions = db.scalars(
-            select(Transaction)
-            .filter(Transaction.deleted_at == None)
-            .options(joinedload(Transaction.category), joinedload(Transaction.account))
+            query.options(joinedload(Transaction.category), joinedload(Transaction.account))
             .order_by(Transaction.date.desc())
             .offset(skip)
             .limit(limit)
@@ -57,48 +76,69 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
                 category_name=t.category.name if t.category else "Sem Categoria",
                 is_transfer=False,
                 installment_number=t.installment_number,
-                account_name=t.account.name if t.account else "Sem Conta"
+                account_name=t.account.name if t.account else "Sem Conta",
+                account_type=t.account.type if t.account else None
             ))
 
         # Get Transfers
-        transfers = db.scalars(
-            select(Transfer)
-            .options(joinedload(Transfer.from_account), joinedload(Transfer.to_account))
-            .order_by(Transfer.date.desc())
-            .offset(skip)
-            .limit(limit)
-        ).all()
+        # For transfers, we only filter by account_id and dates. Category filtering doesn't apply directly.
+        if not category_id:
+            query_tr = select(Transfer)
+            if account_id:
+                query_tr = query_tr.filter((Transfer.from_account_id == account_id) | (Transfer.to_account_id == account_id))
+            if start_date:
+                query_tr = query_tr.filter(Transfer.date >= start_date)
+            if end_date:
+                query_tr = query_tr.filter(Transfer.date <= end_date)
 
-        for tr in transfers:
-            # Entry for the source account (outgoing)
-            unified_list.append(UnifiedTransactionResponse(
-                id=tr.id, # Note: using same ID, might need handling in frontend
-                description=tr.description or "Transferência",
-                amount=tr.amount * -1,
-                date=tr.date,
-                category_name=f"Transferência para {tr.to_account.name}",
-                is_transfer=True,
-                account_name=tr.from_account.name,
-                from_account_name=tr.from_account.name,
-                to_account_name=tr.to_account.name
-            ))
-            # Entry for the destination account (incoming)
-            unified_list.append(UnifiedTransactionResponse(
-                id=tr.id,
-                description=tr.description or "Transferência",
-                amount=tr.amount,
-                date=tr.date,
-                category_name=f"Recebido de {tr.from_account.name}",
-                is_transfer=True,
-                account_name=tr.to_account.name,
-                from_account_name=tr.from_account.name,
-                to_account_name=tr.to_account.name
-            ))
+            transfers = db.scalars(
+                query_tr.options(joinedload(Transfer.from_account), joinedload(Transfer.to_account))
+                .order_by(Transfer.date.desc())
+                .offset(skip)
+                .limit(limit)
+            ).all()
+
+            for tr in transfers:
+                # Entry for the source account (outgoing)
+                if not account_id or tr.from_account_id == account_id:
+                    unified_list.append(UnifiedTransactionResponse(
+                        id=tr.id,
+                        description=tr.description or "Transferência",
+                        amount=tr.amount * -1,
+                        date=tr.date,
+                        category_name=f"Transferência para {tr.to_account.name}",
+                        is_transfer=True,
+                        account_name=tr.from_account.name,
+                        account_type=tr.from_account.type,
+                        from_account_name=tr.from_account.name,
+                        to_account_name=tr.to_account.name
+                    ))
+                # Entry for the destination account (incoming)
+                if not account_id or tr.to_account_id == account_id:
+                    unified_list.append(UnifiedTransactionResponse(
+                        id=tr.id,
+                        description=tr.description or "Transferência",
+                        amount=tr.amount,
+                        date=tr.date,
+                        category_name=f"Recebido de {tr.from_account.name}",
+                        is_transfer=True,
+                        account_name=tr.to_account.name,
+                        account_type=tr.to_account.type,
+                        from_account_name=tr.from_account.name,
+                        to_account_name=tr.to_account.name
+                    ))
 
         # Re-sort combined list by date desc
         unified_list.sort(key=lambda x: x.date, reverse=True)
 
-        # Apply limit again on the combined list (optional, but good for consistency)
         return unified_list[:limit]
+
+    def get_suggestion(self, db: Session, description: str) -> Optional[Transaction]:
+        return db.scalars(
+            select(Transaction)
+            .filter(Transaction.description.ilike(description), Transaction.deleted_at == None)
+            .order_by(Transaction.date.desc())
+            .limit(1)
+        ).first()
 
 transaction = CRUDTransaction(Transaction)

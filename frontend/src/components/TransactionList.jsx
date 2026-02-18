@@ -11,10 +11,21 @@ import {
   HelpCircle,
   Pencil,
   Trash2,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Landmark,
+  Wallet
 } from 'lucide-react';
 
 const TransactionList = ({ transactions, onEdit, onDelete }) => {
+  const getAccountIcon = (type) => {
+    switch (type) {
+      case 'carteira': return <Wallet size={14} title="Carteira" />;
+      case 'banco': return <Landmark size={14} title="Banco (Débito/Pix)" />;
+      case 'cartao_credito': return <CreditCard size={14} title="Cartão de Crédito" />;
+      default: return <Landmark size={14} title="Conta" />;
+    }
+  };
+
   const getIcon = (t) => {
     if (t.is_transfer) return <ArrowLeftRight size={16} color="#007bff" />;
 
@@ -62,7 +73,10 @@ const TransactionList = ({ transactions, onEdit, onDelete }) => {
           {transactions.map((t, index) => (
             <tr key={`${t.id}-${t.account_name}-${index}`} style={{ borderBottom: '1px solid #f5f5f5' }}>
               <td style={{ padding: '12px', color: '#666', fontSize: '0.9rem' }}>
-                {t.account_name}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  {getAccountIcon(t.account_type)}
+                  <span>{t.account_name}</span>
+                </div>
               </td>
               <td style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 {getIcon(t)}
