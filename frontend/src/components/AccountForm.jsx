@@ -1,6 +1,18 @@
 import React, { useState } from 'react';
-import api from '../api/api';
-import { toast } from 'react-toastify';
+import api from '@/api/api';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const AccountForm = ({ account, onAccountCreated, onClose }) => {
   const [name, setName] = useState(account ? account.name : '');
@@ -49,19 +61,9 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
         await api.post('/accounts/', payload);
       }
 
-      setName('');
-      setType('banco');
-      setInitialBalance(0);
-      setDisplayInitialBalance('');
-      setDisplayCurrentBalance('');
-
       toast.success(account ? 'Conta atualizada!' : 'Conta criada!');
-      if (onAccountCreated) {
-        onAccountCreated();
-      }
-      if (onClose) {
-        onClose();
-      }
+      if (onAccountCreated) onAccountCreated();
+      if (onClose) onClose();
     } catch (error) {
       console.error('Error saving account:', error);
       const detail = error.response?.data?.detail || 'Erro ao salvar conta.';
@@ -70,71 +72,78 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div className="form-group" style={{ marginBottom: '15px' }}>
-        <label htmlFor="accountName">Nome da Conta:</label>
-        <input
-          id="accountName"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
-        />
-      </div>
-      <div className="form-group" style={{ marginBottom: '15px' }}>
-        <label htmlFor="accountType">Tipo:</label>
-        <select
-          id="accountType"
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          required
-          style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
-        >
-          <option value="carteira">Carteira (Dinheiro)</option>
-          <option value="banco">Banco (Corrente)</option>
-          <option value="poupanca">Poupança</option>
-          <option value="investimento">Investimento</option>
-          <option value="cartao_credito">Cartão de Crédito</option>
-        </select>
-      </div>
-
-      {!account ? (
-        <div className="form-group" style={{ marginBottom: '15px' }}>
-          <label htmlFor="initialBalance">Saldo Inicial:</label>
-          <input
-            id="initialBalance"
-            type="text"
-            placeholder="R$ 0,00"
-            value={displayInitialBalance}
-            onChange={(e) => handleBalanceChange(e, setInitialBalance, setDisplayInitialBalance)}
-            style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
+    <form onSubmit={handleSubmit} className="space-y-6 pt-2">
+      <div className="space-y-4">
+        <div className="grid gap-2">
+          <Label htmlFor="accountName">Nome da Conta</Label>
+          <Input
+            id="accountName"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ex: Nubank, Carteira, Itaú..."
+            required
+            className="bg-secondary/30 border-none h-11 rounded-xl"
           />
         </div>
-      ) : (
-        <div className="form-group" style={{ marginBottom: '15px' }}>
-          <label htmlFor="currentBalance">Saldo Atual:</label>
-          <input
-            id="currentBalance"
-            type="text"
-            placeholder="R$ 0,00"
-            value={displayCurrentBalance}
-            onChange={(e) => handleBalanceChange(e, setCurrentBalance, setDisplayCurrentBalance)}
-            style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
-          />
-          <small style={{ color: 'var(--sidebar-text)' }}>Alterar o saldo gerará uma transação de ajuste.</small>
-        </div>
-      )}
 
-      <div className="form-actions" style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-        <button type="submit" style={{ backgroundColor: '#007bff', color: 'white', border: 'none', padding: '10px', flex: 1, cursor: 'pointer' }}>
-          Salvar Conta
-        </button>
-        {onClose && (
-          <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px', cursor: 'pointer' }}>
-            Cancelar
-          </button>
+        <div className="grid gap-2">
+          <Label htmlFor="accountType">Tipo de Conta</Label>
+          <Select value={type} onValueChange={setType}>
+            <SelectTrigger className="bg-secondary/30 border-none h-11 rounded-xl">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="carteira">Carteira (Dinheiro)</SelectItem>
+              <SelectItem value="banco">Banco (Corrente)</SelectItem>
+              <SelectItem value="poupanca">Poupança</SelectItem>
+              <SelectItem value="investimento">Investimento</SelectItem>
+              <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {!account ? (
+          <div className="grid gap-2">
+            <Label htmlFor="initialBalance">Saldo Inicial</Label>
+            <Input
+              id="initialBalance"
+              type="text"
+              placeholder="R$ 0,00"
+              value={displayInitialBalance}
+              onChange={(e) => handleBalanceChange(e, setInitialBalance, setDisplayInitialBalance)}
+              className="bg-secondary/30 border-none h-11 rounded-xl font-semibold text-lg"
+            />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid gap-2">
+              <Label htmlFor="currentBalance">Saldo Atual</Label>
+              <Input
+                id="currentBalance"
+                type="text"
+                placeholder="R$ 0,00"
+                value={displayCurrentBalance}
+                onChange={(e) => handleBalanceChange(e, setCurrentBalance, setDisplayCurrentBalance)}
+                className="bg-secondary/30 border-none h-11 rounded-xl font-semibold text-lg"
+              />
+            </div>
+            <Alert className="bg-primary/5 border-none rounded-xl">
+              <AlertCircle className="h-4 w-4 text-primary" />
+              <AlertDescription className="text-xs text-muted-foreground">
+                Alterar o saldo manualmente gerará automaticamente uma transação de ajuste.
+              </AlertDescription>
+            </Alert>
+          </div>
         )}
+      </div>
+
+      <div className="flex gap-3 pt-2">
+        <Button type="submit" className="flex-1 rounded-xl h-12 font-bold shadow-lg shadow-primary/20">
+          Salvar Conta
+        </Button>
+        <Button type="button" variant="ghost" onClick={onClose} className="flex-1 h-12 rounded-xl">
+          Cancelar
+        </Button>
       </div>
     </form>
   );

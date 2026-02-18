@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
-import api from '../api/api';
-import { toast } from 'react-toastify';
+import api from '@/api/api';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowRightLeft } from 'lucide-react';
 
 const TransferForm = ({ accounts, onTransferCreated, onClose }) => {
   const [fromAccountId, setFromAccountId] = useState('');
@@ -30,6 +41,10 @@ const TransferForm = ({ accounts, onTransferCreated, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!fromAccountId || !toAccountId) {
+      toast.error('Selecione as contas de origem e destino.');
+      return;
+    }
     if (fromAccountId === toAccountId) {
       toast.error('Contas de origem e destino devem ser diferentes.');
       return;
@@ -44,12 +59,8 @@ const TransferForm = ({ accounts, onTransferCreated, onClose }) => {
       };
       await api.post('/transfers/', payload);
       toast.success('Transferência realizada!');
-      if (onTransferCreated) {
-        onTransferCreated();
-      }
-      if (onClose) {
-        onClose();
-      }
+      if (onTransferCreated) onTransferCreated();
+      if (onClose) onClose();
     } catch (error) {
       console.error('Error creating transfer:', error);
       const detail = error.response?.data?.detail || 'Erro ao realizar transferência.';
@@ -58,88 +69,92 @@ const TransferForm = ({ accounts, onTransferCreated, onClose }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div className="form-group" style={{ marginBottom: '15px' }}>
-        <label htmlFor="fromAccount">De:</label>
-        <select
-          id="fromAccount"
-          value={fromAccountId}
-          onChange={(e) => setFromAccountId(e.target.value)}
-          required
-          style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
-        >
-          <option value="">Selecione a conta de origem</option>
-          {accounts.map((acc) => (
-            <option key={acc.id} value={acc.id}>
-              {acc.name}
-            </option>
-          ))}
-        </select>
+    <form onSubmit={handleSubmit} className="space-y-6 pt-2">
+      <div className="flex items-center gap-4 bg-secondary/20 p-4 rounded-2xl border border-dashed border-primary/20">
+        <div className="flex-1 space-y-2">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground ml-1">Origem</Label>
+          <Select value={fromAccountId} onValueChange={setFromAccountId} required>
+            <SelectTrigger className="bg-background border-none h-11 rounded-xl">
+              <SelectValue placeholder="De..." />
+            </SelectTrigger>
+            <SelectContent>
+              {accounts.map((acc) => (
+                <SelectItem key={acc.id} value={acc.id}>
+                  {acc.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="pt-6">
+          <div className="p-2 bg-primary/10 rounded-full text-primary">
+            <ArrowRightLeft size={16} />
+          </div>
+        </div>
+
+        <div className="flex-1 space-y-2">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground ml-1">Destino</Label>
+          <Select value={toAccountId} onValueChange={setToAccountId} required>
+            <SelectTrigger className="bg-background border-none h-11 rounded-xl">
+              <SelectValue placeholder="Para..." />
+            </SelectTrigger>
+            <SelectContent>
+              {accounts.map((acc) => (
+                <SelectItem key={acc.id} value={acc.id}>
+                  {acc.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <div className="form-group" style={{ marginBottom: '15px' }}>
-        <label htmlFor="toAccount">Para:</label>
-        <select
-          id="toAccount"
-          value={toAccountId}
-          onChange={(e) => setToAccountId(e.target.value)}
-          required
-          style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
-        >
-          <option value="">Selecione a conta de destino</option>
-          {accounts.map((acc) => (
-            <option key={acc.id} value={acc.id}>
-              {acc.name}
-            </option>
-          ))}
-        </select>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-2">
+          <Label htmlFor="transferAmount">Valor</Label>
+          <Input
+            id="transferAmount"
+            type="text"
+            placeholder="R$ 0,00"
+            value={displayAmount}
+            onChange={handleAmountChange}
+            required
+            className="bg-secondary/30 border-none h-11 rounded-xl font-semibold text-lg"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="transferDate">Data</Label>
+          <Input
+            id="transferDate"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            required
+            className="bg-secondary/30 border-none h-11 rounded-xl"
+          />
+        </div>
       </div>
 
-      <div className="form-group" style={{ marginBottom: '15px' }}>
-        <label htmlFor="transferAmount">Valor:</label>
-        <input
-          id="transferAmount"
-          type="text"
-          placeholder="R$ 0,00"
-          value={displayAmount}
-          onChange={handleAmountChange}
-          required
-          style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
-        />
-      </div>
-
-      <div className="form-group" style={{ marginBottom: '15px' }}>
-        <label htmlFor="transferDate">Data:</label>
-        <input
-          id="transferDate"
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          required
-          style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
-        />
-      </div>
-
-      <div className="form-group" style={{ marginBottom: '15px' }}>
-        <label htmlFor="transferDescription">Descrição (Opcional):</label>
-        <input
+      <div className="grid gap-2">
+        <Label htmlFor="transferDescription">Descrição (Opcional)</Label>
+        <Input
           id="transferDescription"
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--text-color)' }}
+          placeholder="Ex: Transferência para reserva..."
+          className="bg-secondary/30 border-none h-11 rounded-xl"
         />
       </div>
 
-      <div className="form-actions" style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-        <button type="submit" style={{ backgroundColor: '#007bff', color: 'white', border: 'none', padding: '10px', flex: 1, cursor: 'pointer' }}>
-          Realizar Transferência
-        </button>
-        {onClose && (
-          <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px', cursor: 'pointer' }}>
-            Cancelar
-          </button>
-        )}
+      <div className="flex gap-3 pt-2">
+        <Button type="submit" className="flex-1 rounded-xl h-12 font-bold shadow-lg shadow-primary/20">
+          Confirmar Transferência
+        </Button>
+        <Button type="button" variant="ghost" onClick={onClose} className="flex-1 h-12 rounded-xl">
+          Cancelar
+        </Button>
       </div>
     </form>
   );

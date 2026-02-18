@@ -1,15 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api/api';
+import api from '@/api/api';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, Wallet, Briefcase, CreditCard,
-  AlertCircle, RefreshCw
+  AlertCircle, RefreshCw, Landmark, PiggyBank
 } from 'lucide-react';
-import { toast } from 'react-toastify';
-import Modal from '../components/Modal';
+import { toast } from 'sonner';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 const Patrimonio = () => {
   const [data, setData] = useState(null);
@@ -85,9 +96,15 @@ const Patrimonio = () => {
     }).format(numberValue);
   };
 
-  if (loading && !data) return <div style={{ padding: '20px' }}>Carregando...</div>;
+  if (loading && !data) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="animate-pulse text-muted-foreground font-medium">Carregando patrimônio...</div>
+      </div>
+    );
+  }
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+  const COLORS = ['#2563EB', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6'];
 
   const typeLabels = {
     carteira: 'Dinheiro',
@@ -103,224 +120,228 @@ const Patrimonio = () => {
   })).filter(item => item.value > 0) : [];
 
   return (
-    <div className="net-worth-page" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      <h1>Patrimônio</h1>
-      <p style={{ color: 'var(--sidebar-text)', marginBottom: '30px' }}>
-        Visão consolidada dos seus ativos e passivos.
-      </p>
+    <div className="space-y-8 pb-10">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Patrimônio</h1>
+        <p className="text-muted-foreground mt-1">Visão consolidada dos seus ativos e passivos.</p>
+      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '30px', marginBottom: '30px' }}>
-        {/* Ativos vs Passivos Cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '20px'
-          }}>
-            <div className="card" style={{ ...cardStyle, borderLeft: '5px solid #28a745' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <span style={{ color: 'var(--sidebar-text)', fontSize: '0.9rem' }}>Ativos (O que tenho)</span>
-                <TrendingUp size={20} color="#28a745" />
-              </div>
-              <h2 style={{ margin: 0 }}>{formatCurrency(data?.total_assets)}</h2>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <Card className="border-none shadow-md bg-success/5">
+              <CardContent className="p-6 flex items-center gap-4">
+                <div className="p-3 bg-success/10 rounded-2xl text-success">
+                  <TrendingUp size={24} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Ativos</p>
+                  <h3 className="text-2xl font-bold text-success">{formatCurrency(data?.total_assets)}</h3>
+                </div>
+              </CardContent>
+            </Card>
 
-            <div className="card" style={{ ...cardStyle, borderLeft: '5px solid #dc3545' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <span style={{ color: 'var(--sidebar-text)', fontSize: '0.9rem' }}>Passivos (Dívidas)</span>
-                <TrendingDown size={20} color="#dc3545" />
-              </div>
-              <h2 style={{ margin: 0, color: '#dc3545' }}>{formatCurrency(data?.total_liabilities)}</h2>
-            </div>
+            <Card className="border-none shadow-md bg-destructive/5">
+              <CardContent className="p-6 flex items-center gap-4">
+                <div className="p-3 bg-destructive/10 rounded-2xl text-destructive">
+                  <TrendingDown size={24} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Passivos</p>
+                  <h3 className="text-2xl font-bold text-destructive">{formatCurrency(data?.total_liabilities)}</h3>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          <div style={{
-            backgroundColor: data?.net_worth >= 0 ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)',
-            padding: '30px',
-            borderRadius: '12px',
-            textAlign: 'center',
-            border: `1px solid ${data?.net_worth >= 0 ? '#28a745' : '#dc3545'}50`
-          }}>
-            <div style={{ fontSize: '1rem', color: 'var(--sidebar-text)', marginBottom: '5px' }}>Patrimônio Líquido</div>
-            <h1 style={{ margin: 0, fontSize: '2.5rem', color: data?.net_worth >= 0 ? '#28a745' : '#dc3545' }}>
-              {formatCurrency(data?.net_worth)}
-            </h1>
-          </div>
+          <Card className={cn(
+            "border-none shadow-lg rounded-2xl overflow-hidden",
+            data?.net_worth >= 0 ? "bg-primary/5" : "bg-destructive/5"
+          )}>
+            <CardContent className="p-10 text-center space-y-2">
+              <p className="text-sm font-semibold text-muted-foreground uppercase tracking-[0.2em]">Patrimônio Líquido</p>
+              <h1 className={cn(
+                "text-5xl font-black tracking-tighter",
+                data?.net_worth >= 0 ? "text-primary" : "text-destructive"
+              )}>
+                {formatCurrency(data?.net_worth)}
+              </h1>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Allocation Chart */}
-        <div className="card" style={cardStyle}>
-          <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Alocação de Ativos</h3>
-          <div style={{ width: '100%', height: '220px' }}>
-            <ResponsiveContainer>
-              <PieChart>
-                <Pie
-                  data={allocationData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={70}
-                  paddingAngle={5}
+        <Card className="border-none shadow-md rounded-2xl">
+          <CardHeader>
+            <CardTitle>Alocação de Ativos</CardTitle>
+            <CardDescription>Distribuição por tipo de conta</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[250px] w-full relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={allocationData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {allocationData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <Card className="p-3 shadow-xl border-none bg-background/90 backdrop-blur-sm">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill }} />
+                              <span className="font-bold text-sm">{payload[0].name}</span>
+                            </div>
+                            <p className="text-xs font-bold mt-1">{formatCurrency(payload[0].value)}</p>
+                          </Card>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Legend verticalAlign="bottom" align="center" iconType="circle" />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Evolution Chart */}
+      <Card className="border-none shadow-md rounded-2xl">
+        <CardHeader>
+          <CardTitle>Evolução Patrimonial</CardTitle>
+          <CardDescription>Histórico de valorização líquida</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[350px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data?.history} margin={{ left: -10, right: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted-foreground) / 0.1)" />
+                <XAxis
+                  dataKey="month"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  tickFormatter={(value) => `R$${value >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
+                />
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <Card className="p-3 shadow-xl border-none bg-background/90 backdrop-blur-sm">
+                          <p className="font-bold text-sm mb-1">{label}</p>
+                          <p className="text-primary font-black text-base">{formatCurrency(payload[0].value)}</p>
+                        </Card>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Line
+                  type="monotone"
                   dataKey="value"
-                >
-                  {allocationData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => formatCurrency(value)} />
-                <Legend verticalAlign="bottom" height={36}/>
-              </PieChart>
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={4}
+                  dot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "hsl(var(--background))" }}
+                  activeDot={{ r: 8, strokeWidth: 0 }}
+                />
+              </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Line Chart */}
-      <div className="card" style={{ ...cardStyle, marginBottom: '30px' }}>
-        <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Evolução Patrimonial</h3>
-        <div style={{ width: '100%', height: '300px' }}>
-          <ResponsiveContainer>
-            <LineChart data={data?.history}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" />
-              <YAxis tickFormatter={(value) => `R$ ${value}`} />
-              <Tooltip formatter={(value) => formatCurrency(value)} />
-              <Line
-                type="monotone"
-                dataKey="value"
-                name="Patrimônio"
-                stroke="#007bff"
-                strokeWidth={3}
-                dot={{ r: 6 }}
-                activeDot={{ r: 8 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Gestão de Ativos (Investimentos) */}
-      <div className="card" style={cardStyle}>
-        <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Gestão de Ativos (Investimentos)</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-          {investments.map(acc => (
-            <div key={acc.id} style={{
-              padding: '15px',
-              borderRadius: '8px',
-              border: '1px solid var(--border-color)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              backgroundColor: 'var(--sidebar-hover)'
-            }}>
-              <div>
-                <div style={{ fontWeight: '600' }}>{acc.name}</div>
-                <div style={{ color: '#28a745', fontSize: '1.1rem', fontWeight: 'bold' }}>{formatCurrency(acc.balance)}</div>
+      {/* Assets Management */}
+      <Card className="border-none shadow-md rounded-2xl overflow-hidden">
+        <CardHeader>
+          <CardTitle>Gestão de Ativos</CardTitle>
+          <CardDescription>Atualize o saldo de seus investimentos e poupanças</CardDescription>
+        </CardHeader>
+        <CardContent className="bg-secondary/10 pt-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {investments.map(acc => (
+              <Card key={acc.id} className="border-none shadow-sm rounded-xl hover:shadow-md transition-all">
+                <CardContent className="p-5 flex justify-between items-center">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold truncate max-w-[150px]">{acc.name}</p>
+                    <p className="text-xl font-bold text-success">{formatCurrency(acc.balance)}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedAccount(acc);
+                      setNewBalance(formatCurrency(acc.balance));
+                      setIsUpdateModalOpen(true);
+                    }}
+                    className="rounded-lg h-9"
+                  >
+                    <RefreshCw size={14} className="mr-2" /> Atualizar
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+            {investments.length === 0 && (
+              <div className="col-span-full py-10 text-center text-muted-foreground italic">
+                Nenhum investimento cadastrado como conta.
               </div>
-              <button
-                onClick={() => {
-                  setSelectedAccount(acc);
-                  setNewBalance(formatCurrency(acc.balance));
-                  setIsUpdateModalOpen(true);
-                }}
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  fontSize: '0.9rem'
-                }}
-              >
-                <RefreshCw size={14} /> Atualizar
-              </button>
-            </div>
-          ))}
-          {investments.length === 0 && (
-            <p style={{ color: 'var(--sidebar-text)' }}>Nenhum investimento cadastrado como conta.</p>
-          )}
-        </div>
-      </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Update Modal */}
-      <Modal
-        isOpen={isUpdateModalOpen}
-        onClose={() => setIsUpdateModalOpen(false)}
-        title={`Atualizar Saldo: ${selectedAccount?.name}`}
-      >
-        <form onSubmit={handleUpdateBalance} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '8px' }}>Novo Saldo</label>
-            <input
-              type="text"
-              value={newBalance}
-              onChange={(e) => setNewBalance(formatInputCurrency(e.target.value))}
-              placeholder="R$ 0,00"
-              style={inputStyle}
-              required
-              autoFocus
-            />
-          </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              type="submit"
-              style={{
-                flex: 1,
-                padding: '12px',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontWeight: 'bold',
-                cursor: 'pointer'
-              }}
-            >
-              Confirmar
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsUpdateModalOpen(false)}
-              style={{
-                flex: 1,
-                padding: '12px',
-                backgroundColor: '#6c757d',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontWeight: 'bold',
-                cursor: 'pointer'
-              }}
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </Modal>
+      <Dialog open={isUpdateModalOpen} onOpenChange={setIsUpdateModalOpen}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Atualizar Saldo</DialogTitle>
+            <CardDescription>{selectedAccount?.name}</CardDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateBalance} className="space-y-6 pt-4">
+            <div className="grid gap-2">
+              <Label htmlFor="newBalance">Novo Saldo Atual</Label>
+              <Input
+                id="newBalance"
+                type="text"
+                value={newBalance}
+                onChange={(e) => setNewBalance(formatInputCurrency(e.target.value))}
+                placeholder="R$ 0,00"
+                className="bg-secondary/30 border-none h-12 rounded-xl text-xl font-bold"
+                required
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                <AlertCircle size={12} /> Isso criará um ajuste de saldo automático.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button type="submit" className="flex-1 h-12 rounded-xl font-bold shadow-lg shadow-success/20 bg-success hover:bg-success/90">
+                Confirmar
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setIsUpdateModalOpen(false)} className="flex-1 h-12 rounded-xl">
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
-
-const cardStyle = {
-  backgroundColor: 'var(--card-bg)',
-  padding: '20px',
-  borderRadius: '12px',
-  boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-  border: '1px solid var(--border-color)',
-  color: 'var(--text-color)'
-};
-
-const inputStyle = {
-  width: '100%',
-  padding: '12px',
-  borderRadius: '8px',
-  border: '1px solid var(--border-color)',
-  backgroundColor: 'var(--card-bg)',
-  color: 'var(--text-color)',
-  fontSize: '16px'
 };
 
 export default Patrimonio;

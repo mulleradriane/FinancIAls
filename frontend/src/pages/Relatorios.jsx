@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api/api';
+import api from '@/api/api';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { TrendingUp, TrendingDown, Wallet, PieChartIcon, ArrowRight, BarChart3 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const Relatorios = () => {
   const [summary, setSummary] = useState(null);
@@ -47,113 +52,174 @@ const Relatorios = () => {
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ];
 
+  const COLORS = ['#2563EB', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6'];
+
   return (
-    <div className="reports-page" style={{ padding: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1>Relatórios e Análises</h1>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <select value={month} onChange={(e) => setMonth(parseInt(e.target.value))} style={{ padding: '8px' }}>
-            {monthNames.map((name, i) => (
-              <option key={i + 1} value={i + 1}>{name}</option>
-            ))}
-          </select>
-          <select value={year} onChange={(e) => setYear(parseInt(e.target.value))} style={{ padding: '8px' }}>
-            {[2024, 2025, 2026].map(y => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
+    <div className="space-y-8 pb-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Relatórios</h1>
+          <p className="text-muted-foreground mt-1">Análise detalhada do seu desempenho mensal.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Select value={month.toString()} onValueChange={(val) => setMonth(parseInt(val))}>
+            <SelectTrigger className="w-[150px] bg-secondary/30 border-none rounded-xl">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {monthNames.map((name, i) => (
+                <SelectItem key={i + 1} value={(i + 1).toString()}>{name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={year.toString()} onValueChange={(val) => setYear(parseInt(val))}>
+            <SelectTrigger className="w-[100px] bg-secondary/30 border-none rounded-xl">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[2024, 2025, 2026].map(y => (
+                <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       {loading ? (
-        <div>Carregando...</div>
+        <div className="flex items-center justify-center h-[50vh]">
+          <div className="animate-pulse text-muted-foreground font-medium">Processando relatórios...</div>
+        </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
-          <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Despesas por Categoria</h3>
-            <div style={{ width: '100%', height: '300px' }}>
-              {chartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={chartData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {chartData.map((entry, index) => {
-                        const category = categories.find(c => c.name === entry.name);
-                        return <Cell key={`cell-${index}`} fill={category?.color || '#888'} />;
-                      })}
-                    </Pie>
-                    <Tooltip formatter={(value) => formatCurrency(value)} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#666' }}>
-                  Sem despesas neste mês.
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Maiores Gastos do Mês</h3>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
-                  <th style={{ padding: '10px' }}>Descrição</th>
-                  <th style={{ padding: '10px' }}>Categoria</th>
-                  <th style={{ padding: '10px', textAlign: 'right' }}>Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary?.top_transactions.map((t, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '10px' }}>{t.description}</td>
-                    <td style={{ padding: '10px' }}>
-                      <span style={{ fontSize: '0.8rem', backgroundColor: 'var(--table-header-bg)', padding: '2px 8px', borderRadius: '10px' }}>
-                        {t.category_name}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px', textAlign: 'right', fontWeight: 'bold', color: '#dc3545' }}>
-                      {formatCurrency(t.amount)}
-                    </td>
-                  </tr>
-                ))}
-                {summary?.top_transactions.length === 0 && (
-                  <tr>
-                    <td colSpan="3" style={{ padding: '20px', textAlign: 'center', color: '#666' }}>Nenhum gasto registrado.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
-             <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                <div style={{ color: 'var(--sidebar-text)', fontSize: '0.9rem' }}>Total de Receitas</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#28a745' }}>{formatCurrency(summary?.total_income || 0)}</div>
-             </div>
-             <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                <div style={{ color: 'var(--sidebar-text)', fontSize: '0.9rem' }}>Total de Despesas</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#dc3545' }}>{formatCurrency(summary?.total_expenses || 0)}</div>
-             </div>
-             <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                <div style={{ color: 'var(--sidebar-text)', fontSize: '0.9rem' }}>Total Investido</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#007bff' }}>{formatCurrency(summary?.total_invested || 0)}</div>
-             </div>
-             <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                <div style={{ color: 'var(--sidebar-text)', fontSize: '0.9rem' }}>Saldo Líquido</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: (summary?.balance || 0) >= 0 ? 'var(--text-color)' : '#dc3545' }}>
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="border-none shadow-md bg-success/5">
+              <CardContent className="p-6">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Receitas</p>
+                <h3 className="text-2xl font-bold text-success mt-1">{formatCurrency(summary?.total_income || 0)}</h3>
+              </CardContent>
+            </Card>
+            <Card className="border-none shadow-md bg-destructive/5">
+              <CardContent className="p-6">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Despesas</p>
+                <h3 className="text-2xl font-bold text-destructive mt-1">{formatCurrency(summary?.total_expenses || 0)}</h3>
+              </CardContent>
+            </Card>
+            <Card className="border-none shadow-md bg-primary/5">
+              <CardContent className="p-6">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Investido</p>
+                <h3 className="text-2xl font-bold text-primary mt-1">{formatCurrency(summary?.total_invested || 0)}</h3>
+              </CardContent>
+            </Card>
+            <Card className="border-none shadow-md bg-secondary/30">
+              <CardContent className="p-6">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Saldo Líquido</p>
+                <h3 className={cn(
+                  "text-2xl font-bold mt-1",
+                  (summary?.balance || 0) >= 0 ? "text-foreground" : "text-destructive"
+                )}>
                   {formatCurrency(summary?.balance || 0)}
+                </h3>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <Card className="border-none shadow-md rounded-2xl">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div className="space-y-1">
+                  <CardTitle>Composição de Gastos</CardTitle>
+                  <CardDescription>Distribuição por categoria</CardDescription>
                 </div>
-             </div>
+                <PieChartIcon className="h-5 w-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-[350px] w-full relative">
+                  {chartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={chartData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={80}
+                          outerRadius={100}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {chartData.map((entry, index) => {
+                            const category = categories.find(c => c.name === entry.name);
+                            return <Cell key={`cell-${index}`} fill={category?.color || COLORS[index % COLORS.length]} stroke="none" />;
+                          })}
+                        </Pie>
+                        <Tooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <Card className="p-3 shadow-xl border-none bg-background/90 backdrop-blur-sm">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill }} />
+                                    <span className="font-bold text-sm">{payload[0].name}</span>
+                                  </div>
+                                  <p className="text-xs font-bold mt-1">{formatCurrency(payload[0].value)}</p>
+                                </Card>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Legend verticalAlign="bottom" height={36}/>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
+                      <BarChart3 size={40} className="opacity-20" />
+                      <p className="italic">Nenhuma despesa no período.</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-none shadow-md rounded-2xl">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div className="space-y-1">
+                  <CardTitle>Maiores Saídas</CardTitle>
+                  <CardDescription>Principais transações do mês</CardDescription>
+                </div>
+                <TrendingDown className="h-5 w-5 text-destructive" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {summary?.top_transactions.map((t, i) => {
+                    const category = categories.find(c => c.name === t.category_name);
+                    return (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-secondary/20 hover:bg-secondary/30 transition-colors group">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-10 h-10 rounded-full flex items-center justify-center text-lg border"
+                            style={{ backgroundColor: `${category?.color}15`, borderColor: `${category?.color}30` }}
+                          >
+                            {category?.icon || '💰'}
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">{t.description}</p>
+                            <Badge variant="outline" className="text-[9px] font-bold uppercase h-4 px-1 mt-0.5">
+                              {t.category_name}
+                            </Badge>
+                          </div>
+                        </div>
+                        <p className="font-black text-destructive">{formatCurrency(t.amount)}</p>
+                      </div>
+                    );
+                  })}
+                  {summary?.top_transactions.length === 0 && (
+                    <div className="text-center py-20 text-muted-foreground italic">
+                      Nenhum gasto relevante identificado.
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       )}

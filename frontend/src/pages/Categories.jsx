@@ -1,19 +1,40 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api/api';
-import { toast } from 'react-toastify';
+import api from '@/api/api';
+import { toast } from 'sonner';
 import EmojiPicker from 'emoji-picker-react';
-import { Edit2, Trash2, Plus, X } from 'lucide-react';
-import Modal from '../components/Modal';
+import { Edit2, Trash2, Plus, X, Search, Tag } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/EmptyState";
 
 function Categories() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
 
   // Form state
   const [name, setName] = useState('');
   const [type, setType] = useState('expense');
   const [icon, setIcon] = useState('💰');
-  const [color, setColor] = useState('#007bff');
+  const [color, setColor] = useState('#2563eb');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   // Modal state
@@ -41,7 +62,7 @@ function Categories() {
     setName('');
     setType('expense');
     setIcon('💰');
-    setColor('#007bff');
+    setColor('#2563eb');
     setEditingCategory(null);
     setShowEmojiPicker(false);
   };
@@ -56,7 +77,7 @@ function Categories() {
     setName(category.name);
     setType(category.type);
     setIcon(category.icon || '💰');
-    setColor(category.color || '#007bff');
+    setColor(category.color || '#2563eb');
     setIsModalOpen(true);
   };
 
@@ -95,195 +116,196 @@ function Categories() {
     }
   };
 
+  const filteredCategories = categories.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div className="categories-page" style={{ padding: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1>Categorias</h1>
-        <button
-          onClick={openAddModal}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            borderRadius: '6px',
-            cursor: 'pointer'
-          }}
-        >
-          <Plus size={20} /> Nova Categoria
-        </button>
+    <div className="space-y-8 pb-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Categorias</h1>
+          <p className="text-muted-foreground mt-1">Personalize suas classificações financeiras.</p>
+        </div>
+        <Button onClick={openAddModal} size="lg" className="rounded-xl shadow-lg shadow-primary/20">
+          <Plus className="mr-2 h-5 w-5" /> Nova Categoria
+        </Button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
+      <div className="flex items-center gap-4 max-w-sm">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Procurar categoria..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10 bg-secondary/30 border-none rounded-xl"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {loading ? (
-          <p>Carregando...</p>
-        ) : (
-          categories.map((category) => (
-            <div
+          Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-2xl" />
+          ))
+        ) : filteredCategories.length > 0 ? (
+          filteredCategories.map((category) => (
+            <Card
               key={category.id}
-              style={{
-                backgroundColor: 'var(--card-bg, #fff)',
-                padding: '20px',
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '15px',
-                borderLeft: `6px solid ${category.color || '#007bff'}`
-              }}
+              className="group border-none shadow-md hover:shadow-lg transition-all duration-300 rounded-2xl overflow-hidden"
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '24px' }}>{category.icon || '💰'}</span>
-                  <div>
-                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{category.name}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#666', textTransform: 'capitalize' }}>
-                      {category.type === 'expense' ? 'Despesa' : 'Receita'}
+              <CardContent className="p-0">
+                <div className="p-6">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-4">
+                      <div
+                        className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl border shadow-sm"
+                        style={{
+                          backgroundColor: `${category.color}15`,
+                          borderColor: `${category.color}30`
+                        }}
+                      >
+                        {category.icon || '💰'}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-lg truncate max-w-[120px]">{category.name}</h3>
+                        <Badge variant="outline" className={cn(
+                          "mt-1 text-[10px] uppercase font-bold",
+                          category.type === 'expense' ? "text-destructive border-destructive/20 bg-destructive/5" : "text-success border-success/20 bg-success/5"
+                        )}>
+                          {category.type === 'expense' ? 'Despesa' : 'Receita'}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditModal(category)}
+                        className="h-8 w-8 rounded-full"
+                      >
+                        <Edit2 size={14} className="text-primary" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(category.id)}
+                        className="h-8 w-8 rounded-full"
+                      >
+                        <Trash2 size={14} className="text-destructive" />
+                      </Button>
                     </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    onClick={() => openEditModal(category)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#007bff', padding: '5px' }}
-                  >
-                    <Edit2 size={18} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(category.id)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '5px' }}
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </div>
-            </div>
+                <div
+                  className="h-1.5 w-full"
+                  style={{ backgroundColor: category.color || '#2563eb' }}
+                />
+              </CardContent>
+            </Card>
           ))
-        )}
-        {!loading && categories.length === 0 && <p>Nenhuma categoria encontrada.</p>}
+        ) : null}
       </div>
 
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={editingCategory ? 'Editar Categoria' : 'Nova Categoria'}
-      >
-        <form onSubmit={handleSubmit}>
-          <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
-            <div style={{ flex: '0 0 100px', textAlign: 'center' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Ícone</label>
-              <button
-                type="button"
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                style={{
-                  fontSize: '32px',
-                  width: '64px',
-                  height: '64px',
-                  borderRadius: '12px',
-                  border: '1px solid #ddd',
-                  backgroundColor: '#f8f9fa',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                {icon}
-              </button>
-              {showEmojiPicker && (
-                <div style={{ position: 'absolute', zIndex: 1000, marginTop: '10px' }}>
-                  <div
-                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
-                    onClick={() => setShowEmojiPicker(false)}
-                  />
-                  <div style={{ position: 'relative' }}>
-                    <EmojiPicker
-                      onEmojiClick={(emojiData) => {
-                        setIcon(emojiData.emoji);
-                        setShowEmojiPicker(false);
-                      }}
-                    />
+      {!loading && filteredCategories.length === 0 && (
+        <div className="col-span-full">
+          <EmptyState
+            icon={Tag}
+            title="Nenhuma categoria"
+            description="Você ainda não possui categorias cadastradas ou os filtros não retornaram resultados."
+            actionLabel="Nova Categoria"
+            onAction={openAddModal}
+          />
+        </div>
+      )}
+
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingCategory ? 'Editar Categoria' : 'Nova Categoria'}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative">
+                <Label className="text-center block mb-2">Ícone</Label>
+                <button
+                  type="button"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className="w-20 h-20 rounded-2xl border-2 border-dashed border-primary/20 hover:border-primary/50 hover:bg-primary/5 flex items-center justify-center text-4xl transition-all"
+                  style={{ backgroundColor: `${color}10` }}
+                >
+                  {icon}
+                </button>
+                {showEmojiPicker && (
+                  <div className="absolute z-50 top-full mt-2 left-1/2 -translate-x-1/2">
+                    <div className="fixed inset-0" onClick={() => setShowEmojiPicker(false)} />
+                    <div className="relative shadow-2xl">
+                      <EmojiPicker
+                        onEmojiClick={(emojiData) => {
+                          setIcon(emojiData.emoji);
+                          setShowEmojiPicker(false);
+                        }}
+                        theme="auto"
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
-            <div style={{ flex: 1 }}>
-              <div style={{ marginBottom: '15px' }}>
-                <label htmlFor="cat-name" style={{ display: 'block', marginBottom: '5px' }}>Nome</label>
-                <input
+            <div className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="cat-name">Nome da Categoria</Label>
+                <Input
                   id="cat-name"
-                  type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex: Alimentação, Lazer..."
                   required
-                  style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }}
+                  className="bg-secondary/30 border-none h-11 rounded-xl"
                 />
               </div>
-              <div style={{ marginBottom: '15px' }}>
-                <label htmlFor="cat-type" style={{ display: 'block', marginBottom: '5px' }}>Tipo</label>
-                <select
-                  id="cat-type"
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }}
-                >
-                  <option value="expense">Despesa</option>
-                  <option value="income">Receita</option>
-                </select>
+
+              <div className="grid gap-2">
+                <Label htmlFor="cat-type">Tipo</Label>
+                <Select value={type} onValueChange={setType}>
+                  <SelectTrigger className="bg-secondary/30 border-none h-11 rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="expense">Despesa</SelectItem>
+                    <SelectItem value="income">Receita</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div>
-                <label htmlFor="cat-color" style={{ display: 'block', marginBottom: '5px' }}>Cor</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <input
+
+              <div className="grid gap-2">
+                <Label htmlFor="cat-color">Cor de Identificação</Label>
+                <div className="flex items-center gap-4">
+                  <Input
                     id="cat-color"
                     type="color"
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
-                    style={{ width: '50px', height: '40px', padding: '2px', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}
+                    className="w-16 h-11 p-1 bg-secondary/30 border-none rounded-xl cursor-pointer"
                   />
-                  <span style={{ fontFamily: 'monospace' }}>{color}</span>
+                  <code className="bg-secondary/30 px-3 py-2 rounded-lg text-sm font-mono">{color}</code>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: '30px' }}>
-            <button
-              type="submit"
-              style={{
-                flex: 1,
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                padding: '12px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              {editingCategory ? 'Salvar Alterações' : 'Criar Categoria'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(false)}
-              style={{
-                flex: 1,
-                backgroundColor: '#f8f9fa',
-                border: '1px solid #ddd',
-                padding: '12px',
-                borderRadius: '6px',
-                cursor: 'pointer'
-              }}
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </Modal>
+            <div className="flex gap-3 pt-4">
+              <Button type="submit" className="flex-1 rounded-xl h-12 font-bold shadow-lg shadow-primary/20">
+                {editingCategory ? 'Salvar Alterações' : 'Criar Categoria'}
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)} className="flex-1 h-12 rounded-xl">
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

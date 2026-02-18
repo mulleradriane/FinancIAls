@@ -1,24 +1,57 @@
-import React, { useState } from 'react';
-import api from '../api/api';
-import { toast } from 'react-toastify';
+import React, { useState, useEffect } from 'react';
+import api from '@/api/api';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown, CalendarIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const TransactionForm = ({ categories, accounts, transaction, onTransactionCreated, onClose }) => {
   const [description, setDescription] = useState(transaction ? transaction.description : '');
   const [suggestions, setSuggestions] = useState([]);
+  const [openCommand, setOpenCommand] = useState(false);
+
   const [amount, setAmount] = useState(transaction ? transaction.amount : 0);
   const [displayAmount, setDisplayAmount] = useState(transaction ?
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(transaction.amount) : ''
   );
   const [date, setDate] = useState(transaction ? transaction.date : new Date().toISOString().split('T')[0]);
   const [categoryId, setCategoryId] = useState(transaction ? transaction.category_id : '');
-  const [accountId, setAccountId] = useState(transaction ? transaction.account_id : (accounts && accounts.length > 0 ? accounts[0].id : ''));
+  const [accountId, setAccountId] = useState(transaction ? transaction.account_id : '');
 
-  React.useEffect(() => {
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringType, setRecurringType] = useState('subscription');
+  const [totalInstallments, setTotalInstallments] = useState('');
+  const [frequency, setFrequency] = useState('monthly');
+
+  useEffect(() => {
     if (!transaction && accounts && accounts.length > 0 && !accountId) {
       setAccountId(accounts[0].id);
     }
     fetchSuggestions();
-  }, [accounts, transaction, accountId]);
+  }, [accounts, transaction]);
 
   const fetchSuggestions = async () => {
     try {
@@ -26,18 +59,6 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
       setSuggestions(response.data);
     } catch (error) {
       console.error('Error fetching descriptions:', error);
-    }
-  };
-
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [recurringType, setRecurringType] = useState('subscription');
-  const [totalInstallments, setTotalInstallments] = useState('');
-  const [frequency, setFrequency] = useState('monthly');
-
-  const handleDescriptionChange = (val) => {
-    setDescription(val);
-    if (suggestions.includes(val)) {
-      applySuggestion(val);
     }
   };
 
@@ -52,10 +73,6 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
     } catch (error) {
       console.log('No suggestion found for this description');
     }
-  };
-
-  const handleDescriptionBlur = () => {
-    applySuggestion(description);
   };
 
   const handleAmountChange = (e) => {
@@ -79,45 +96,30 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        description,
+        amount: amount,
+        date,
+        category_id: categoryId,
+        account_id: accountId,
+      };
+
       if (transaction) {
-        const payload = {
-          description,
-          amount: amount,
-          date,
-          category_id: categoryId,
-          account_id: accountId,
-        };
         await api.put(`/transactions/${transaction.id}`, payload);
       } else {
-        const payload = {
-          description,
-          amount: amount,
-          date,
-          category_id: categoryId,
-          account_id: accountId,
+        const createPayload = {
+          ...payload,
           is_recurring: isRecurring,
           recurring_type: isRecurring ? recurringType : null,
           total_installments: isRecurring && recurringType === 'installment' ? parseInt(totalInstallments) : null,
           frequency: isRecurring && recurringType === 'subscription' ? frequency : null,
         };
-        await api.post('/transactions/', payload);
+        await api.post('/transactions/', createPayload);
       }
-
-      // Reset form
-      setDescription('');
-      setDisplayAmount('');
-      setAmount(0);
-      setDate(new Date().toISOString().split('T')[0]);
-      setCategoryId('');
-      setIsRecurring(false);
 
       toast.success(transaction ? 'Transação atualizada!' : 'Transação criada!');
-      if (onTransactionCreated) {
-        onTransactionCreated();
-      }
-      if (onClose) {
-        onClose();
-      }
+      if (onTransactionCreated) onTransactionCreated();
+      if (onClose) onClose();
     } catch (error) {
       console.error('Error saving transaction:', error);
       const detail = error.response?.data?.detail || 'Erro ao salvar transação.';
@@ -125,148 +127,215 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
     }
   };
 
+  const formatCurrencySimple = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+
   return (
-    <div className="transaction-form" style={{ border: 'none', padding: 0, margin: 0, backgroundColor: 'transparent' }}>
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="description">Descrição:</label>
-          <input
-            id="description"
-            type="text"
-            list="description-suggestions"
-            value={description}
-            onChange={(e) => handleDescriptionChange(e.target.value)}
-            onBlur={handleDescriptionBlur}
-            required
-            autoComplete="off"
-          />
-          <datalist id="description-suggestions">
-            {suggestions.map((s, i) => (
-              <option key={i} value={s} />
-            ))}
-          </datalist>
-        </div>
-        <div className="form-group">
-          <label htmlFor="amount">Valor:</label>
-          <input
-            id="amount"
-            type="text"
-            placeholder="R$ 0,00"
-            value={displayAmount}
-            onChange={handleAmountChange}
-            required
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="date">Data:</label>
-          <input
-            id="date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="category">Categoria:</label>
-          <select
-            id="category"
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            required
-          >
-            <option value="">Selecione uma categoria</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-4">
+        <div className="grid gap-2">
+          <Label htmlFor="description">Descrição</Label>
+          <Popover open={openCommand} onOpenChange={setOpenCommand}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={openCommand}
+                className="justify-between bg-secondary/50 border-none h-11 rounded-xl"
+              >
+                {description || "O que foi comprado?"}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+              <Command>
+                <CommandInput
+                  placeholder="Procurar descrição..."
+                  value={description}
+                  onValueChange={(val) => {
+                    setDescription(val);
+                  }}
+                />
+                <CommandList>
+                  <CommandEmpty>
+                    <div
+                      className="px-2 py-3 text-sm cursor-pointer hover:bg-accent"
+                      onClick={() => {
+                        applySuggestion(description);
+                        setOpenCommand(false);
+                      }}
+                    >
+                      Usar "{description}"
+                    </div>
+                  </CommandEmpty>
+                  <CommandGroup>
+                    {suggestions.map((s) => (
+                      <CommandItem
+                        key={s}
+                        value={s}
+                        onSelect={() => {
+                          setDescription(s);
+                          applySuggestion(s);
+                          setOpenCommand(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            description === s ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {s}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="account">Conta/Carteira:</label>
-          <select
-            id="account"
-            value={accountId}
-            onChange={(e) => setAccountId(e.target.value)}
-            required
-          >
-            <option value="">Selecione uma conta</option>
-            {accounts.map((acc) => (
-              <option key={acc.id} value={acc.id}>
-                {acc.name} ({new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(acc.balance)})
-              </option>
-            ))}
-          </select>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="amount">Valor</Label>
+            <Input
+              id="amount"
+              type="text"
+              placeholder="R$ 0,00"
+              value={displayAmount}
+              onChange={handleAmountChange}
+              required
+              className="bg-secondary/50 border-none h-11 rounded-xl text-lg font-semibold"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="date">Data</Label>
+            <Input
+              id="date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+              className="bg-secondary/50 border-none h-11 rounded-xl"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="category">Categoria</Label>
+            <Select value={categoryId} onValueChange={setCategoryId} required>
+              <SelectTrigger className="bg-secondary/50 border-none h-11 rounded-xl">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    <div className="flex items-center gap-2">
+                      <span>{cat.icon || '💰'}</span>
+                      <span>{cat.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="account">Conta</Label>
+            <Select value={accountId} onValueChange={setAccountId} required>
+              <SelectTrigger className="bg-secondary/50 border-none h-11 rounded-xl text-left">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.map((acc) => (
+                  <SelectItem key={acc.id} value={acc.id}>
+                    {acc.name} ({formatCurrencySimple(acc.balance)})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {!transaction && (
-          <div className="form-group toggle-group">
-            <label className="switch-label">
-              <input
-                type="checkbox"
-                checked={isRecurring}
-                onChange={(e) => setIsRecurring(e.target.checked)}
-              />
-              É uma despesa recorrente/parcelada?
-            </label>
+          <div className="flex items-center space-x-2 pt-2">
+            <Checkbox
+              id="recurring"
+              checked={isRecurring}
+              onCheckedChange={setIsRecurring}
+            />
+            <Label
+              htmlFor="recurring"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              É uma despesa recorrente ou parcelada?
+            </Label>
           </div>
         )}
+
         {isRecurring && !transaction && (
-          <div className="recurring-options" style={{ backgroundColor: 'var(--table-header-bg)', border: '1px dashed var(--border-color)' }}>
-            <div className="form-group">
-              <label htmlFor="recurringType">Tipo:</label>
-              <select
-                id="recurringType"
-                value={recurringType}
-                onChange={(e) => setRecurringType(e.target.value)}
-              >
-                <option value="subscription">Assinatura Mensal</option>
-                <option value="installment">Parcelamento</option>
-              </select>
+          <Card className="bg-secondary/20 border-dashed p-4 space-y-4 rounded-xl">
+            <div className="grid gap-2">
+              <Label htmlFor="recurringType">Tipo</Label>
+              <Select value={recurringType} onValueChange={setRecurringType}>
+                <SelectTrigger className="bg-background border-none h-10 rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="subscription">Assinatura Mensal</SelectItem>
+                  <SelectItem value="installment">Parcelamento</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {recurringType === 'installment' ? (
-              <div className="form-group">
-                <label htmlFor="totalInstallments">Número de Parcelas:</label>
-                <input
+              <div className="grid gap-2">
+                <Label htmlFor="totalInstallments">Número de Parcelas</Label>
+                <Input
                   id="totalInstallments"
                   type="number"
                   min="2"
                   value={totalInstallments}
                   onChange={(e) => setTotalInstallments(e.target.value)}
                   required
+                  className="bg-background border-none h-10 rounded-lg"
                 />
               </div>
             ) : (
-              <div className="form-group">
-                <label htmlFor="frequency">Frequência:</label>
-                <select
-                  id="frequency"
-                  value={frequency}
-                  onChange={(e) => setFrequency(e.target.value)}
-                >
-                  <option value="monthly">Mensal</option>
-                  <option value="yearly">Anual</option>
-                </select>
+              <div className="grid gap-2">
+                <Label htmlFor="frequency">Frequência</Label>
+                <Select value={frequency} onValueChange={setFrequency}>
+                  <SelectTrigger className="bg-background border-none h-10 rounded-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Mensal</SelectItem>
+                    <SelectItem value="yearly">Anual</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
-          </div>
+          </Card>
         )}
+      </div>
 
-        <div className="form-actions" style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-          <button type="submit" style={{ backgroundColor: '#007bff', color: 'white', border: 'none', flex: 1 }}>
-            Salvar Transação
-          </button>
-          {onClose && (
-            <button type="button" onClick={onClose} style={{ flex: 1 }}>
-              Cancelar
-            </button>
-          )}
-        </div>
-      </form>
-    </div>
+      <div className="flex gap-3 pt-4">
+        <Button
+          type="submit"
+          className="flex-1 rounded-xl h-12 text-base font-bold shadow-lg shadow-primary/20"
+        >
+          {transaction ? 'Atualizar Transação' : 'Salvar Transação'}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onClose}
+          className="flex-1 rounded-xl h-12 text-base"
+        >
+          Cancelar
+        </Button>
+      </div>
+    </form>
   );
 };
 

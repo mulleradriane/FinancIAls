@@ -1,142 +1,83 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  --bg-color: #ffffff;
-  --text-color: #213547;
-  --card-bg: #ffffff;
-  --sidebar-bg: #ffffff;
-  --sidebar-text: #64748b;
-  --sidebar-hover: #f1f5f9;
-  --sidebar-active-bg: #eff6ff;
-  --sidebar-active-text: #2563eb;
-  --border-color: #f0f0f0;
-  --input-bg: #ffffff;
-  --input-border: #ccc;
-  --table-header-bg: #f8f9fa;
-  --table-row-hover: #fcfcfc;
-  --modal-bg: #ffffff;
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
 
-  color: var(--text-color);
-  background-color: var(--bg-color);
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 142.1 76.2% 45.3%;
+    --success-foreground: 355.7 100% 97.3%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+
+    --radius: 1rem;
+  }
+
+  .dark {
+    --background: 0 0% 7%;
+    --foreground: 210 40% 98%;
+
+    --card: 0 0% 11%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 0 0% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.1 70.6% 96%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+  }
 }
 
-[data-theme='dark'] {
-  --bg-color: #121212;
-  --text-color: #e2e8f0;
-  --card-bg: #1e1e1e;
-  --sidebar-bg: #1a1a1a;
-  --sidebar-text: #94a3b8;
-  --sidebar-hover: #2d2d2d;
-  --sidebar-active-bg: #2563eb;
-  --sidebar-active-text: #ffffff;
-  --border-color: #334155;
-  --input-bg: #2d2d2d;
-  --input-border: #475569;
-  --table-header-bg: #1a1a1a;
-  --table-row-hover: #262626;
-  --modal-bg: #1e1e1e;
-}
-
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  color: var(--text-color);
-  background-color: var(--bg-color);
-  transition: background-color 0.3s, color 0.3s;
-}
-
-h1 {
-  font-size: 2em;
-  line-height: 1.1;
-  margin-bottom: 20px;
-}
-
-h2 {
-  font-size: 1.5em;
-  margin-top: 0;
-}
-
-button {
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  padding: 0.6em 1.2em;
-  font-size: 0.9em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #f9f9f9;
-  cursor: pointer;
-  transition: border-color 0.25s, background-color 0.25s;
-}
-
-button:hover {
-  border-color: #007bff;
-  background-color: #e9ecef;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-  background-color: var(--card-bg);
-}
-
-th, td {
-  border: 1px solid var(--border-color);
-  padding: 12px;
-  text-align: left;
-}
-
-th {
-  background-color: var(--table-header-bg);
-  color: var(--text-color);
-  font-weight: 600;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 500;
-}
-
-.form-group input, .form-group select {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid var(--input-border);
-  border-radius: 4px;
-  box-sizing: border-box;
-  background-color: var(--input-bg);
-  color: var(--text-color);
-}
-
-/* Toggle Switch Styles */
-.toggle-group {
-  margin: 20px 0;
-}
-
-.switch-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  font-weight: 500;
-}
-
-.recurring-options {
-  background-color: #f9f9f9;
-  padding: 15px;
-  border-radius: 8px;
-  border: 1px dashed #ccc;
-  margin-bottom: 20px;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
 }

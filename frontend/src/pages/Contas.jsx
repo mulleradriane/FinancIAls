@@ -1,23 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api/api';
-import { toast } from 'react-toastify';
-import Modal from '../components/Modal';
-import AccountForm from '../components/AccountForm';
-import TransferForm from '../components/TransferForm';
+import api from '@/api/api';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import AccountForm from '@/components/AccountForm';
+import TransferForm from '@/components/TransferForm';
 import { Plus, ArrowLeftRight, CreditCard, Landmark, Wallet, PiggyBank, Briefcase, Pencil, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/EmptyState";
 
 const Contas = () => {
   const [accounts, setAccounts] = useState([]);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const fetchAccounts = async () => {
     try {
+      setLoading(true);
       const response = await api.get('/accounts/');
       setAccounts(response.data);
     } catch (error) {
       console.error('Error fetching accounts:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -26,13 +41,14 @@ const Contas = () => {
   }, []);
 
   const getAccountIcon = (type) => {
+    const props = { size: 24 };
     switch (type) {
-      case 'carteira': return <Wallet size={24} />;
-      case 'banco': return <Landmark size={24} />;
-      case 'poupanca': return <PiggyBank size={24} />;
-      case 'investimento': return <Briefcase size={24} />;
-      case 'cartao_credito': return <CreditCard size={24} />;
-      default: return <Landmark size={24} />;
+      case 'carteira': return <Wallet {...props} />;
+      case 'banco': return <Landmark {...props} />;
+      case 'poupanca': return <PiggyBank {...props} />;
+      case 'investimento': return <Briefcase {...props} />;
+      case 'cartao_credito': return <CreditCard {...props} />;
+      default: return <Landmark {...props} />;
     }
   };
 
@@ -63,140 +79,134 @@ const Contas = () => {
   };
 
   return (
-    <div className="accounts-page" style={{ padding: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1 style={{ margin: 0 }}>Minhas Contas</h1>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button
+    <div className="space-y-8 pb-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Contas e Carteiras</h1>
+          <p className="text-muted-foreground mt-1">Organize onde seu dinheiro está guardado.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
             onClick={() => setIsTransferModalOpen(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              backgroundColor: '#6c757d',
-              color: 'white',
-              border: 'none',
-              padding: '10px 20px',
-              cursor: 'pointer'
-            }}
+            className="rounded-xl"
           >
-            <ArrowLeftRight size={20} /> Transferência
-          </button>
-          <button
+            <ArrowLeftRight className="mr-2 h-4 w-4" /> Transferir
+          </Button>
+          <Button
             onClick={() => {
               setEditingAccount(null);
               setIsAccountModalOpen(true);
             }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              padding: '10px 20px',
-              cursor: 'pointer'
-            }}
+            className="rounded-xl shadow-lg shadow-primary/20"
           >
-            <Plus size={20} /> Nova Conta
-          </button>
+            <Plus className="mr-2 h-5 w-5" /> Nova Conta
+          </Button>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-        {accounts.map((account) => (
-          <div
-            key={account.id}
-            style={{
-              padding: '20px',
-              border: '1px solid var(--border-color)',
-              borderRadius: '12px',
-              backgroundColor: 'var(--card-bg)',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '15px',
-              color: 'var(--text-color)'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ color: '#007bff' }}>
-                  {getAccountIcon(account.type)}
-                </div>
-                <div>
-                  <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{account.name}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--sidebar-text)', textTransform: 'capitalize' }}>
-                    {account.type.replace('_', ' ')}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-40 w-full rounded-2xl" />
+          ))
+        ) : accounts.length > 0 ? (
+          accounts.map((account) => (
+            <Card
+              key={account.id}
+              className="group border-none shadow-md hover:shadow-lg transition-all duration-300 rounded-2xl overflow-hidden"
+            >
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-primary/10 rounded-2xl text-primary group-hover:scale-110 transition-transform duration-300">
+                      {getAccountIcon(account.type)}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">{account.name}</h3>
+                      <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider mt-1">
+                        {account.type.replace('_', ' ')}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(account)}
+                      className="h-8 w-8 rounded-full"
+                    >
+                      <Pencil size={14} className="text-primary" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(account.id)}
+                      className="h-8 w-8 rounded-full"
+                    >
+                      <Trash2 size={14} className="text-destructive" />
+                    </Button>
                   </div>
                 </div>
-              </div>
-              <div style={{ display: 'flex', gap: '5px' }}>
-                <button
-                  onClick={() => handleEdit(account)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-color)', opacity: 0.7, padding: '5px' }}
-                  title="Editar"
-                >
-                  <Pencil size={18} />
-                </button>
-                <button
-                  onClick={() => handleDelete(account.id)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '5px' }}
-                  title="Excluir"
-                >
-                  <Trash2 size={18} />
-                </button>
-              </div>
-            </div>
 
-            <div style={{ marginTop: '5px' }}>
-              <div style={{ fontSize: '0.9rem', color: 'var(--sidebar-text)' }}>Saldo Atual</div>
-              <div style={{
-                fontSize: '1.5rem',
-                fontWeight: 'bold',
-                color: account.balance >= 0 ? '#28a745' : '#dc3545'
-              }}>
-                {formatCurrency(account.balance)}
-              </div>
-            </div>
-          </div>
-        ))}
-        {accounts.length === 0 && (
-          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '50px', color: '#666' }}>
-            Nenhuma conta cadastrada. Clique em "Nova Conta" para começar.
-          </div>
-        )}
+                <div className="mt-6">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Saldo Disponível</p>
+                  <div className={cn(
+                    "text-2xl font-black mt-1",
+                    account.balance >= 0 ? "text-success" : "text-destructive"
+                  )}>
+                    {formatCurrency(account.balance)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : null}
       </div>
 
-      <Modal
-        isOpen={isAccountModalOpen}
-        onClose={() => {
-          setIsAccountModalOpen(false);
-          setEditingAccount(null);
-        }}
-        title={editingAccount ? "Editar Conta" : "Nova Conta"}
-      >
-        <AccountForm
-          account={editingAccount}
-          onAccountCreated={fetchAccounts}
-          onClose={() => {
-            setIsAccountModalOpen(false);
-            setEditingAccount(null);
-          }}
-        />
-      </Modal>
+      {!loading && accounts.length === 0 && (
+        <div className="col-span-full">
+          <EmptyState
+            icon={Landmark}
+            title="Nenhuma conta"
+            description="Você ainda não cadastrou nenhuma conta ou carteira para gerenciar seus saldos."
+            actionLabel="Nova Conta"
+            onAction={() => {
+              setEditingAccount(null);
+              setIsAccountModalOpen(true);
+            }}
+          />
+        </div>
+      )}
 
-      <Modal
-        isOpen={isTransferModalOpen}
-        onClose={() => setIsTransferModalOpen(false)}
-        title="Transferência entre Contas"
-      >
-        <TransferForm
-          accounts={accounts}
-          onTransferCreated={fetchAccounts}
-          onClose={() => setIsTransferModalOpen(false)}
-        />
-      </Modal>
+      <Dialog open={isAccountModalOpen} onOpenChange={setIsAccountModalOpen}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingAccount ? "Editar Conta" : "Nova Conta"}</DialogTitle>
+          </DialogHeader>
+          <AccountForm
+            account={editingAccount}
+            onAccountCreated={fetchAccounts}
+            onClose={() => {
+              setIsAccountModalOpen(false);
+              setEditingAccount(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Transferência entre Contas</DialogTitle>
+          </DialogHeader>
+          <TransferForm
+            accounts={accounts}
+            onTransferCreated={fetchAccounts}
+            onClose={() => setIsTransferModalOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

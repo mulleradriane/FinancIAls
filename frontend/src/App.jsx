@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout';
+import MainLayout from './components/layout/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import Categories from './pages/Categories';
@@ -9,18 +9,14 @@ import Contas from './pages/Contas';
 import Patrimonio from './pages/Patrimonio';
 import Recorrentes from './pages/Recorrentes';
 import Relatorios from './pages/Relatorios';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { ThemeProvider } from './context/ThemeContext';
 import './App.css';
 
 function AppContent() {
-  const { theme } = useTheme();
   return (
     <Router>
-      <ToastContainer position="top-right" autoClose={3000} theme={theme} />
       <Routes>
-        <Route path="/" element={<Layout />}>
+        <Route path="/" element={<MainLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="transactions" element={<Transactions />} />
           <Route path="categories" element={<Categories />} />
