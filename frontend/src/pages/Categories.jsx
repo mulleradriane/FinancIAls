@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/api';
+import { toast } from 'react-toastify';
 
 function Categories() {
   const [categories, setCategories] = useState([]);
@@ -30,22 +31,24 @@ function Categories() {
     e.preventDefault();
     try {
       await api.post('/categories/', { name, type });
+      toast.success('Categoria criada!');
       setName('');
       setType('expense');
       fetchCategories();
     } catch (err) {
-      setError('Error creating category');
+      toast.error('Erro ao criar categoria.');
       console.error(err);
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this category?')) {
+    if (window.confirm('Tem certeza que deseja excluir esta categoria?')) {
       try {
         await api.delete(`/categories/${id}`);
+        toast.success('Categoria excluída!');
         fetchCategories();
       } catch (err) {
-        setError('Error deleting category');
+        toast.error('Erro ao excluir categoria.');
         console.error(err);
       }
     }

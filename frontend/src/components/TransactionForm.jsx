@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api from '../api/api';
+import { toast } from 'react-toastify';
 
 const TransactionForm = ({ categories, accounts, transaction, onTransactionCreated, onClose }) => {
   const [description, setDescription] = useState(transaction ? transaction.description : '');
@@ -21,6 +22,21 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
   const [recurringType, setRecurringType] = useState('subscription');
   const [totalInstallments, setTotalInstallments] = useState('');
   const [frequency, setFrequency] = useState('monthly');
+
+  const handleDescriptionBlur = async () => {
+    if (!description || transaction) return;
+
+    try {
+      const response = await api.get(`/transactions/suggest/?description=${description}`);
+      if (response.data) {
+        if (response.data.category_id) setCategoryId(response.data.category_id);
+        if (response.data.account_id) setAccountId(response.data.account_id);
+      }
+    } catch (error) {
+      // Ignore 404s, just means no suggestion found
+      console.log('No suggestion found for this description');
+    }
+  };
 
   const handleAmountChange = (e) => {
     const value = e.target.value.replace(/\D/g, '');
@@ -75,6 +91,7 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
       setCategoryId('');
       setIsRecurring(false);
 
+      toast.success(transaction ? 'Transação atualizada!' : 'Transação criada!');
       if (onTransactionCreated) {
         onTransactionCreated();
       }
@@ -84,7 +101,7 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
     } catch (error) {
       console.error('Error saving transaction:', error);
       const detail = error.response?.data?.detail || 'Erro ao salvar transação.';
-      alert(detail);
+      toast.error(detail);
     }
   };
 
@@ -98,6 +115,7 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            onBlur={handleDescriptionBlur}
             required
           />
         </div>

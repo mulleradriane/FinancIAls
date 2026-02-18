@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api from '../api/api';
+import { toast } from 'react-toastify';
 
 const TransferForm = ({ accounts, onTransferCreated, onClose }) => {
   const [fromAccountId, setFromAccountId] = useState('');
@@ -30,7 +31,7 @@ const TransferForm = ({ accounts, onTransferCreated, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (fromAccountId === toAccountId) {
-      alert('Contas de origem e destino devem ser diferentes.');
+      toast.error('Contas de origem e destino devem ser diferentes.');
       return;
     }
     try {
@@ -42,7 +43,7 @@ const TransferForm = ({ accounts, onTransferCreated, onClose }) => {
         description,
       };
       await api.post('/transfers/', payload);
-
+      toast.success('Transferência realizada!');
       if (onTransferCreated) {
         onTransferCreated();
       }
@@ -52,7 +53,7 @@ const TransferForm = ({ accounts, onTransferCreated, onClose }) => {
     } catch (error) {
       console.error('Error creating transfer:', error);
       const detail = error.response?.data?.detail || 'Erro ao realizar transferência.';
-      alert(detail);
+      toast.error(detail);
     }
   };
 

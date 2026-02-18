@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/api';
+import { toast } from 'react-toastify';
 import Modal from '../components/Modal';
 import AccountForm from '../components/AccountForm';
 import TransferForm from '../components/TransferForm';
@@ -51,11 +52,12 @@ const Contas = () => {
     if (window.confirm('Tem certeza que deseja excluir esta conta? Todas as transações vinculadas perderão o vínculo.')) {
       try {
         await api.delete(`/accounts/${id}`);
+        toast.success('Conta excluída!');
         fetchAccounts();
       } catch (error) {
         console.error('Error deleting account:', error);
         const detail = error.response?.data?.detail || 'Erro ao excluir conta.';
-        alert(detail);
+        toast.error(detail);
       }
     }
   };

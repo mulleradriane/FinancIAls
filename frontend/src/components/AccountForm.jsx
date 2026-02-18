@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api from '../api/api';
+import { toast } from 'react-toastify';
 
 const AccountForm = ({ account, onAccountCreated, onClose }) => {
   const [name, setName] = useState(account ? account.name : '');
@@ -54,6 +55,7 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
       setDisplayInitialBalance('');
       setDisplayCurrentBalance('');
 
+      toast.success(account ? 'Conta atualizada!' : 'Conta criada!');
       if (onAccountCreated) {
         onAccountCreated();
       }
@@ -63,7 +65,7 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
     } catch (error) {
       console.error('Error saving account:', error);
       const detail = error.response?.data?.detail || 'Erro ao salvar conta.';
-      alert(detail);
+      toast.error(detail);
     }
   };
 
