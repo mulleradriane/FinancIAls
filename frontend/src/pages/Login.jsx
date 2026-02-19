@@ -82,7 +82,7 @@ const Login = () => {
           variant="outline"
           size="icon"
           onClick={toggleTheme}
-          className="rounded-full bg-background/20 backdrop-blur-md border-white/20 hover:bg-white/30 text-white transition-all duration-300"
+          className="rounded-full bg-white shadow-xl border-primary/10 hover:bg-primary/5 text-primary dark:bg-background/20 dark:backdrop-blur-md dark:border-white/20 dark:hover:bg-white/30 dark:text-white transition-all duration-300"
         >
           {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
         </Button>

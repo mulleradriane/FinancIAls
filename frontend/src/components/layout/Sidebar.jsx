@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   ArrowRightLeft,
@@ -13,7 +13,8 @@ import {
   Moon,
   ChevronLeft,
   ChevronRight,
-  Settings
+  Settings,
+  LogOut
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { cn } from '@/lib/utils';
@@ -39,6 +40,12 @@ const menuItems = [
 export function Sidebar() {
   const { theme, toggleTheme } = useTheme();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('isAuthenticated');
+    navigate('/login');
+  };
 
   return (
     <aside
@@ -139,6 +146,27 @@ export function Sidebar() {
             {isCollapsed && (
               <TooltipContent side="right">
                 {theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}
+              </TooltipContent>
+            )}
+          </Tooltip>
+
+          <Tooltip disableHoverableContent={!isCollapsed}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                onClick={handleLogout}
+                className={cn(
+                  "w-full flex items-center gap-3 justify-start rounded-xl border-none text-destructive hover:bg-destructive/10 hover:text-destructive",
+                  isCollapsed && "justify-center p-0 h-10 w-10 mx-auto"
+                )}
+              >
+                <LogOut size={20} className="shrink-0" />
+                {!isCollapsed && <span className="font-medium">Sair</span>}
+              </Button>
+            </TooltipTrigger>
+            {isCollapsed && (
+              <TooltipContent side="right">
+                Sair
               </TooltipContent>
             )}
           </Tooltip>
