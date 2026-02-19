@@ -5,13 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Moon, Sun, Lock, User, ArrowRight } from 'lucide-react';
+import { Moon, Sun, Lock, User, ArrowRight, UserPlus, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Login = () => {
   const { theme, toggleTheme } = useTheme();
+  const [isSignUp, setIsSignUp] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const videoRef = useRef(null);
@@ -25,21 +27,31 @@ const Login = () => {
     }
   }, [theme]);
 
-  const handleLogin = (e) => {
+  const handleAuth = (e) => {
     e.preventDefault();
     setLoading(true);
 
     // Simulate a small delay for premium feel
     setTimeout(() => {
-      const savedSettings = localStorage.getItem('userSettings');
-      const user = savedSettings ? JSON.parse(savedSettings) : { username: 'admin', password: 'password' };
-
-      if (username === user.username && password === user.password) {
+      if (isSignUp) {
+        // Register logic
+        const newUser = { displayName, username, password };
+        localStorage.setItem('userSettings', JSON.stringify(newUser));
         localStorage.setItem('isAuthenticated', 'true');
-        toast.success(`Bem-vindo de volta, ${user.displayName || user.username}!`);
+        toast.success(`Conta criada! Bem-vinda(o), ${displayName || username}!`);
         navigate('/');
       } else {
-        toast.error('Credenciais inválidas. Tente novamente.');
+        // Login logic
+        const savedSettings = localStorage.getItem('userSettings');
+        const user = savedSettings ? JSON.parse(savedSettings) : { username: 'admin', password: 'password' };
+
+        if (username === user.username && password === user.password) {
+          localStorage.setItem('isAuthenticated', 'true');
+          toast.success(`Bem-vindo de volta, ${user.displayName || user.username}!`);
+          navigate('/');
+        } else {
+          toast.error('Credenciais inválidas. Tente novamente.');
+        }
       }
       setLoading(false);
     }, 1000);
@@ -86,17 +98,33 @@ const Login = () => {
         </p>
       </div>
 
-      {/* Login Form - Positioned lower (~60% of viewport) */}
-      <div className="relative z-10 w-full max-w-md px-6 mt-auto mb-[15vh] animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300">
+      {/* Auth Form - Positioned lower (~60% of viewport) */}
+      <div className="relative z-10 w-full max-w-md px-6 mt-auto mb-[10vh] animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300">
         <Card className="border-none shadow-2xl bg-background/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
           <CardHeader className="space-y-1 pt-8">
-            <CardTitle className="text-2xl font-bold text-center">Acesse sua conta</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">
+              {isSignUp ? 'Criar sua conta' : 'Acesse sua conta'}
+            </CardTitle>
             <CardDescription className="text-center font-medium">
-              Entre para gerenciar seu patrimônio
+              {isSignUp ? 'Cadastre-se para começar sua gestão' : 'Entre para gerenciar seu patrimônio'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="pb-8">
-            <form onSubmit={handleLogin} className="space-y-4">
+          <CardContent className="pb-6">
+            <form onSubmit={handleAuth} className="space-y-4">
+              {isSignUp && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Nome de exibição"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      className="pl-10 h-12 bg-background/50 border-none rounded-2xl focus-visible:ring-primary/30"
+                      required={isSignUp}
+                    />
+                  </div>
+                </div>
+              )}
               <div className="space-y-2">
                 <div className="relative">
                   <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -130,16 +158,25 @@ const Login = () => {
                 {loading ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    <span>Entrando...</span>
+                    <span>Processando...</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <span>Acessar Dashboard</span>
+                    <span>{isSignUp ? 'Criar Conta' : 'Acessar Dashboard'}</span>
                     <ArrowRight size={18} />
                   </div>
                 )}
               </Button>
             </form>
+
+            <div className="mt-6 flex flex-col items-center gap-2">
+               <button
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sm font-semibold text-primary hover:underline underline-offset-4 transition-all"
+               >
+                 {isSignUp ? 'Já tem uma conta? Entre aqui' : 'Não tem uma conta? Crie uma agora'}
+               </button>
+            </div>
           </CardContent>
         </Card>
 
