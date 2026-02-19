@@ -26,18 +26,6 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function AppContent() {
-  useEffect(() => {
-    // Initialize default user if not exists
-    const savedSettings = localStorage.getItem('userSettings');
-    if (!savedSettings) {
-      localStorage.setItem('userSettings', JSON.stringify({
-        displayName: '',
-        username: 'admin',
-        password: 'password'
-      }));
-    }
-  }, []);
-
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
