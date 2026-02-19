@@ -25,13 +25,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, CalendarIcon } from "lucide-react";
+import { Check, ChevronsUpDown, CalendarIcon, Search } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const TransactionForm = ({ categories, accounts, transaction, onTransactionCreated, onClose }) => {
   const [description, setDescription] = useState(transaction ? transaction.description : '');
   const [suggestions, setSuggestions] = useState([]);
-  const [openCommand, setOpenCommand] = useState(false);
+  const [openSuggestions, setOpenSuggestions] = useState(false);
 
   const [amount, setAmount] = useState(transaction ? transaction.amount : 0);
   const [displayAmount, setDisplayAmount] = useState(transaction ?
@@ -59,19 +59,6 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
       setSuggestions(response.data);
     } catch (error) {
       console.error('Error fetching descriptions:', error);
-    }
-  };
-
-  const applySuggestion = async (desc) => {
-    if (!desc || transaction) return;
-    try {
-      const response = await api.get(`/transactions/suggest/?description=${desc}`);
-      if (response.data) {
-        if (response.data.category_id) setCategoryId(response.data.category_id);
-        if (response.data.account_id) setAccountId(response.data.account_id);
-      }
-    } catch (error) {
-      console.log('No suggestion found for this description');
     }
   };
 
@@ -129,69 +116,63 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
 
   const formatCurrencySimple = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
+  const filteredSuggestions = suggestions.filter(s =>
+    s.toLowerCase().includes(description.toLowerCase())
+  );
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
-        <div className="grid gap-2">
+        <div className="grid gap-2 relative">
           <Label htmlFor="description">Descrição</Label>
-          <Popover open={openCommand} onOpenChange={setOpenCommand}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={openCommand}
-                className="justify-between bg-secondary/50 border-none h-11 rounded-xl"
-              >
-                {description || "O que foi comprado?"}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-              <Command>
-                <CommandInput
-                  placeholder="Procurar descrição..."
-                  value={description}
-                  onValueChange={(val) => {
-                    setDescription(val);
-                  }}
-                />
-                <CommandList>
-                  <CommandEmpty>
-                    <div
-                      className="px-2 py-3 text-sm cursor-pointer hover:bg-accent"
-                      onClick={() => {
-                        applySuggestion(description);
-                        setOpenCommand(false);
-                      }}
-                    >
-                      Usar "{description}"
-                    </div>
-                  </CommandEmpty>
-                  <CommandGroup>
-                    {suggestions.map((s) => (
-                      <CommandItem
-                        key={s}
-                        value={s}
-                        onSelect={() => {
-                          setDescription(s);
-                          applySuggestion(s);
-                          setOpenCommand(false);
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            description === s ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {s}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          <div className="relative">
+            <Input
+              id="description"
+              value={description}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setOpenSuggestions(true);
+              }}
+              onFocus={() => setOpenSuggestions(true)}
+              placeholder="O que foi comprado?"
+              className="bg-secondary/50 border-none h-11 rounded-xl pr-10"
+              autoComplete="off"
+              required
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40">
+              <Search size={18} />
+            </div>
+          </div>
+
+          {openSuggestions && description && filteredSuggestions.length > 0 && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setOpenSuggestions(false)}
+              />
+              <div className="absolute top-[calc(100%+4px)] left-0 w-full z-50 bg-popover text-popover-foreground rounded-xl border shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                <Command className="bg-transparent">
+                  <CommandList>
+                    <CommandGroup heading="Sugestões">
+                      {filteredSuggestions.map((s) => (
+                        <CommandItem
+                          key={s}
+                          value={s}
+                          onSelect={() => {
+                            setDescription(s);
+                            setOpenSuggestions(false);
+                          }}
+                          className="cursor-pointer py-3"
+                        >
+                          {s}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
