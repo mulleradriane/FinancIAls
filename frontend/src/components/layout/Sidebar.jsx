@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   ArrowRightLeft,
@@ -13,7 +13,8 @@ import {
   Moon,
   ChevronLeft,
   ChevronRight,
-  Settings
+  Settings,
+  LogOut
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -35,6 +36,12 @@ const menuItems = [
 export function Sidebar() {
   const { theme, toggleTheme } = useTheme();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('isAuthenticated');
+    navigate('/login');
+  };
 
   // CORES FIXAS - baseadas no tema
   const styles = {
@@ -46,6 +53,8 @@ export function Sidebar() {
       hover: '#f3f4f6',
       active: '#2563eb',
       activeText: '#ffffff',
+      destructive: '#dc2626', // Vermelho para o logout
+      destructiveHover: '#fee2e2', // Vermelho claro para hover
     },
     dark: {
       background: '#111827',
@@ -55,6 +64,8 @@ export function Sidebar() {
       hover: '#1f2937',
       active: '#3b82f6',
       activeText: '#ffffff',
+      destructive: '#ef4444', // Vermelho para o logout
+      destructiveHover: '#7f1d1d', // Vermelho escuro para hover
     }
   };
 
@@ -199,7 +210,7 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Área inferior com Configurações e Tema */}
+      {/* Área inferior com Configurações, Tema e Logout */}
       <div style={{
         padding: '1rem',
         borderTop: `1px solid ${currentStyle.border}`,
@@ -257,6 +268,7 @@ export function Sidebar() {
             cursor: 'pointer',
             transition: 'all 0.2s',
             margin: isCollapsed ? '0 auto' : '0',
+            marginBottom: '0.5rem',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = currentStyle.hover;
@@ -268,6 +280,38 @@ export function Sidebar() {
           {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
           {!isCollapsed && (
             <span>{theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}</span>
+          )}
+        </button>
+
+        {/* Botão de Logout */}
+        <button
+          onClick={handleLogout}
+          style={{
+            width: isCollapsed ? '2.5rem' : '100%',
+            height: '2.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            justifyContent: isCollapsed ? 'center' : 'flex-start',
+            padding: isCollapsed ? '0' : '0 0.75rem',
+            borderRadius: '0.75rem',
+            border: `1px solid ${currentStyle.border}`,
+            backgroundColor: 'transparent',
+            color: currentStyle.destructive,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            margin: isCollapsed ? '0 auto' : '0',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = currentStyle.destructiveHover;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          <LogOut size={20} />
+          {!isCollapsed && (
+            <span style={{ fontWeight: 500 }}>Sair</span>
           )}
         </button>
       </div>

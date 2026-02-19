@@ -12,6 +12,7 @@ import Relatorios from './pages/Relatorios';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 import { ThemeProvider } from './context/ThemeContext';
+import { Toaster } from 'sonner';
 import './App.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -55,6 +56,7 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
+      <Toaster position="top-right" richColors />
       <Router>
         <AppContent />
       </Router>
