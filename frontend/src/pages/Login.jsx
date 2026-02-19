@@ -91,10 +91,10 @@ const Login = () => {
       {/* Branding - Top Center */}
       <div className="relative z-10 pt-16 animate-in fade-in slide-in-from-top-8 duration-1000">
         <h1 className="text-5xl font-black tracking-tighter text-white drop-shadow-2xl">
-          FinancIAls
+          Ronromia
         </h1>
         <p className="text-white/70 text-center mt-2 font-medium tracking-widest uppercase text-[10px]">
-          Inteligência Financeira Premium
+          miau
         </p>
       </div>
 
@@ -181,7 +181,7 @@ const Login = () => {
         </Card>
 
         <p className="text-center mt-8 text-white/50 text-xs font-medium">
-          &copy; {new Date().getFullYear()} FinancIAls. Todos os direitos reservados.
+          &copy; {new Date().getFullYear()} Ronromia. Todos os direitos reservados.
         </p>
       </div>
     </div>
