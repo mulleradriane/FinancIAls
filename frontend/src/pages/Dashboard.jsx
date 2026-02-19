@@ -60,6 +60,7 @@ const VariationBadge = ({ value, type }) => {
 const Dashboard = () => {
   const [data, setData] = useState(null);
   const [categories, setCategories] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -67,12 +68,14 @@ const Dashboard = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [dashboardRes, categoriesRes] = await Promise.all([
+      const [dashboardRes, categoriesRes, accountsRes] = await Promise.all([
         api.get('/summary/dashboard'),
-        api.get('/categories/')
+        api.get('/categories/'),
+        api.get('/accounts/')
       ]);
       setData(dashboardRes.data);
       setCategories(categoriesRes.data);
+      setAccounts(accountsRes.data);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -416,6 +419,7 @@ const Dashboard = () => {
           </DialogHeader>
           <TransactionForm
             categories={categories}
+            accounts={accounts}
             onTransactionCreated={fetchData}
             onClose={() => setIsModalOpen(false)}
           />

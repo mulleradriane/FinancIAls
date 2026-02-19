@@ -14,41 +14,37 @@ import {
 } from "@/components/ui/select";
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Check, ChevronsUpDown, CalendarIcon, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Card } from '@/components/ui/card';
 
-const TransactionForm = ({ categories, accounts, transaction, onTransactionCreated, onClose }) => {
-  const [description, setDescription] = useState(transaction ? transaction.description : '');
+const TransactionForm = ({ categories = [], accounts = [], transaction, onTransactionCreated, onClose }) => {
+  const [formData, setFormData] = useState({
+    description: transaction ? transaction.description : '',
+    amount: transaction ? transaction.amount : 0,
+    displayAmount: transaction ?
+      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(transaction.amount) : '',
+    date: transaction ? transaction.date : new Date().toISOString().split('T')[0],
+    categoryId: transaction ? transaction.category_id : '',
+    accountId: transaction ? transaction.account_id : '',
+    isRecurring: false,
+    recurring: {
+      type: 'subscription', // 'subscription' or 'installment'
+      frequency: 'monthly', // for subscription
+      totalInstallments: '', // for installment
+    }
+  });
+
   const [suggestions, setSuggestions] = useState([]);
   const [openSuggestions, setOpenSuggestions] = useState(false);
 
-  const [amount, setAmount] = useState(transaction ? transaction.amount : 0);
-  const [displayAmount, setDisplayAmount] = useState(transaction ?
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(transaction.amount) : ''
-  );
-  const [date, setDate] = useState(transaction ? transaction.date : new Date().toISOString().split('T')[0]);
-  const [categoryId, setCategoryId] = useState(transaction ? transaction.category_id : '');
-  const [accountId, setAccountId] = useState(transaction ? transaction.account_id : '');
-
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [recurringType, setRecurringType] = useState('subscription');
-  const [totalInstallments, setTotalInstallments] = useState('');
-  const [frequency, setFrequency] = useState('monthly');
-
   useEffect(() => {
-    if (!transaction && accounts && accounts.length > 0 && !accountId) {
-      setAccountId(accounts[0].id);
+    if (!transaction && accounts && accounts.length > 0 && !formData.accountId) {
+      setFormData(prev => ({ ...prev, accountId: accounts[0].id }));
     }
     fetchSuggestions();
   }, [accounts, transaction]);
@@ -56,39 +52,54 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
   const fetchSuggestions = async () => {
     try {
       const response = await api.get('/transactions/descriptions/');
-      setSuggestions(response.data);
+      setSuggestions(response.data || []);
     } catch (error) {
       console.error('Error fetching descriptions:', error);
+    }
+  };
+
+  const applySuggestion = async (desc) => {
+    if (!desc || transaction) return;
+    try {
+      const response = await api.get(`/transactions/suggest/?description=${desc}`);
+      if (response.data) {
+        setFormData(prev => ({
+          ...prev,
+          categoryId: response.data.category_id || prev.categoryId,
+          accountId: response.data.account_id || prev.accountId
+        }));
+      }
+    } catch (error) {
+      console.log('No suggestion found for this description');
     }
   };
 
   const handleAmountChange = (e) => {
     const value = e.target.value.replace(/\D/g, '');
     if (value === '') {
-      setDisplayAmount('');
-      setAmount(0);
+      setFormData(prev => ({ ...prev, amount: 0, displayAmount: '' }));
       return;
     }
     const intValue = parseInt(value, 10);
-    setAmount(intValue / 100);
+    const floatValue = intValue / 100;
 
     const formatted = new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-    }).format(intValue / 100);
+    }).format(floatValue);
 
-    setDisplayAmount(formatted);
+    setFormData(prev => ({ ...prev, amount: floatValue, displayAmount: formatted }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const payload = {
-        description,
-        amount: amount,
-        date,
-        category_id: categoryId,
-        account_id: accountId,
+        description: formData.description,
+        amount: formData.amount,
+        date: formData.date,
+        category_id: formData.categoryId,
+        account_id: formData.accountId,
       };
 
       if (transaction) {
@@ -96,10 +107,12 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
       } else {
         const createPayload = {
           ...payload,
-          is_recurring: isRecurring,
-          recurring_type: isRecurring ? recurringType : null,
-          total_installments: isRecurring && recurringType === 'installment' ? parseInt(totalInstallments) : null,
-          frequency: isRecurring && recurringType === 'subscription' ? frequency : null,
+          is_recurring: formData.isRecurring,
+          recurring_type: formData.isRecurring ? formData.recurring.type : null,
+          total_installments: formData.isRecurring && formData.recurring.type === 'installment' ?
+            parseInt(formData.recurring.totalInstallments) : null,
+          frequency: formData.isRecurring && formData.recurring.type === 'subscription' ?
+            formData.recurring.frequency : null,
         };
         await api.post('/transactions/', createPayload);
       }
@@ -114,10 +127,10 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
     }
   };
 
-  const formatCurrencySimple = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+  const formatCurrencySimple = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 
   const filteredSuggestions = suggestions.filter(s =>
-    s.toLowerCase().includes(description.toLowerCase())
+    s.toLowerCase().includes(formData.description.toLowerCase())
   );
 
   return (
@@ -128,9 +141,10 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
           <div className="relative">
             <Input
               id="description"
-              value={description}
+              value={formData.description}
               onChange={(e) => {
-                setDescription(e.target.value);
+                const val = e.target.value;
+                setFormData(prev => ({ ...prev, description: val }));
                 setOpenSuggestions(true);
               }}
               onFocus={() => setOpenSuggestions(true)}
@@ -144,7 +158,7 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
             </div>
           </div>
 
-          {openSuggestions && description && filteredSuggestions.length > 0 && (
+          {openSuggestions && formData.description && filteredSuggestions.length > 0 && (
             <>
               <div
                 className="fixed inset-0 z-40"
@@ -159,7 +173,8 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
                           key={s}
                           value={s}
                           onSelect={() => {
-                            setDescription(s);
+                            setFormData(prev => ({ ...prev, description: s }));
+                            applySuggestion(s);
                             setOpenSuggestions(false);
                           }}
                           className="cursor-pointer py-3"
@@ -182,7 +197,7 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
               id="amount"
               type="text"
               placeholder="R$ 0,00"
-              value={displayAmount}
+              value={formData.displayAmount}
               onChange={handleAmountChange}
               required
               className="bg-secondary/50 border-none h-11 rounded-xl text-lg font-semibold"
@@ -193,8 +208,8 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
             <Input
               id="date"
               type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
+              value={formData.date}
+              onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
               required
               className="bg-secondary/50 border-none h-11 rounded-xl"
             />
@@ -204,7 +219,11 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
         <div className="grid grid-cols-2 gap-4">
           <div className="grid gap-2">
             <Label htmlFor="category">Categoria</Label>
-            <Select value={categoryId} onValueChange={setCategoryId} required>
+            <Select
+              value={formData.categoryId}
+              onValueChange={(val) => setFormData(prev => ({ ...prev, categoryId: val }))}
+              required
+            >
               <SelectTrigger className="bg-secondary/50 border-none h-11 rounded-xl">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
@@ -223,12 +242,16 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
 
           <div className="grid gap-2">
             <Label htmlFor="account">Conta</Label>
-            <Select value={accountId} onValueChange={setAccountId} required>
+            <Select
+              value={formData.accountId}
+              onValueChange={(val) => setFormData(prev => ({ ...prev, accountId: val }))}
+              required
+            >
               <SelectTrigger className="bg-secondary/50 border-none h-11 rounded-xl text-left">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                {accounts.map((acc) => (
+                {(accounts || []).map((acc) => (
                   <SelectItem key={acc.id} value={acc.id}>
                     {acc.name} ({formatCurrencySimple(acc.balance)})
                   </SelectItem>
@@ -242,23 +265,29 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
           <div className="flex items-center space-x-2 pt-2">
             <Checkbox
               id="recurring"
-              checked={isRecurring}
-              onCheckedChange={setIsRecurring}
+              checked={formData.isRecurring}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isRecurring: checked === true }))}
             />
             <Label
               htmlFor="recurring"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              className="text-sm font-medium leading-none cursor-pointer"
             >
               É uma despesa recorrente ou parcelada?
             </Label>
           </div>
         )}
 
-        {isRecurring && !transaction && (
-          <Card className="bg-secondary/20 border-dashed p-4 space-y-4 rounded-xl">
+        {formData.isRecurring && !transaction && (
+          <Card className="bg-secondary/20 border-dashed p-4 space-y-4 rounded-xl animate-in zoom-in-95 duration-200">
             <div className="grid gap-2">
               <Label htmlFor="recurringType">Tipo</Label>
-              <Select value={recurringType} onValueChange={setRecurringType}>
+              <Select
+                value={formData.recurring.type}
+                onValueChange={(val) => setFormData(prev => ({
+                  ...prev,
+                  recurring: { ...prev.recurring, type: val }
+                }))}
+              >
                 <SelectTrigger className="bg-background border-none h-10 rounded-lg">
                   <SelectValue />
                 </SelectTrigger>
@@ -269,15 +298,18 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
               </Select>
             </div>
 
-            {recurringType === 'installment' ? (
+            {formData.recurring.type === 'installment' ? (
               <div className="grid gap-2">
                 <Label htmlFor="totalInstallments">Número de Parcelas</Label>
                 <Input
                   id="totalInstallments"
                   type="number"
                   min="2"
-                  value={totalInstallments}
-                  onChange={(e) => setTotalInstallments(e.target.value)}
+                  value={formData.recurring.totalInstallments}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    recurring: { ...prev.recurring, totalInstallments: e.target.value }
+                  }))}
                   required
                   className="bg-background border-none h-10 rounded-lg"
                 />
@@ -285,7 +317,13 @@ const TransactionForm = ({ categories, accounts, transaction, onTransactionCreat
             ) : (
               <div className="grid gap-2">
                 <Label htmlFor="frequency">Frequência</Label>
-                <Select value={frequency} onValueChange={setFrequency}>
+                <Select
+                  value={formData.recurring.frequency}
+                  onValueChange={(val) => setFormData(prev => ({
+                    ...prev,
+                    recurring: { ...prev.recurring, frequency: val }
+                  }))}
+                >
                   <SelectTrigger className="bg-background border-none h-10 rounded-lg">
                     <SelectValue />
                   </SelectTrigger>
