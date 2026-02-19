@@ -12,7 +12,8 @@ import {
   Sun,
   Moon,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Settings
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { cn } from '@/lib/utils';
@@ -94,15 +95,40 @@ export function Sidebar() {
         </TooltipProvider>
       </nav>
 
-      <div className="p-4 border-t mt-auto">
+      <div className="p-4 border-t mt-auto space-y-2">
         <TooltipProvider delayDuration={0}>
+          <Tooltip disableHoverableContent={!isCollapsed}>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/settings"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group relative",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
+                    isCollapsed && "justify-center px-0 w-10 mx-auto"
+                  )
+                }
+              >
+                <Settings size={20} className="shrink-0" />
+                {!isCollapsed && <span className="font-medium">Configurações</span>}
+              </NavLink>
+            </TooltipTrigger>
+            {isCollapsed && (
+              <TooltipContent side="right">
+                Configurações
+              </TooltipContent>
+            )}
+          </Tooltip>
+
           <Tooltip disableHoverableContent={!isCollapsed}>
             <TooltipTrigger asChild>
               <Button
                 variant="outline"
                 onClick={toggleTheme}
                 className={cn(
-                  "w-full flex items-center gap-3 justify-start rounded-xl",
+                  "w-full flex items-center gap-3 justify-start rounded-xl border-none hover:bg-accent/50",
                   isCollapsed && "justify-center p-0 h-10 w-10 mx-auto"
                 )}
               >

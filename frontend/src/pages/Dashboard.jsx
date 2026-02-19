@@ -64,6 +64,14 @@ const Dashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [greeting, setGreeting] = useState('');
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return "Bom dia";
+    if (hour >= 12 && hour < 18) return "Boa tarde";
+    return "Boa noite";
+  };
 
   const fetchData = async () => {
     try {
@@ -85,6 +93,9 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchData();
+    const userSettings = JSON.parse(localStorage.getItem('userSettings') || '{}');
+    const name = userSettings.displayName || "Usuário";
+    setGreeting(`${getGreeting()}, ${name}.`);
   }, []);
 
   const formatCurrency = (value) => {
@@ -124,7 +135,7 @@ const Dashboard = () => {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{greeting}</h1>
           <p className="text-muted-foreground">Bem-vindo ao seu controle financeiro premium.</p>
         </div>
         <div className="flex items-center gap-3">
