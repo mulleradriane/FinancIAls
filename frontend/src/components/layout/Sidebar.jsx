@@ -12,10 +12,17 @@ import {
   Sun,
   Moon,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Settings
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Importar as imagens
 import logoLight from '@/assets/images/logo-light.png';
@@ -78,39 +85,59 @@ export function Sidebar() {
         width: isCollapsed ? '80px' : '260px',
       }}
     >
-    {/* Header com logo - CENTRALIZADO */}
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '0.5rem 1rem',
-      width: '100%',
-      borderBottom: `1px solid ${currentStyle.border}`,
-    }}>
-      {!isCollapsed ? (
-        <>
-          {/* Espaçador invisível com a MESMA largura do botão */}
-          <div style={{ width: '32px' }} /> {/* Aumentei para igualar ao botão */}
-          
-          {/* Container da logo para garantir centralização */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            flex: 1, // Ocupa o espaço disponível
-          }}>
-            <img 
-              src={logoSrc}
-              alt="Ronromia"
+      {/* Header com logo - CENTRALIZADO */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0.5rem 1rem',
+        width: '100%',
+        borderBottom: `1px solid ${currentStyle.border}`,
+      }}>
+        {!isCollapsed ? (
+          <>
+            {/* Espaçador invisível com a MESMA largura do botão */}
+            <div style={{ width: '32px' }} />
+            
+            {/* Container da logo para garantir centralização */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              flex: 1,
+            }}>
+              <img 
+                src={logoSrc}
+                alt="Ronromia"
+                style={{
+                  height: '40px',
+                  width: 'auto',
+                  maxWidth: '140px',
+                  objectFit: 'contain',
+                }}
+              />
+            </div>
+            
+            {/* Botão com largura fixa */}
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
               style={{
-                height: '40px',
-                width: 'auto',
-                maxWidth: '140px',
-                objectFit: 'contain',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: currentStyle.text,
+                padding: '0.25rem',
+                borderRadius: '0.375rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '32px',
+                height: '32px',
               }}
-            />
-          </div>
-          
-          {/* Botão com largura fixa */}
+            >
+              {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+            </button>
+          </>
+        ) : (
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             style={{
@@ -123,35 +150,16 @@ export function Sidebar() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '32px', // Largura fixa
-              height: '32px', // Altura fixa
+              margin: '0 auto',
+              width: '32px',
+              height: '32px',
             }}
           >
             {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
           </button>
-        </>
-      ) : (
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: currentStyle.text,
-            padding: '0.25rem',
-            borderRadius: '0.375rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto',
-            width: '32px',
-            height: '32px',
-          }}
-        >
-          {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-        </button>
-      )}
-    </div>
+        )}
+      </div>
+
       {/* Menu de navegação */}
       <nav style={{
         flex: 1,
@@ -198,41 +206,95 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Botão de tema */}
+      {/* Área inferior com Configurações e Tema */}
       <div style={{
         padding: '1rem',
         borderTop: `1px solid ${currentStyle.border}`,
       }}>
-        <button
-          onClick={toggleTheme}
-          style={{
-            width: isCollapsed ? '2.5rem' : '100%',
-            height: '2.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            justifyContent: isCollapsed ? 'center' : 'flex-start',
-            padding: isCollapsed ? '0' : '0 0.75rem',
-            borderRadius: '0.75rem',
-            border: `1px solid ${currentStyle.border}`,
-            backgroundColor: 'transparent',
-            color: currentStyle.text,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            margin: isCollapsed ? '0 auto' : '0',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = currentStyle.hover;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-          {!isCollapsed && (
-            <span>{theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}</span>
-          )}
-        </button>
+        <TooltipProvider delayDuration={0}>
+          {/* Item Configurações */}
+          <Tooltip disableHoverableContent={!isCollapsed}>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/settings"
+                style={({ isActive }) => ({
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: isCollapsed ? '0.625rem 0' : '0.625rem 0.75rem',
+                  borderRadius: '0.75rem',
+                  width: isCollapsed ? '2.5rem' : '100%',
+                  margin: isCollapsed ? '0 auto' : '0',
+                  marginBottom: '0.5rem',
+                  justifyContent: isCollapsed ? 'center' : 'flex-start',
+                  backgroundColor: isActive ? currentStyle.active : 'transparent',
+                  color: isActive ? currentStyle.activeText : currentStyle.text,
+                  textDecoration: 'none',
+                  transition: 'all 0.2s',
+                })}
+                onMouseEnter={(e) => {
+                  if (!e.currentTarget.style.backgroundColor.includes(currentStyle.active)) {
+                    e.currentTarget.style.backgroundColor = currentStyle.hover;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!e.currentTarget.style.backgroundColor.includes(currentStyle.active)) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                <Settings size={20} />
+                {!isCollapsed && <span style={{ fontWeight: 500 }}>Configurações</span>}
+              </NavLink>
+            </TooltipTrigger>
+            {isCollapsed && (
+              <TooltipContent side="right">
+                Configurações
+              </TooltipContent>
+            )}
+          </Tooltip>
+
+          {/* Botão de tema */}
+          <Tooltip disableHoverableContent={!isCollapsed}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={toggleTheme}
+                style={{
+                  width: isCollapsed ? '2.5rem' : '100%',
+                  height: '2.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  justifyContent: isCollapsed ? 'center' : 'flex-start',
+                  padding: isCollapsed ? '0' : '0 0.75rem',
+                  borderRadius: '0.75rem',
+                  border: `1px solid ${currentStyle.border}`,
+                  backgroundColor: 'transparent',
+                  color: currentStyle.text,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  margin: isCollapsed ? '0 auto' : '0',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = currentStyle.hover;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+                {!isCollapsed && (
+                  <span>{theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}</span>
+                )}
+              </button>
+            </TooltipTrigger>
+            {isCollapsed && (
+              <TooltipContent side="right">
+                {theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </aside>
   );
