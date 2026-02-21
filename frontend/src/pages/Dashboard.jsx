@@ -47,12 +47,14 @@ const VariationBadge = ({ value, type }) => {
 
   return (
     <div className={cn(
-      "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold",
-      isGood ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
+      "flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide",
+      isGood
+        ? "bg-success/[0.03] text-success/90 border border-success/10"
+        : "bg-destructive/[0.03] text-destructive/90 border border-destructive/10"
     )}>
-      {isPositive ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+      {isPositive ? <TrendingUp size={10} strokeWidth={2.5} /> : <TrendingDown size={10} strokeWidth={2.5} />}
       {Math.abs(value).toFixed(1)}%
-      <span className="font-normal opacity-70 ml-0.5 text-[8px] uppercase">vs mês ant.</span>
+      <span className="font-medium opacity-60 ml-1 text-[9px] uppercase">vs mês ant.</span>
     </div>
   );
 };
@@ -98,12 +100,44 @@ const Dashboard = () => {
     setGreeting(`${getGreeting()}, ${name}.`);
   }, []);
 
+  const getInsights = () => {
+    if (!data) return [];
+    const insights = [];
+
+    // 1. Top Category
+    const sortedCategories = Object.entries(data.expenses_by_category)
+      .sort((a, b) => parseFloat(b[1]) - parseFloat(a[1]));
+
+    if (sortedCategories.length > 0) {
+      const [name, value] = sortedCategories[0];
+      const percentage = data.monthly_expenses > 0
+        ? ((parseFloat(value) / parseFloat(data.monthly_expenses)) * 100).toFixed(0)
+        : 0;
+      insights.push(`Sua maior despesa este mês foi com ${name}, representando ${percentage}% dos seus gastos.`);
+    }
+
+    // 2. Variation
+    if (data.expenses_variation !== 0) {
+      const verb = data.expenses_variation > 0 ? 'aumentaram' : 'diminuíram';
+      insights.push(`Seus gastos ${verb} ${Math.abs(data.expenses_variation).toFixed(0)}% em relação ao mês passado.`);
+    }
+
+    // 3. Savings trend
+    if (data.balance_variation > 0) {
+      insights.push("Você está economizando mais do que no mês anterior.");
+    }
+
+    return insights;
+  };
+
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
   };
+
+  const insights = getInsights();
 
   if (loading || !data) {
     return (
@@ -118,14 +152,15 @@ const Dashboard = () => {
             <Skeleton className="h-10 w-40 rounded-xl" />
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Skeleton className="h-32 w-full rounded-2xl" />
-          <Skeleton className="h-32 w-full rounded-2xl" />
-          <Skeleton className="h-32 w-full rounded-2xl" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <Skeleton className="h-40 w-full rounded-2xl" />
+          <Skeleton className="h-40 w-full rounded-2xl" />
+          <Skeleton className="h-40 w-full rounded-2xl" />
         </div>
+        <Skeleton className="h-32 w-full rounded-2xl" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <Skeleton className="lg:col-span-2 h-[400px] rounded-2xl" />
-          <Skeleton className="h-[400px] rounded-2xl" />
+          <Skeleton className="lg:col-span-2 h-[480px] rounded-2xl" />
+          <Skeleton className="h-[480px] rounded-2xl" />
         </div>
       </div>
     );
@@ -133,10 +168,10 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{greeting}</h1>
-          <p className="text-muted-foreground">Bem-vindo ao seu controle financeiro premium.</p>
+          <h1 className="text-4xl font-bold tracking-tight">{greeting}</h1>
+          <p className="text-muted-foreground mt-1 text-base">Aqui está o panorama financeiro de hoje.</p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" onClick={() => navigate('/transactions')} className="rounded-xl">
@@ -149,20 +184,23 @@ const Dashboard = () => {
       </div>
 
       {/* Top Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-none shadow-md overflow-hidden group">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <Card className={cn(
+          "border-none shadow-md overflow-hidden group transition-all duration-300",
+          data.current_balance < 0 && "bg-destructive/[0.03] border border-destructive/10"
+        )}>
           <CardContent className="p-0">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div className="p-2 bg-primary/10 rounded-xl group-hover:scale-110 transition-transform">
-                  <Wallet className="h-5 w-5 text-primary" />
+            <div className="p-8">
+              <div className="flex justify-between items-start mb-6">
+                <div className="p-2.5 bg-primary/10 rounded-xl group-hover:scale-110 transition-transform">
+                  <Wallet className="h-6 w-6 text-primary" />
                 </div>
                 <VariationBadge value={data.balance_variation} type="balance" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground">Saldo Total</p>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Saldo Total</p>
               <h2 className={cn(
-                "text-3xl font-bold mt-1",
-                data.current_balance >= 0 ? "text-foreground" : "text-destructive"
+                "text-4xl font-bold mt-2 tracking-tight",
+                data.current_balance >= 0 ? "text-foreground" : "text-foreground/90"
               )}>
                 {formatCurrency(data.current_balance)}
               </h2>
@@ -173,15 +211,15 @@ const Dashboard = () => {
 
         <Card className="border-none shadow-md overflow-hidden group">
           <CardContent className="p-0">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div className="p-2 bg-success/10 rounded-xl group-hover:scale-110 transition-transform">
-                  <ArrowUpCircle className="h-5 w-5 text-success" />
+            <div className="p-8">
+              <div className="flex justify-between items-start mb-6">
+                <div className="p-2.5 bg-success/10 rounded-xl group-hover:scale-110 transition-transform">
+                  <ArrowUpCircle className="h-6 w-6 text-success" />
                 </div>
                 <VariationBadge value={data.income_variation} type="income" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground">Receitas do Mês</p>
-              <h2 className="text-3xl font-bold mt-1 text-success">
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Receitas do Mês</p>
+              <h2 className="text-4xl font-bold mt-2 text-success tracking-tight">
                 {formatCurrency(data.monthly_income)}
               </h2>
             </div>
@@ -191,15 +229,15 @@ const Dashboard = () => {
 
         <Card className="border-none shadow-md overflow-hidden group">
           <CardContent className="p-0">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div className="p-2 bg-destructive/10 rounded-xl group-hover:scale-110 transition-transform">
-                  <ArrowDownCircle className="h-5 w-5 text-destructive" />
+            <div className="p-8">
+              <div className="flex justify-between items-start mb-6">
+                <div className="p-2.5 bg-destructive/10 rounded-xl group-hover:scale-110 transition-transform">
+                  <ArrowDownCircle className="h-6 w-6 text-destructive" />
                 </div>
                 <VariationBadge value={data.expenses_variation} type="expense" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground">Despesas do Mês</p>
-              <h2 className="text-3xl font-bold mt-1 text-destructive">
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Despesas do Mês</p>
+              <h2 className="text-4xl font-bold mt-2 text-destructive tracking-tight">
                 {formatCurrency(data.monthly_expenses)}
               </h2>
             </div>
@@ -208,15 +246,43 @@ const Dashboard = () => {
         </Card>
       </div>
 
+      {/* Smart Summary */}
+      <Card className="border-none shadow-md rounded-2xl bg-secondary/20 overflow-hidden relative group">
+        <div className="absolute top-0 left-0 w-1 h-full bg-primary/40" />
+        <CardContent className="p-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Resumo Inteligente</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-3">
+                {insights.map((insight, idx) => (
+                  <div key={idx} className="flex items-start gap-3">
+                    <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
+                    <p className="text-foreground/80 text-[15px] font-medium leading-relaxed">
+                      {insight}
+                    </p>
+                  </div>
+                ))}
+                {insights.length === 0 && (
+                  <p className="text-muted-foreground text-sm italic">Adicione mais transações para gerar insights personalizados.</p>
+                )}
+              </div>
+            </div>
+            <Button variant="outline" className="shrink-0 border-primary/20 text-primary hover:bg-primary/5 rounded-xl h-11 px-6 font-semibold transition-all" onClick={() => navigate('/relatorios')}>
+              Ver relatórios
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Chart */}
         <Card className="lg:col-span-2 border-none shadow-md rounded-2xl">
-          <CardHeader>
-            <CardTitle>Evolução Mensal</CardTitle>
+          <CardHeader className="p-8 pb-0">
+            <CardTitle className="text-xl">Evolução Mensal</CardTitle>
             <CardDescription>Comparativo de receitas e despesas nos últimos 6 meses</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="h-[300px] w-full">
+          <CardContent className="p-8">
+            <div className="h-[350px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.chart_data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted-foreground) / 0.1)" />
@@ -268,12 +334,12 @@ const Dashboard = () => {
 
         {/* Categories Chart */}
         <Card className="border-none shadow-md rounded-2xl">
-          <CardHeader>
-            <CardTitle>Gastos por Categoria</CardTitle>
+          <CardHeader className="p-8 pb-0">
+            <CardTitle className="text-xl">Gastos por Categoria</CardTitle>
             <CardDescription>Distribuição percentual mensal</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="h-[300px] w-full relative">
+          <CardContent className="p-8">
+            <div className="h-[350px] w-full relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -323,11 +389,11 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Top 5 Categories */}
         <Card className="border-none shadow-md rounded-2xl">
-          <CardHeader>
-            <CardTitle>Top 5 Despesas</CardTitle>
+          <CardHeader className="p-8 pb-4">
+            <CardTitle className="text-xl">Top 5 Despesas</CardTitle>
             <CardDescription>Categorias com maior volume financeiro</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="p-8 pt-0 space-y-6">
             {Object.entries(data.expenses_by_category)
               .sort((a, b) => parseFloat(b[1]) - parseFloat(a[1]))
               .slice(0, 5)
@@ -369,14 +435,14 @@ const Dashboard = () => {
         </Card>
 
         {/* Quick Actions & Recent Info */}
-        <div className="space-y-6">
+        <div className="space-y-8">
           <Card className="border-none shadow-md bg-primary text-primary-foreground rounded-2xl overflow-hidden relative">
             <div className="absolute top-[-20px] right-[-20px] w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-            <CardHeader>
+            <CardHeader className="p-8 pb-4">
               <CardTitle className="text-xl">O que deseja fazer agora?</CardTitle>
               <CardDescription className="text-primary-foreground/70">Ações rápidas para agilizar sua gestão</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
+            <CardContent className="p-8 pt-0 grid grid-cols-2 gap-4">
               <Button
                 onClick={() => setIsModalOpen(true)}
                 className="bg-white text-primary hover:bg-white/90 rounded-xl h-20 flex-col gap-2 font-bold transition-all hover:translate-y-[-2px]"
@@ -396,10 +462,10 @@ const Dashboard = () => {
           </Card>
 
           <Card className="border-none shadow-md rounded-2xl">
-            <CardHeader>
-              <CardTitle>Resumo de Saúde</CardTitle>
+            <CardHeader className="p-8 pb-4">
+              <CardTitle className="text-xl">Resumo de Saúde</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-8 pt-0">
               <div className="space-y-4 text-sm">
                 <div className="flex justify-between items-center py-2 border-b">
                   <span className="text-muted-foreground">Comprometimento de Renda</span>
