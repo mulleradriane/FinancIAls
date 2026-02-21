@@ -57,3 +57,9 @@ class NetWorthData(BaseModel):
     net_worth: Decimal
     allocation: Dict[str, Decimal]
     history: List[NetWorthHistory] = []
+
+class CashFlowSummary(BaseModel):
+    month: str
+    income: Decimal
+    expense: Decimal
+    net: Decimal
