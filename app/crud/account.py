@@ -47,49 +47,35 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
             diff = Decimal(str(current_balance_input)) - actual_balance
 
             if diff != 0:
-                if diff > 0:
-                    category = db.scalar(
-                        select(Category).filter(
-                            Category.name == "Ajuste de Saldo",
-                            Category.type == CategoryType.income
-                        )
-                    )
-                    if not category:
-                        category = Category(name="Ajuste de Saldo", type=CategoryType.income)
-                        db.add(category)
-                        db.commit()
-                        db.refresh(category)
+                # Find or create adjustment category (by name only to avoid unique constraint)
+                category = db.scalar(
+                    select(Category).filter(Category.name == "Ajuste de Saldo")
+                )
+                if not category:
+                    category = Category(name="Ajuste de Saldo", type=CategoryType.income)
+                    db.add(category)
+                    db.commit()
+                    db.refresh(category)
 
+                if diff > 0:
                     adjustment = Transaction(
                         description="Ajuste de Saldo",
                         amount=diff,
                         date=date.today(),
                         category_id=category.id,
                         account_id=db_obj.id,
-                        type=category.type
+                        type="income"
                     )
                     db.add(adjustment)
                 else:
                     # diff < 0, need an expense transaction
-                    category = db.scalar(
-                        select(Category).filter(
-                            Category.name == "Ajuste de Saldo",
-                            Category.type == CategoryType.expense
-                        )
-                    )
-                    if not category:
-                        category = Category(name="Ajuste de Saldo", type=CategoryType.expense)
-                        db.add(category)
-                        db.commit()
-                        db.refresh(category)
-
                     adjustment = Transaction(
                         description="Ajuste de Saldo",
                         amount=abs(diff),
                         date=date.today(),
                         category_id=category.id,
                         account_id=db_obj.id,
-                        type=category.type
+                        type="expense"
                     )
                     db.add(adjustment)
 
