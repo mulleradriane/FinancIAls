@@ -8,9 +8,43 @@ from app.models.transaction import Transaction
 from app.models.recurring_expense import RecurringExpense
 from app.models.transfer import Transfer
 from app.models.account import Account
+from app.models.category import Category, CategoryType
 from app.schemas.transaction import TransactionCreate, TransactionUpdate, UnifiedTransactionResponse
 
 class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate]):
+    def create(self, db: Session, *, obj_in: TransactionCreate) -> Transaction:
+        obj_in_data = obj_in.model_dump()
+
+        # Determine type from category
+        category = db.get(Category, obj_in.category_id)
+        if category:
+            obj_in_data["type"] = category.type
+
+        db_obj = self.model(**obj_in_data)
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+
+    def update(
+        self,
+        db: Session,
+        *,
+        db_obj: Transaction,
+        obj_in: TransactionUpdate | dict
+    ) -> Transaction:
+        if isinstance(obj_in, dict):
+            update_data = obj_in
+        else:
+            update_data = obj_in.model_dump(exclude_unset=True)
+
+        if "category_id" in update_data and update_data["category_id"]:
+            category = db.get(Category, update_data["category_id"])
+            if category:
+                update_data["type"] = category.type
+
+        return super().update(db, db_obj=db_obj, obj_in=update_data)
+
     def get(self, db: Session, id: UUID) -> Optional[Transaction]:
         return db.scalars(
             select(Transaction)
@@ -77,6 +111,7 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
                 id=t.id,
                 description=t.description,
                 amount=t.amount,
+                type=t.type,
                 date=t.date,
                 category_name=t.category.name if t.category else "Sem Categoria",
                 category_icon=t.category.icon if t.category else "💰",
@@ -115,6 +150,7 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
                         id=tr.id,
                         description=tr.description or "Transferência",
                         amount=tr.amount * -1,
+                        type="expense",
                         date=tr.date,
                         category_name=f"Transferência para {tr.to_account.name}",
                         is_transfer=True,
@@ -129,6 +165,7 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
                         id=tr.id,
                         description=tr.description or "Transferência",
                         amount=tr.amount,
+                        type="income",
                         date=tr.date,
                         category_name=f"Recebido de {tr.from_account.name}",
                         is_transfer=True,

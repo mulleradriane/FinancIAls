@@ -282,7 +282,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
               onValueChange={(val) => setFormData(prev => ({ ...prev, categoryId: val }))}
               required
             >
-              <SelectTrigger className="bg-secondary/50 border-none h-11 rounded-xl">
+              <SelectTrigger id="category" className="bg-secondary/50 border-none h-11 rounded-xl">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
@@ -305,7 +305,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
               onValueChange={(val) => setFormData(prev => ({ ...prev, accountId: val }))}
               required
             >
-              <SelectTrigger className="bg-secondary/50 border-none h-11 rounded-xl text-left">
+              <SelectTrigger id="account" className="bg-secondary/50 border-none h-11 rounded-xl text-left">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
