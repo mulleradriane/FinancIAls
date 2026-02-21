@@ -47,12 +47,19 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
             diff = Decimal(str(current_balance_input)) - actual_balance
 
             if diff != 0:
-                # Find or create adjustment category (by name only to avoid unique constraint)
+                # Find adjustment category by name
                 category = db.scalar(
                     select(Category).filter(Category.name == "Ajuste de Saldo")
                 )
+
+                # If for some reason it doesn't exist (e.g. fresh DB without migrations),
+                # we create it as a system category.
                 if not category:
-                    category = Category(name="Ajuste de Saldo", type=CategoryType.income)
+                    category = Category(
+                        name="Ajuste de Saldo",
+                        type=CategoryType.income,
+                        is_system=True
+                    )
                     db.add(category)
                     db.commit()
                     db.refresh(category)

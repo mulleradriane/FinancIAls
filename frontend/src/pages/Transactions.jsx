@@ -134,6 +134,7 @@ const Transactions = () => {
   };
 
   const totals = transactions.reduce((acc, t) => {
+    if (t.category_is_system) return acc;
     const val = Math.abs(parseFloat(t.amount));
     if (t.type === 'income') acc.incomes += val;
     else acc.expenses += val;
@@ -261,7 +262,9 @@ const Transactions = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as Categorias</SelectItem>
-                  {categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                  {categories
+                    .filter(cat => !cat.is_system)
+                    .map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

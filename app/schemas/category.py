@@ -7,6 +7,7 @@ class CategoryBase(BaseModel):
     type: CategoryType
     icon: str | None = None
     color: str | None = None
+    is_system: bool = False
 
 class CategoryCreate(CategoryBase):
     pass
@@ -16,6 +17,7 @@ class CategoryUpdate(BaseModel):
     type: CategoryType | None = None
     icon: str | None = None
     color: str | None = None
+    is_system: bool | None = None
 
 class Category(CategoryBase):
     id: UUID
