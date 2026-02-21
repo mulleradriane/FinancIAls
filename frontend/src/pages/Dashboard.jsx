@@ -9,7 +9,9 @@ import {
   ArrowDownCircle,
   TrendingUp,
   TrendingDown,
-  ArrowRight
+  ArrowRight,
+  Landmark,
+  Scale
 } from 'lucide-react';
 import {
   BarChart,
@@ -152,6 +154,10 @@ const Dashboard = () => {
             <Skeleton className="h-10 w-40 rounded-xl" />
           </div>
         </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <Skeleton className="h-40 w-full rounded-2xl" />
+          <Skeleton className="h-40 w-full rounded-2xl" />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <Skeleton className="h-40 w-full rounded-2xl" />
           <Skeleton className="h-40 w-full rounded-2xl" />
@@ -183,11 +189,11 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Top Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {/* Top Cards - Tier 1: Liquidity & Net Worth */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <Card className={cn(
           "border-none shadow-md overflow-hidden group transition-all duration-300",
-          data.current_balance < 0 && "bg-destructive/[0.03] border border-destructive/10"
+          data.available_balance < 0 && "bg-destructive/[0.03] border border-destructive/10"
         )}>
           <CardContent className="p-0">
             <div className="p-8">
@@ -197,18 +203,41 @@ const Dashboard = () => {
                 </div>
                 <VariationBadge value={data.balance_variation} type="balance" />
               </div>
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Saldo Total</p>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Saldo Disponível</p>
               <h2 className={cn(
                 "text-4xl font-bold mt-2 tracking-tight",
-                data.current_balance >= 0 ? "text-foreground" : "text-foreground/90"
+                data.available_balance >= 0 ? "text-foreground" : "text-foreground/90"
               )}>
-                {formatCurrency(data.current_balance)}
+                {formatCurrency(data.available_balance)}
               </h2>
             </div>
             <div className="h-1 w-full bg-primary/10 group-hover:bg-primary/30 transition-colors" />
           </CardContent>
         </Card>
 
+        <Card className="border-none shadow-md overflow-hidden group transition-all duration-300">
+          <CardContent className="p-0">
+            <div className="p-8">
+              <div className="flex justify-between items-start mb-6">
+                <div className="p-2.5 bg-primary/10 rounded-xl group-hover:scale-110 transition-transform">
+                  <Landmark className="h-6 w-6 text-primary" />
+                </div>
+                <div className="px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide bg-primary/5 text-primary/70 border border-primary/10 uppercase">
+                  Consolidado
+                </div>
+              </div>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Patrimônio Total</p>
+              <h2 className="text-4xl font-bold mt-2 tracking-tight">
+                {formatCurrency(data.total_net_worth)}
+              </h2>
+            </div>
+            <div className="h-1 w-full bg-primary/10 group-hover:bg-primary/30 transition-colors" />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Top Cards - Tier 2: Monthly Results */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <Card className="border-none shadow-md overflow-hidden group">
           <CardContent className="p-0">
             <div className="p-8">
@@ -242,6 +271,26 @@ const Dashboard = () => {
               </h2>
             </div>
             <div className="h-1 w-full bg-destructive/10 group-hover:bg-destructive/30 transition-colors" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-md overflow-hidden group">
+          <CardContent className="p-0">
+            <div className="p-8">
+              <div className="flex justify-between items-start mb-6">
+                <div className="p-2.5 bg-primary/10 rounded-xl group-hover:scale-110 transition-transform">
+                  <Scale className="h-6 w-6 text-primary" />
+                </div>
+              </div>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Resultado do Mês</p>
+              <h2 className={cn(
+                "text-4xl font-bold mt-2 tracking-tight",
+                (data.monthly_income - data.monthly_expenses) >= 0 ? "text-success" : "text-destructive"
+              )}>
+                {formatCurrency(data.monthly_income - data.monthly_expenses)}
+              </h2>
+            </div>
+            <div className="h-1 w-full bg-primary/10 group-hover:bg-primary/30 transition-colors" />
           </CardContent>
         </Card>
       </div>
