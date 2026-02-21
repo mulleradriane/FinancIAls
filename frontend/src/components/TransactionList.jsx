@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-const TransactionList = ({ transactions, onEdit, onDelete }) => {
+const TransactionList = ({ transactions, onEdit, onDelete, highlightId }) => {
   const getAccountIcon = (type) => {
     const iconProps = { size: 12, className: "text-muted-foreground" };
     switch (type) {
@@ -65,58 +65,76 @@ const TransactionList = ({ transactions, onEdit, onDelete }) => {
       {transactions.map((t, index) => (
         <Card
           key={`${t.id}-${t.account_name}-${index}`}
-          className="p-4 hover:shadow-md transition-all duration-200 group relative overflow-hidden"
+          className={cn(
+            "p-5 transition-all duration-300 group relative overflow-hidden border-none shadow-sm",
+            "hover:shadow-md hover:-translate-y-0.5",
+            highlightId === t.id ? "bg-primary/[0.04] ring-1 ring-primary/10" : "bg-card"
+          )}
         >
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-5">
             {getIcon(t)}
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-semibold truncate text-foreground">
+                <span className="font-semibold text-[17px] tracking-tight truncate text-foreground">
                   {t.description}
                 </span>
-                {t.installment_number && (
-                  <Badge variant="outline" className="text-[10px] h-4 px-1 font-normal">
-                    {t.installment_number}
-                  </Badge>
-                )}
               </div>
-              <div className="flex items-center gap-3 mt-0.5">
-                <span className="text-xs text-muted-foreground">
+
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5">
+                <Badge
+                  variant="secondary"
+                  className="text-[10px] h-4.5 px-2 font-semibold uppercase tracking-wider"
+                  style={{
+                    backgroundColor: t.is_transfer ? undefined : `${t.category_color}12`,
+                    color: t.is_transfer ? undefined : t.category_color,
+                    border: t.is_transfer ? undefined : `1px solid ${t.category_color}20`
+                  }}
+                >
+                  {t.category_name}
+                </Badge>
+
+                {t.is_recurring && (
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/80">
+                    <span className="text-muted-foreground/30">•</span>
+                    {t.recurring_type === 'installment' ? (
+                      <span className="flex items-center gap-1">
+                        <span>📦</span> {t.installment_number}/{t.total_installments} Parcelado
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1">
+                        <span>🔁</span> Recorrente
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <span className="text-muted-foreground/30">•</span>
+                <span className="text-[11px] font-medium text-muted-foreground/70">
                   {new Date(t.date).toLocaleDateString('pt-BR')}
                 </span>
+
                 <span className="text-muted-foreground/30">•</span>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/70">
                   {getAccountIcon(t.account_type)}
                   <span>{t.account_name}</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col items-end gap-1">
+            <div className="flex flex-col items-end justify-center min-w-[130px]">
               <span className={cn(
-                "font-bold text-lg",
+                "font-semibold text-2xl tracking-tighter leading-none mb-1",
                 t.amount < 0 || t.category_name === 'Despesa' ? "text-destructive" : "text-success"
               )}>
                 {formatCurrency(t.amount)}
               </span>
-              <Badge
-                variant="secondary"
-                className="text-[10px] h-4 px-1.5 font-medium"
-                style={{
-                  backgroundColor: t.is_transfer ? undefined : `${t.category_color}20`,
-                  color: t.is_transfer ? undefined : t.category_color,
-                  border: t.is_transfer ? undefined : `1px solid ${t.category_color}30`
-                }}
-              >
-                {t.category_name}
-              </Badge>
             </div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <MoreVertical size={16} />
+                <Button variant="ghost" size="icon" className="h-9 w-9 opacity-0 group-hover:opacity-100 transition-all duration-150">
+                  <MoreVertical size={18} className="text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
