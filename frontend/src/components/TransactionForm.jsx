@@ -286,7 +286,9 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((cat) => (
+                {categories
+                  .filter(cat => cat.name !== 'Ajuste de Saldo')
+                  .map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>
                     <div className="flex items-center gap-2">
                       <span>{cat.icon || '💰'}</span>

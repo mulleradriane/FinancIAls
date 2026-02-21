@@ -25,21 +25,27 @@ class SummaryService:
 
         # Transações de Receita (Transaction where type == income)
         total_income += db.scalar(
-            select(func.sum(Transaction.amount)).filter(
+            select(func.sum(Transaction.amount))
+            .join(Category)
+            .filter(
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
                 Transaction.type == "income",
-                Transaction.deleted_at == None
+                Transaction.deleted_at == None,
+                Category.name != "Ajuste de Saldo"
             )
         ) or Decimal(0)
 
         # Total Expenses (Transactions where type == expense)
         total_expenses = db.scalar(
-            select(func.sum(Transaction.amount)).filter(
+            select(func.sum(Transaction.amount))
+            .join(Category)
+            .filter(
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
                 Transaction.type == "expense",
-                Transaction.deleted_at == None
+                Transaction.deleted_at == None,
+                Category.name != "Ajuste de Saldo"
             )
         ) or Decimal(0)
 
@@ -59,7 +65,8 @@ class SummaryService:
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
                 Transaction.type == "expense",
-                Transaction.deleted_at == None
+                Transaction.deleted_at == None,
+                Category.name != "Ajuste de Saldo"
             )
             .group_by(Category.name)
         ).all()
@@ -74,7 +81,8 @@ class SummaryService:
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
                 Transaction.type == "expense",
-                Transaction.deleted_at == None
+                Transaction.deleted_at == None,
+                Category.name != "Ajuste de Saldo"
             )
             .order_by(Transaction.amount.desc())
             .limit(5)
@@ -138,21 +146,27 @@ class SummaryService:
             ) or Decimal(0)
 
             m_income += db.scalar(
-                select(func.sum(Transaction.amount)).filter(
+                select(func.sum(Transaction.amount))
+                .join(Category)
+                .filter(
                     extract('year', Transaction.date) == d.year,
                     extract('month', Transaction.date) == d.month,
                     Transaction.type == "income",
-                    Transaction.deleted_at == None
+                    Transaction.deleted_at == None,
+                    Category.name != "Ajuste de Saldo"
                 )
             ) or Decimal(0)
 
             # Monthly Expenses for this specific month
             m_expenses = db.scalar(
-                select(func.sum(Transaction.amount)).filter(
+                select(func.sum(Transaction.amount))
+                .join(Category)
+                .filter(
                     extract('year', Transaction.date) == d.year,
                     extract('month', Transaction.date) == d.month,
                     Transaction.type == "expense",
-                    Transaction.deleted_at == None
+                    Transaction.deleted_at == None,
+                    Category.name != "Ajuste de Saldo"
                 )
             ) or Decimal(0)
 
@@ -263,11 +277,13 @@ class SummaryService:
         future_income = db.scalar(select(func.sum(Income.amount)).filter(Income.date >= today)) or Decimal(0)
         future_trans_income = db.scalar(
             select(func.sum(Transaction.amount))
-            .filter(Transaction.type == "income", Transaction.deleted_at == None, Transaction.date >= today)
+            .join(Category)
+            .filter(Transaction.type == "income", Transaction.deleted_at == None, Transaction.date >= today, Category.name != "Ajuste de Saldo")
         ) or Decimal(0)
         future_expenses = db.scalar(
             select(func.sum(Transaction.amount))
-            .filter(Transaction.type == "expense", Transaction.deleted_at == None, Transaction.date >= today)
+            .join(Category)
+            .filter(Transaction.type == "expense", Transaction.deleted_at == None, Transaction.date >= today, Category.name != "Ajuste de Saldo")
         ) or Decimal(0)
         future_investments = db.scalar(select(func.sum(Investment.amount)).filter(Investment.date >= today)) or Decimal(0)
 
@@ -281,7 +297,8 @@ class SummaryService:
 
         expenses = db.execute(
             select(Transaction.date, func.sum(Transaction.amount).label('amount'))
-            .filter(Transaction.type == "expense", Transaction.deleted_at == None, Transaction.date >= today, Transaction.date <= end_of_month)
+            .join(Category)
+            .filter(Transaction.type == "expense", Transaction.deleted_at == None, Transaction.date >= today, Transaction.date <= end_of_month, Category.name != "Ajuste de Saldo")
             .group_by(Transaction.date)
         ).all()
 
@@ -303,7 +320,8 @@ class SummaryService:
         # Também incluir transações do tipo 'income' que não estão no modelo Income
         trans_incomes = db.execute(
             select(Transaction.date, func.sum(Transaction.amount).label('amount'))
-            .filter(Transaction.type == "income", Transaction.deleted_at == None, Transaction.date >= today, Transaction.date <= end_of_month)
+            .join(Category)
+            .filter(Transaction.type == "income", Transaction.deleted_at == None, Transaction.date >= today, Transaction.date <= end_of_month, Category.name != "Ajuste de Saldo")
             .group_by(Transaction.date)
         ).all()
         for row in trans_incomes:
@@ -335,10 +353,13 @@ class SummaryService:
     def get_yearly_summary(self, db: Session, year: int) -> YearlySummary:
         total_income = db.scalar(select(func.sum(Income.amount)).filter(extract('year', Income.date) == year)) or Decimal(0)
         total_expenses = db.scalar(
-            select(func.sum(Transaction.amount)).filter(
+            select(func.sum(Transaction.amount))
+            .join(Category)
+            .filter(
                 extract('year', Transaction.date) == year,
                 Transaction.type == "expense",
-                Transaction.deleted_at == None
+                Transaction.deleted_at == None,
+                Category.name != "Ajuste de Saldo"
             )
         ) or Decimal(0)
         total_invested = db.scalar(select(func.sum(Investment.amount)).filter(extract('year', Investment.date) == year)) or Decimal(0)
