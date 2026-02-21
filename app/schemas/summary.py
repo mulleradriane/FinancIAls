@@ -29,7 +29,8 @@ class DashboardChartData(BaseModel):
     expenses: Decimal
 
 class DashboardData(BaseModel):
-    current_balance: Decimal
+    available_balance: Decimal
+    total_net_worth: Decimal
     monthly_income: Decimal
     monthly_expenses: Decimal
     income_variation: float
