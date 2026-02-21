@@ -95,9 +95,9 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
 
                 db.commit()
 
-            # Record history snapshot
-            new_balance = self.get_balance(db, db_obj.id)
-            self._record_history(db, db_obj.id, new_balance)
+        # Record history snapshot for the current state
+        new_balance = self.get_balance(db, db_obj.id)
+        self._record_history(db, db_obj.id, new_balance)
 
         return updated_obj
 

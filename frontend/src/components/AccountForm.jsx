@@ -28,8 +28,10 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
   const [displayCurrentBalance, setDisplayCurrentBalance] = useState(account ?
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(account.balance) : ''
   );
+  const [isCurrentBalanceDirty, setIsCurrentBalanceDirty] = useState(false);
 
-  const handleBalanceChange = (e, setVal, setDisplayVal) => {
+  const handleBalanceChange = (e, setVal, setDisplayVal, isCorrection = false) => {
+    if (isCorrection) setIsCurrentBalanceDirty(true);
     const value = e.target.value.replace(/\D/g, '');
     if (value === '') {
       setDisplayVal('');
@@ -58,7 +60,9 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
       };
 
       if (account) {
-        payload.current_balance = parseFloat(currentBalance);
+        if (isCurrentBalanceDirty) {
+          payload.current_balance = parseFloat(currentBalance);
+        }
         await api.put(`/accounts/${account.id}`, payload);
       } else {
         await api.post('/accounts/', payload);
@@ -139,7 +143,7 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
                 type="text"
                 placeholder="R$ 0,00"
                 value={displayCurrentBalance}
-                onChange={(e) => handleBalanceChange(e, setCurrentBalance, setDisplayCurrentBalance)}
+                onChange={(e) => handleBalanceChange(e, setCurrentBalance, setDisplayCurrentBalance, true)}
                 className="bg-primary/5 border-primary/20 h-11 rounded-xl font-bold text-lg text-primary"
               />
             </div>
