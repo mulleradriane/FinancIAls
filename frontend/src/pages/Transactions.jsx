@@ -31,6 +31,7 @@ const Transactions = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [highlightId, setHighlightId] = useState(null);
 
   // Filters
   const [period, setPeriod] = useState('month');
@@ -114,6 +115,14 @@ const Transactions = () => {
   const handleEdit = (transaction) => {
     setEditingTransaction(transaction);
     setIsModalOpen(true);
+  };
+
+  const handleTransactionCreated = async (newTransaction) => {
+    await fetchTransactions();
+    if (newTransaction && newTransaction.id) {
+      setHighlightId(newTransaction.id);
+      setTimeout(() => setHighlightId(null), 2000);
+    }
   };
 
   const clearFilters = () => {
@@ -273,7 +282,7 @@ const Transactions = () => {
             categories={categories}
             accounts={accounts}
             transaction={editingTransaction}
-            onTransactionCreated={fetchTransactions}
+            onTransactionCreated={handleTransactionCreated}
             onClose={() => {
               setIsModalOpen(false);
               setEditingTransaction(null);
@@ -301,6 +310,7 @@ const Transactions = () => {
             transactions={transactions}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            highlightId={highlightId}
           />
         ) : (
           <EmptyState

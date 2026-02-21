@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import select
 from app.crud.base import CRUDBase
 from app.models.transaction import Transaction
+from app.models.recurring_expense import RecurringExpense
 from app.models.transfer import Transfer
 from app.models.account import Account
 from app.schemas.transaction import TransactionCreate, TransactionUpdate, UnifiedTransactionResponse
@@ -60,7 +61,11 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
             query = query.filter(Transaction.date <= end_date)
 
         transactions = db.scalars(
-            query.options(joinedload(Transaction.category), joinedload(Transaction.account))
+            query.options(
+                joinedload(Transaction.category),
+                joinedload(Transaction.account),
+                joinedload(Transaction.recurring_expense)
+            )
             .order_by(Transaction.date.desc())
             .offset(skip)
             .limit(limit)
@@ -79,7 +84,10 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
                 is_transfer=False,
                 installment_number=t.installment_number,
                 account_name=t.account.name if t.account else "Sem Conta",
-                account_type=t.account.type if t.account else None
+                account_type=t.account.type if t.account else None,
+                is_recurring=t.recurring_expense_id is not None,
+                recurring_type=t.recurring_expense.type.value if t.recurring_expense else None,
+                total_installments=t.recurring_expense.total_installments if t.recurring_expense else None
             ))
 
         # Get Transfers

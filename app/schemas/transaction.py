@@ -72,5 +72,9 @@ class UnifiedTransactionResponse(BaseModel):
     # For transfers, we might want to know from/to names in the response
     from_account_name: str | None = None
     to_account_name: str | None = None
+    # Recurring indicators
+    is_recurring: bool = False
+    recurring_type: str | None = None
+    total_installments: int | None = None
 
     model_config = ConfigDict(from_attributes=True)

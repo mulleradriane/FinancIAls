@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '@/api/api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from '@/components/ui/card';
 
 const TransactionForm = ({ categories = [], accounts = [], transaction, onTransactionCreated, onClose }) => {
+  const descriptionRef = useRef(null);
   const [formData, setFormData] = useState({
     description: transaction ? transaction.description : '',
     amount: transaction ? transaction.amount : 0,
@@ -47,7 +48,27 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
       setFormData(prev => ({ ...prev, accountId: accounts[0].id }));
     }
     fetchSuggestions();
+
+    // Auto-focus description
+    const timer = setTimeout(() => {
+      if (descriptionRef.current) descriptionRef.current.focus();
+    }, 100);
+    return () => clearTimeout(timer);
   }, [accounts, transaction]);
+
+  useEffect(() => {
+    // Simple intelligence matching
+    if (!transaction && formData.description.length >= 3) {
+      const match = suggestions.find(s =>
+        s.toLowerCase() === formData.description.toLowerCase() ||
+        (formData.description.length >= 5 && s.toLowerCase().startsWith(formData.description.toLowerCase()))
+      );
+      if (match) {
+        const timer = setTimeout(() => applySuggestion(match), 300);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [formData.description]);
 
   const fetchSuggestions = async () => {
     try {
@@ -92,7 +113,12 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    if (!formData.description || !formData.amount || !formData.categoryId || !formData.accountId) {
+      toast.error("Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+
     try {
       const payload = {
         description: formData.description,
@@ -102,8 +128,9 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
         account_id: formData.accountId,
       };
 
+      let response;
       if (transaction) {
-        await api.put(`/transactions/${transaction.id}`, payload);
+        response = await api.put(`/transactions/${transaction.id}`, payload);
       } else {
         const createPayload = {
           ...payload,
@@ -114,12 +141,32 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
           frequency: formData.isRecurring && formData.recurring.type === 'subscription' ?
             formData.recurring.frequency : null,
         };
-        await api.post('/transactions/', createPayload);
+        response = await api.post('/transactions/', createPayload);
       }
 
       toast.success(transaction ? 'Transação atualizada!' : 'Transação criada!');
-      if (onTransactionCreated) onTransactionCreated();
-      if (onClose) onClose();
+
+      if (onTransactionCreated) onTransactionCreated(response.data);
+
+      if (transaction) {
+        if (onClose) onClose();
+      } else {
+        // Clear form and keep open for next entry
+        setFormData(prev => ({
+          ...prev,
+          description: '',
+          amount: 0,
+          displayAmount: '',
+          isRecurring: false,
+          recurring: {
+            type: 'subscription',
+            frequency: 'monthly',
+            total_installments: '',
+          }
+        }));
+        if (descriptionRef.current) descriptionRef.current.focus();
+        fetchSuggestions(); // Refresh suggestions for next match
+      }
     } catch (error) {
       console.error('Error saving transaction:', error);
       const detail = error.response?.data?.detail || 'Erro ao salvar transação.';
@@ -133,14 +180,25 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
     s.toLowerCase().includes(formData.description.toLowerCase())
   );
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape' && onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-6 outline-none"
+      onKeyDown={handleKeyDown}
+    >
       <div className="space-y-4">
         <div className="grid gap-2 relative">
           <Label htmlFor="description">Descrição</Label>
           <div className="relative">
             <Input
               id="description"
+              ref={descriptionRef}
               value={formData.description}
               onChange={(e) => {
                 const val = e.target.value;
