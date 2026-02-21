@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Enum
+from sqlalchemy import Column, String, Enum, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from app.core.database import Base
 import enum
@@ -16,3 +16,4 @@ class Category(Base):
     type = Column(Enum(CategoryType), nullable=False)
     icon = Column(String, nullable=True)
     color = Column(String, nullable=True)
+    is_system = Column(Boolean, nullable=False, default=False)

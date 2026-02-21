@@ -71,6 +71,7 @@ class UnifiedTransactionResponse(BaseModel):
     category_name: str
     category_icon: str | None = None
     category_color: str | None = None
+    category_is_system: bool = False
     is_transfer: bool = False
     installment_number: int | None = None
     account_name: str | None = None

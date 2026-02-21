@@ -91,7 +91,7 @@ const TransactionList = ({ transactions, onEdit, onDelete, highlightId }) => {
                     border: t.is_transfer ? undefined : `1px solid ${t.category_color}20`
                   }}
                 >
-                  {t.category_name}
+                  {t.category_is_system ? 'Sistema' : t.category_name}
                 </Badge>
 
                 {t.is_recurring && (
@@ -138,17 +138,23 @@ const TransactionList = ({ transactions, onEdit, onDelete, highlightId }) => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {!t.is_transfer && (
+                {!t.is_transfer && !t.category_is_system && (
                   <DropdownMenuItem onClick={() => onEdit(t)}>
                     <Pencil size={14} className="mr-2" /> Editar
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem
-                  onClick={() => onDelete(t)}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 size={14} className="mr-2" /> Excluir
-                </DropdownMenuItem>
+                {!t.category_is_system ? (
+                  <DropdownMenuItem
+                    onClick={() => onDelete(t)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 size={14} className="mr-2" /> Excluir
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem disabled className="text-muted-foreground opacity-50">
+                    <Trash2 size={14} className="mr-2" /> Protegido
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

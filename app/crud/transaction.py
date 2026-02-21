@@ -116,6 +116,7 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
                 category_name=t.category.name if t.category else "Sem Categoria",
                 category_icon=t.category.icon if t.category else "💰",
                 category_color=t.category.color if t.category else "#666666",
+                category_is_system=t.category.is_system if t.category else False,
                 is_transfer=False,
                 installment_number=t.installment_number,
                 account_name=t.account.name if t.account else "Sem Conta",
