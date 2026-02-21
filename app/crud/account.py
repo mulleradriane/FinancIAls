@@ -19,40 +19,16 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
     def create(self, db: Session, *, obj_in: AccountCreate) -> Account:
         db_obj = Account(
             name=obj_in.name,
-            type=obj_in.type
+            type=obj_in.type,
+            initial_balance=obj_in.initial_balance,
+            initial_balance_date=obj_in.initial_balance_date or date.today()
         )
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
 
-        initial_balance = obj_in.initial_balance or Decimal(0)
-
-        if initial_balance > 0:
-            # Create or find adjustment category (income type)
-            category = db.scalar(
-                select(Category).filter(
-                    Category.name == "Ajuste de Saldo",
-                    Category.type == CategoryType.income
-                )
-            )
-            if not category:
-                category = Category(name="Ajuste de Saldo", type=CategoryType.income)
-                db.add(category)
-                db.commit()
-                db.refresh(category)
-
-            initial_adjustment = Transaction(
-                description="Saldo Inicial",
-                amount=initial_balance,
-                date=date.today(),
-                category_id=category.id,
-                account_id=db_obj.id,
-                type=category.type
-            )
-            db.add(initial_adjustment)
-            db.commit()
-
-        self._record_history(db, db_obj.id, initial_balance)
+        balance = self.get_balance(db, db_obj.id)
+        self._record_history(db, db_obj.id, balance)
 
         return db_obj
 
@@ -182,9 +158,16 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
         return obj
 
     def get_balance(self, db: Session, account_id: UUID) -> Decimal:
+        account = db.get(Account, account_id)
+        if not account:
+            return Decimal(0)
+
+        initial_balance = account.initial_balance
+        start_date = account.initial_balance_date
+
         incomes = db.scalar(
             select(func.sum(Income.amount))
-            .filter(Income.account_id == account_id)
+            .filter(Income.account_id == account_id, Income.date >= start_date)
         ) or Decimal(0)
 
         expenses = db.scalar(
@@ -192,7 +175,8 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
             .filter(
                 Transaction.account_id == account_id,
                 Transaction.deleted_at == None,
-                Transaction.type == "expense"
+                Transaction.type == "expense",
+                Transaction.date >= start_date
             )
         ) or Decimal(0)
 
@@ -201,25 +185,26 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
             .filter(
                 Transaction.account_id == account_id,
                 Transaction.deleted_at == None,
-                Transaction.type == "income"
+                Transaction.type == "income",
+                Transaction.date >= start_date
             )
         ) or Decimal(0)
 
         investments = db.scalar(
             select(func.sum(Investment.amount))
-            .filter(Investment.account_id == account_id)
+            .filter(Investment.account_id == account_id, Investment.date >= start_date)
         ) or Decimal(0)
 
         transfers_to = db.scalar(
             select(func.sum(Transfer.amount))
-            .filter(Transfer.to_account_id == account_id)
+            .filter(Transfer.to_account_id == account_id, Transfer.date >= start_date)
         ) or Decimal(0)
 
         transfers_from = db.scalar(
             select(func.sum(Transfer.amount))
-            .filter(Transfer.from_account_id == account_id)
+            .filter(Transfer.from_account_id == account_id, Transfer.date >= start_date)
         ) or Decimal(0)
 
-        return incomes + trans_income - expenses - investments + transfers_to - transfers_from
+        return initial_balance + incomes + trans_income - expenses - investments + transfers_to - transfers_from
 
 account = CRUDAccount(Account)

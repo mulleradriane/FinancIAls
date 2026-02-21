@@ -17,8 +17,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 const AccountForm = ({ account, onAccountCreated, onClose }) => {
   const [name, setName] = useState(account ? account.name : '');
   const [type, setType] = useState(account ? account.type : 'banco');
-  const [initialBalance, setInitialBalance] = useState(0);
-  const [displayInitialBalance, setDisplayInitialBalance] = useState('');
+  const [initialBalance, setInitialBalance] = useState(account ? account.initial_balance : 0);
+  const [displayInitialBalance, setDisplayInitialBalance] = useState(account ?
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(account.initial_balance) : ''
+  );
+  const [initialBalanceDate, setInitialBalanceDate] = useState(
+    account?.initial_balance_date || new Date().toISOString().split('T')[0]
+  );
   const [currentBalance, setCurrentBalance] = useState(account ? account.balance : 0);
   const [displayCurrentBalance, setDisplayCurrentBalance] = useState(account ?
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(account.balance) : ''
@@ -45,19 +50,17 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        name,
+        type,
+        initial_balance: parseFloat(initialBalance),
+        initial_balance_date: initialBalanceDate,
+      };
+
       if (account) {
-        const payload = {
-          name,
-          type,
-          current_balance: parseFloat(currentBalance),
-        };
+        payload.current_balance = parseFloat(currentBalance);
         await api.put(`/accounts/${account.id}`, payload);
       } else {
-        const payload = {
-          name,
-          type,
-          initial_balance: parseFloat(initialBalance),
-        };
         await api.post('/accounts/', payload);
       }
 
@@ -102,7 +105,7 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
           </Select>
         </div>
 
-        {!account ? (
+        <div className="grid grid-cols-2 gap-4">
           <div className="grid gap-2">
             <Label htmlFor="initialBalance">Saldo Inicial</Label>
             <Input
@@ -111,26 +114,39 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
               placeholder="R$ 0,00"
               value={displayInitialBalance}
               onChange={(e) => handleBalanceChange(e, setInitialBalance, setDisplayInitialBalance)}
-              className="bg-secondary/30 border-none h-11 rounded-xl font-semibold text-lg"
+              className="bg-secondary/30 border-none h-11 rounded-xl font-semibold"
             />
           </div>
-        ) : (
-          <div className="space-y-3">
+          <div className="grid gap-2">
+            <Label htmlFor="initialBalanceDate">Data Inicial</Label>
+            <Input
+              id="initialBalanceDate"
+              type="date"
+              value={initialBalanceDate}
+              onChange={(e) => setInitialBalanceDate(e.target.value)}
+              className="bg-secondary/30 border-none h-11 rounded-xl"
+              required
+            />
+          </div>
+        </div>
+
+        {account && (
+          <div className="space-y-3 pt-2 border-t border-dashed">
             <div className="grid gap-2">
-              <Label htmlFor="currentBalance">Saldo Atual</Label>
+              <Label htmlFor="currentBalance" className="text-primary font-bold">Saldo Atual (Correção)</Label>
               <Input
                 id="currentBalance"
                 type="text"
                 placeholder="R$ 0,00"
                 value={displayCurrentBalance}
                 onChange={(e) => handleBalanceChange(e, setCurrentBalance, setDisplayCurrentBalance)}
-                className="bg-secondary/30 border-none h-11 rounded-xl font-semibold text-lg"
+                className="bg-primary/5 border-primary/20 h-11 rounded-xl font-bold text-lg text-primary"
               />
             </div>
             <Alert className="bg-primary/5 border-none rounded-xl">
               <AlertCircle className="h-4 w-4 text-primary" />
               <AlertDescription className="text-xs text-muted-foreground">
-                Alterar o saldo manualmente gerará automaticamente uma transação de ajuste.
+                Alterar o saldo atual gerará automaticamente uma transação de ajuste operacional.
               </AlertDescription>
             </Alert>
           </div>
