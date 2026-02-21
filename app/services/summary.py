@@ -7,7 +7,7 @@ from app.models.account import Account, AccountType
 from app.models.balance_history import BalanceHistory
 from app.models.category import Category, CategoryType
 from app.crud.account import account as crud_account
-from app.schemas.summary import MonthlySummary, YearlySummary, DashboardData, DashboardChartData, CashFlowDay, TopTransaction, NetWorthData, NetWorthHistory
+from app.schemas.summary import MonthlySummary, YearlySummary, DashboardData, DashboardChartData, CashFlowDay, TopTransaction, NetWorthData, NetWorthHistory, CashFlowSummary
 from decimal import Decimal
 from datetime import date, timedelta
 from typing import List
@@ -374,5 +374,81 @@ class SummaryService:
             total_invested=total_invested,
             balance=balance
         )
+
+    def get_cash_flow_summary(self, db: Session, months: int = 6) -> List[CashFlowSummary]:
+        today = date.today()
+        start_date = (today - relativedelta(months=months - 1)).replace(day=1)
+
+        # Helper to get monthly totals from a query
+        def get_monthly_totals(query):
+            results = db.execute(query).all()
+            return {(int(r.year), int(r.month)): r.total for r in results}
+
+        # 1. Income from Income model
+        income_model_totals = get_monthly_totals(
+            select(
+                extract('year', Income.date).label('year'),
+                extract('month', Income.date).label('month'),
+                func.sum(Income.amount).label('total')
+            ).filter(Income.date >= start_date)
+            .group_by('year', 'month')
+        )
+
+        # 2. Income from Transaction model
+        income_trans_totals = get_monthly_totals(
+            select(
+                extract('year', Transaction.date).label('year'),
+                extract('month', Transaction.date).label('month'),
+                func.sum(Transaction.amount).label('total')
+            ).join(Category)
+            .filter(
+                Transaction.date >= start_date,
+                Transaction.type == "income",
+                Transaction.deleted_at == None,
+                Category.is_system == False
+            ).group_by('year', 'month')
+        )
+
+        # 3. Expenses from Transaction model
+        expense_trans_totals = get_monthly_totals(
+            select(
+                extract('year', Transaction.date).label('year'),
+                extract('month', Transaction.date).label('month'),
+                func.sum(Transaction.amount).label('total')
+            ).join(Category)
+            .filter(
+                Transaction.date >= start_date,
+                Transaction.type == "expense",
+                Transaction.deleted_at == None,
+                Category.is_system == False
+            ).group_by('year', 'month')
+        )
+
+        # 4. Expenses from Investment model
+        investment_totals = get_monthly_totals(
+            select(
+                extract('year', Investment.date).label('year'),
+                extract('month', Investment.date).label('month'),
+                func.sum(Investment.amount).label('total')
+            ).filter(Investment.date >= start_date)
+            .group_by('year', 'month')
+        )
+
+        summary = []
+        for i in range(months - 1, -1, -1):
+            d = today - relativedelta(months=i)
+            key = (d.year, d.month)
+
+            m_income = income_model_totals.get(key, Decimal(0)) + income_trans_totals.get(key, Decimal(0))
+            m_expense = expense_trans_totals.get(key, Decimal(0)) + investment_totals.get(key, Decimal(0))
+
+            summary.append(CashFlowSummary(
+                month=d.strftime("%Y-%m"),
+                income=m_income,
+                expense=m_expense,
+                net=m_income - m_expense
+            ))
+
+        return summary
 
 summary_service = SummaryService()

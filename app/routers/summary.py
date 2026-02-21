@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.services.summary import summary_service
-from app.schemas.summary import MonthlySummary, YearlySummary, DashboardData, CashFlowDay, NetWorthData
+from app.schemas.summary import MonthlySummary, YearlySummary, DashboardData, CashFlowDay, NetWorthData, CashFlowSummary
 from app.core.database import get_db
 from typing import List
 
@@ -26,3 +26,7 @@ def get_cash_flow(db: Session = Depends(get_db)):
 @router.get("/net-worth", response_model=NetWorthData)
 def get_net_worth(db: Session = Depends(get_db)):
     return summary_service.get_net_worth(db)
+
+@router.get("/cash-flow-summary", response_model=List[CashFlowSummary])
+def get_cash_flow_summary(months: int = 6, db: Session = Depends(get_db)):
+    return summary_service.get_cash_flow_summary(db, months=months)
