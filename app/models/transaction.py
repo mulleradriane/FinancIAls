@@ -1,10 +1,14 @@
 import uuid
-from sqlalchemy import Column, String, Numeric, Date, DateTime, ForeignKey, Integer
+from sqlalchemy import Column, String, Numeric, Date, DateTime, ForeignKey, Integer, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
+import enum
 
+class TransactionType(str, enum.Enum):
+    expense = "expense"
+    income = "income"
 
 class Transaction(Base):
     __tablename__ = "transactions"
@@ -17,6 +21,7 @@ class Transaction(Base):
         nullable=False
     )
     amount = Column(Numeric(12, 2), nullable=False)
+    type = Column(Enum(TransactionType), nullable=False, default=TransactionType.expense)
     date = Column(Date, nullable=False)
 
     recurring_expense_id = Column(

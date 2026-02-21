@@ -5,7 +5,11 @@ import datetime
 from decimal import Decimal
 from app.schemas.category import Category
 from app.models.recurring_expense import RecurringType, FrequencyType
+import enum
 
+class TransactionType(str, enum.Enum):
+    expense = "expense"
+    income = "income"
 
 # 🔹 Tipo decimal alinhado com o banco (Numeric(12,2))
 AmountDecimal = condecimal(max_digits=12, decimal_places=2)
@@ -15,6 +19,7 @@ class TransactionBase(BaseModel):
     description: str
     category_id: UUID
     amount: AmountDecimal
+    type: TransactionType | None = None
     date: datetime.date
     recurring_expense_id: UUID | None = None
     installment_number: int | None = None
@@ -61,6 +66,7 @@ class UnifiedTransactionResponse(BaseModel):
     id: UUID
     description: str | None = None
     amount: AmountDecimal
+    type: TransactionType | None = None
     date: datetime.date
     category_name: str
     category_icon: str | None = None

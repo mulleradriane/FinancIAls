@@ -134,9 +134,9 @@ const Transactions = () => {
   };
 
   const totals = transactions.reduce((acc, t) => {
-    const val = parseFloat(t.amount);
-    if (val > 0) acc.incomes += val;
-    else acc.expenses += Math.abs(val);
+    const val = Math.abs(parseFloat(t.amount));
+    if (t.type === 'income') acc.incomes += val;
+    else acc.expenses += val;
     return acc;
   }, { incomes: 0, expenses: 0 });
 

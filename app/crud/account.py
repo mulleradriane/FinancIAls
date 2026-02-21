@@ -46,7 +46,8 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
                 amount=initial_balance,
                 date=date.today(),
                 category_id=category.id,
-                account_id=db_obj.id
+                account_id=db_obj.id,
+                type=category.type
             )
             db.add(initial_adjustment)
             db.commit()
@@ -88,7 +89,8 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
                         amount=diff,
                         date=date.today(),
                         category_id=category.id,
-                        account_id=db_obj.id
+                        account_id=db_obj.id,
+                        type=category.type
                     )
                     db.add(adjustment)
                 else:
@@ -110,7 +112,8 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
                         amount=abs(diff),
                         date=date.today(),
                         category_id=category.id,
-                        account_id=db_obj.id
+                        account_id=db_obj.id,
+                        type=category.type
                     )
                     db.add(adjustment)
 
@@ -186,21 +189,19 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
 
         expenses = db.scalar(
             select(func.sum(Transaction.amount))
-            .join(Category)
             .filter(
                 Transaction.account_id == account_id,
                 Transaction.deleted_at == None,
-                Category.type == CategoryType.expense
+                Transaction.type == "expense"
             )
         ) or Decimal(0)
 
         trans_income = db.scalar(
             select(func.sum(Transaction.amount))
-            .join(Category)
             .filter(
                 Transaction.account_id == account_id,
                 Transaction.deleted_at == None,
-                Category.type == CategoryType.income
+                Transaction.type == "income"
             )
         ) or Decimal(0)
 

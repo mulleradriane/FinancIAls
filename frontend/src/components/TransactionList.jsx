@@ -62,9 +62,9 @@ const TransactionList = ({ transactions, onEdit, onDelete, highlightId }) => {
 
   return (
     <div className="space-y-3">
-      {transactions.map((t, index) => (
+      {transactions.map((t) => (
         <Card
-          key={`${t.id}-${t.account_name}-${index}`}
+          key={`${t.id}-${t.account_name}`}
           className={cn(
             "p-5 transition-all duration-300 group relative overflow-hidden border-none shadow-sm",
             "hover:shadow-md hover:-translate-y-0.5",
@@ -125,9 +125,9 @@ const TransactionList = ({ transactions, onEdit, onDelete, highlightId }) => {
             <div className="flex flex-col items-end justify-center min-w-[130px]">
               <span className={cn(
                 "font-semibold text-2xl tracking-tighter leading-none mb-1",
-                t.amount < 0 || t.category_name === 'Despesa' ? "text-destructive" : "text-success"
+                t.type === 'expense' ? "text-destructive" : "text-success"
               )}>
-                {formatCurrency(t.amount)}
+                {t.type === 'expense' ? '-' : '+'}{formatCurrency(Math.abs(t.amount))}
               </span>
             </div>
 

@@ -23,22 +23,22 @@ class SummaryService:
             )
         ) or Decimal(0)
 
-        # Transações de Receita (Transaction with category.type == income)
+        # Transações de Receita (Transaction where type == income)
         total_income += db.scalar(
-            select(func.sum(Transaction.amount)).join(Category).filter(
+            select(func.sum(Transaction.amount)).filter(
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
-                Category.type == CategoryType.income,
+                Transaction.type == "income",
                 Transaction.deleted_at == None
             )
         ) or Decimal(0)
 
-        # Total Expenses (Transactions where category.type == expense)
+        # Total Expenses (Transactions where type == expense)
         total_expenses = db.scalar(
-            select(func.sum(Transaction.amount)).join(Category).filter(
+            select(func.sum(Transaction.amount)).filter(
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
-                Category.type == CategoryType.expense,
+                Transaction.type == "expense",
                 Transaction.deleted_at == None
             )
         ) or Decimal(0)
@@ -58,7 +58,7 @@ class SummaryService:
             .filter(
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
-                Category.type == CategoryType.expense,
+                Transaction.type == "expense",
                 Transaction.deleted_at == None
             )
             .group_by(Category.name)
@@ -73,7 +73,7 @@ class SummaryService:
             .filter(
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
-                Category.type == CategoryType.expense,
+                Transaction.type == "expense",
                 Transaction.deleted_at == None
             )
             .order_by(Transaction.amount.desc())
@@ -138,20 +138,20 @@ class SummaryService:
             ) or Decimal(0)
 
             m_income += db.scalar(
-                select(func.sum(Transaction.amount)).join(Category).filter(
+                select(func.sum(Transaction.amount)).filter(
                     extract('year', Transaction.date) == d.year,
                     extract('month', Transaction.date) == d.month,
-                    Category.type == CategoryType.income,
+                    Transaction.type == "income",
                     Transaction.deleted_at == None
                 )
             ) or Decimal(0)
 
             # Monthly Expenses for this specific month
             m_expenses = db.scalar(
-                select(func.sum(Transaction.amount)).join(Category).filter(
+                select(func.sum(Transaction.amount)).filter(
                     extract('year', Transaction.date) == d.year,
                     extract('month', Transaction.date) == d.month,
-                    Category.type == CategoryType.expense,
+                    Transaction.type == "expense",
                     Transaction.deleted_at == None
                 )
             ) or Decimal(0)
@@ -263,13 +263,11 @@ class SummaryService:
         future_income = db.scalar(select(func.sum(Income.amount)).filter(Income.date >= today)) or Decimal(0)
         future_trans_income = db.scalar(
             select(func.sum(Transaction.amount))
-            .join(Category)
-            .filter(Category.type == CategoryType.income, Transaction.deleted_at == None, Transaction.date >= today)
+            .filter(Transaction.type == "income", Transaction.deleted_at == None, Transaction.date >= today)
         ) or Decimal(0)
         future_expenses = db.scalar(
             select(func.sum(Transaction.amount))
-            .join(Category)
-            .filter(Category.type == CategoryType.expense, Transaction.deleted_at == None, Transaction.date >= today)
+            .filter(Transaction.type == "expense", Transaction.deleted_at == None, Transaction.date >= today)
         ) or Decimal(0)
         future_investments = db.scalar(select(func.sum(Investment.amount)).filter(Investment.date >= today)) or Decimal(0)
 
@@ -283,8 +281,7 @@ class SummaryService:
 
         expenses = db.execute(
             select(Transaction.date, func.sum(Transaction.amount).label('amount'))
-            .join(Category)
-            .filter(Category.type == CategoryType.expense, Transaction.deleted_at == None, Transaction.date >= today, Transaction.date <= end_of_month)
+            .filter(Transaction.type == "expense", Transaction.deleted_at == None, Transaction.date >= today, Transaction.date <= end_of_month)
             .group_by(Transaction.date)
         ).all()
 
@@ -306,8 +303,7 @@ class SummaryService:
         # Também incluir transações do tipo 'income' que não estão no modelo Income
         trans_incomes = db.execute(
             select(Transaction.date, func.sum(Transaction.amount).label('amount'))
-            .join(Category)
-            .filter(Category.type == CategoryType.income, Transaction.deleted_at == None, Transaction.date >= today, Transaction.date <= end_of_month)
+            .filter(Transaction.type == "income", Transaction.deleted_at == None, Transaction.date >= today, Transaction.date <= end_of_month)
             .group_by(Transaction.date)
         ).all()
         for row in trans_incomes:
@@ -339,9 +335,9 @@ class SummaryService:
     def get_yearly_summary(self, db: Session, year: int) -> YearlySummary:
         total_income = db.scalar(select(func.sum(Income.amount)).filter(extract('year', Income.date) == year)) or Decimal(0)
         total_expenses = db.scalar(
-            select(func.sum(Transaction.amount)).join(Category).filter(
+            select(func.sum(Transaction.amount)).filter(
                 extract('year', Transaction.date) == year,
-                Category.type == CategoryType.expense,
+                Transaction.type == "expense",
                 Transaction.deleted_at == None
             )
         ) or Decimal(0)
