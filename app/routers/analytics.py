@@ -21,8 +21,8 @@ def get_savings_rate(db: Session = Depends(get_db)):
 
 @router.get("/burn-rate", response_model=BurnRate)
 def get_burn_rate(db: Session = Depends(get_db)):
-    avg = analytics_service.get_burn_rate(db)
-    return BurnRate(avg_monthly_expense_last_3m=avg)
+    data = analytics_service.get_burn_rate(db)
+    return BurnRate(**data)
 
 @router.get("/net-worth", response_model=NetWorth)
 def get_net_worth(db: Session = Depends(get_db)):
