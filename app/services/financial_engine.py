@@ -84,8 +84,9 @@ class FinancialEngine:
     def get_monthly_totals(self, db: Session, year: int, month: int) -> Dict[str, Decimal]:
         """
         Calcula Totais do Mês: Receitas, Despesas e Resultado.
+        Conforme Regras 4.3 e 4.4 da especificação.
         """
-        # Income
+        # Regra 4.3: Receitas (INCOME)
         income = db.scalar(
             select(func.sum(Transaction.amount))
             .filter(
@@ -96,7 +97,7 @@ class FinancialEngine:
             )
         ) or Decimal(0)
 
-        # Expense (valor absoluto para exibição)
+        # Regra 4.4: Despesas Operacionais (EXPENSE)
         expense_sum = db.scalar(
             select(func.sum(Transaction.amount))
             .filter(
@@ -107,15 +108,19 @@ class FinancialEngine:
             )
         ) or Decimal(0)
 
+        # Resultado do Mês: INCOME - EXPENSE (Exclui INVESTMENT, TRANSFER, SYSTEM_ADJUSTMENT)
+        # Como INCOME é positivo e EXPENSE é negativo no banco, a soma simples resolve.
+        monthly_result = income + expense_sum
+
         return {
             "income": income,
             "expense": abs(expense_sum),
-            "result": income + expense_sum  # income (pos) + expense (neg)
+            "result": monthly_result
         }
 
     def calculate_operational_expenses(self, db: Session, year: int, month: int) -> Decimal:
         """
-        Despesa Operacional: Somatório de nature == 'EXPENSE'
+        Despesa Operacional: Somatório apenas de nature == 'EXPENSE' (Regra 4.4)
         """
         expense = db.scalar(
             select(func.sum(Transaction.amount))
