@@ -7,6 +7,7 @@ import {
   Landmark,
   TrendingUp,
   RefreshCw,
+  Target,
   Tags,
   FileText,
   Sun,
@@ -29,6 +30,7 @@ const menuItems = [
   { path: '/contas', label: 'Contas', icon: Landmark },
   { path: '/patrimonio', label: 'Patrimônio', icon: TrendingUp },
   { path: '/recorrentes', label: 'Recorrentes', icon: RefreshCw },
+  { path: '/metas', label: 'Metas', icon: Target },
   { path: '/categories', label: 'Categorias', icon: Tags },
   { path: '/relatorios', label: 'Relatórios', icon: FileText },
 ];
