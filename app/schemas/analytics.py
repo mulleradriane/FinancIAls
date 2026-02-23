@@ -1,0 +1,45 @@
+from pydantic import BaseModel, ConfigDict
+from decimal import Decimal
+from datetime import date, datetime
+from typing import Optional, List
+
+class OperationalMonthly(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    month: date
+    total_income: Decimal
+    total_expense: Decimal
+    net_result: Decimal
+
+class SavingsRate(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    month: date
+    total_income: Decimal
+    total_expense: Decimal
+    net_result: Decimal
+    savings_rate: float
+
+class BurnRate(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    avg_monthly_expense_last_3m: Decimal
+
+class NetWorth(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    net_worth: Decimal
+
+class AssetsLiabilities(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    classification: str
+    total: Decimal
+
+class AccountBalance(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    type: str
+    current_balance: Decimal
+
+class AnalyticsSummary(BaseModel):
+    operational_monthly: List[OperationalMonthly]
+    savings_rate: List[SavingsRate]
+    burn_rate: Decimal
+    net_worth: Decimal
+    assets_liabilities: List[AssetsLiabilities]
