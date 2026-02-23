@@ -6,9 +6,12 @@ from sqlalchemy.orm import relationship
 from app.core.database import Base
 import enum
 
-class TransactionType(str, enum.Enum):
-    expense = "expense"
-    income = "income"
+class TransactionNature(str, enum.Enum):
+    INCOME = "INCOME"
+    EXPENSE = "EXPENSE"
+    INVESTMENT = "INVESTMENT"
+    TRANSFER = "TRANSFER"
+    SYSTEM_ADJUSTMENT = "SYSTEM_ADJUSTMENT"
 
 class Transaction(Base):
     __tablename__ = "transactions"
@@ -18,11 +21,12 @@ class Transaction(Base):
     category_id = Column(
         UUID(as_uuid=True),
         ForeignKey("categories.id"),
-        nullable=False
+        nullable=True
     )
     amount = Column(Numeric(12, 2), nullable=False)
-    type = Column(Enum(TransactionType), nullable=False, default=TransactionType.expense)
+    nature = Column(Enum(TransactionNature), nullable=False, default=TransactionNature.EXPENSE)
     date = Column(Date, nullable=False)
+    transfer_group_id = Column(UUID(as_uuid=True), nullable=True)
 
     recurring_expense_id = Column(
         UUID(as_uuid=True),

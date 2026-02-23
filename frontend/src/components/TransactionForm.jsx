@@ -120,9 +120,13 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
     }
 
     try {
+      const selectedCategory = categories.find(c => c.id === formData.categoryId);
+      const nature = selectedCategory?.type === 'income' ? 'INCOME' : 'EXPENSE';
+
       const payload = {
         description: formData.description,
         amount: formData.amount,
+        nature: nature,
         date: formData.date,
         category_id: formData.categoryId,
         account_id: formData.accountId,

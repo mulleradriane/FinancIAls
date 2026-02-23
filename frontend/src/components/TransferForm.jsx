@@ -50,14 +50,23 @@ const TransferForm = ({ accounts, onTransferCreated, onClose }) => {
       return;
     }
     try {
+      const sourceAccount = accounts.find(a => a.id === fromAccountId);
+      const destAccount = accounts.find(a => a.id === toAccountId);
+
+      // Nature is INVESTMENT if either account is an investment account
+      const nature = (sourceAccount?.type === 'investimento' || destAccount?.type === 'investimento')
+        ? 'INVESTMENT'
+        : 'TRANSFER';
+
       const payload = {
-        from_account_id: fromAccountId,
+        account_id: fromAccountId,
         to_account_id: toAccountId,
         amount: amount,
+        nature: nature,
         date,
-        description,
+        description: description || 'Transferência entre contas',
       };
-      await api.post('/transfers/', payload);
+      await api.post('/transactions/', payload);
       toast.success('Transferência realizada!');
       if (onTransferCreated) onTransferCreated();
       if (onClose) onClose();
