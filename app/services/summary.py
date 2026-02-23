@@ -99,7 +99,8 @@ class SummaryService:
             ) for row in top_trans_results
         ]
 
-        balance = total_income - total_expenses - total_invested
+        # Balance = Income - Expenses (excluding investments as per Stage 2 requirements)
+        balance = total_income - total_expenses
 
         return MonthlySummary(
             total_income=total_income,
@@ -114,9 +115,22 @@ class SummaryService:
         today = date.today()
         prev_month_date = today - relativedelta(months=1)
 
-        # Current Balance (Soma dos saldos de todas as contas)
+        # Get accounts with their calculated balances
         accounts = crud_account.get_multi_with_balance(db)
-        current_balance = sum((acc.balance for acc in accounts), Decimal(0))
+
+        # available_balance = bank + wallet
+        # total_net_worth = all accounts + legacy investments
+        available_balance = Decimal(0)
+        total_accounts_balance = Decimal(0)
+
+        for acc in accounts:
+            total_accounts_balance += acc.balance
+            if acc.type in [AccountType.bank, AccountType.wallet]:
+                available_balance += acc.balance
+
+        # Legacy investments from Investment model
+        total_legacy_investments = db.scalar(select(func.sum(Investment.amount))) or Decimal(0)
+        total_net_worth = total_accounts_balance + total_legacy_investments
 
         # Monthly Data
         monthly_summary = self.get_monthly_summary(db, today.year, today.month)
@@ -179,7 +193,8 @@ class SummaryService:
             ))
 
         return DashboardData(
-            current_balance=current_balance,
+            available_balance=available_balance,
+            total_net_worth=total_net_worth,
             monthly_income=monthly_summary.total_income,
             monthly_expenses=monthly_summary.total_expenses,
             income_variation=income_variation,
@@ -272,7 +287,8 @@ class SummaryService:
         end_of_month = (today + relativedelta(months=1)).replace(day=1) - timedelta(days=1)
 
         accounts = crud_account.get_multi_with_balance(db)
-        total_actual_balance = sum((acc.balance for acc in accounts), Decimal(0))
+        # Liquidity focus: start with available balance (bank + wallet)
+        available_actual_balance = sum((acc.balance for acc in accounts if acc.type in [AccountType.bank, AccountType.wallet]), Decimal(0))
 
         # Para o fluxo de caixa, precisamos do saldo no início de hoje.
         # Subtraímos tudo o que está no banco de hoje em diante para encontrar o ponto de partida.
@@ -287,9 +303,8 @@ class SummaryService:
             .join(Category)
             .filter(Transaction.type == "expense", Transaction.deleted_at == None, Transaction.date >= today, Category.is_system == False)
         ) or Decimal(0)
-        future_investments = db.scalar(select(func.sum(Investment.amount)).filter(Investment.date >= today)) or Decimal(0)
 
-        current_balance = total_actual_balance - future_income - future_trans_income + future_expenses + future_investments
+        current_balance = available_actual_balance - future_income - future_trans_income + future_expenses
 
         incomes = db.execute(
             select(Income.date, func.sum(Income.amount).label('amount'))
@@ -302,12 +317,6 @@ class SummaryService:
             .join(Category)
             .filter(Transaction.type == "expense", Transaction.deleted_at == None, Transaction.date >= today, Transaction.date <= end_of_month, Category.is_system == False)
             .group_by(Transaction.date)
-        ).all()
-
-        investments = db.execute(
-            select(Investment.date, func.sum(Investment.amount).label('amount'))
-            .filter(Investment.date >= today, Investment.date <= end_of_month)
-            .group_by(Investment.date)
         ).all()
 
         daily_data = {}
@@ -330,8 +339,6 @@ class SummaryService:
             daily_data[row.date]["income"] += row.amount
 
         for row in expenses:
-            daily_data[row.date]["expense"] += row.amount
-        for row in investments:
             daily_data[row.date]["expense"] += row.amount
 
         cash_flow = []
@@ -366,7 +373,8 @@ class SummaryService:
         ) or Decimal(0)
         total_invested = db.scalar(select(func.sum(Investment.amount)).filter(extract('year', Investment.date) == year)) or Decimal(0)
 
-        balance = total_income - total_expenses - total_invested
+        # Balance = Income - Expenses (excluding investments)
+        balance = total_income - total_expenses
 
         return YearlySummary(
             total_income=total_income,
@@ -424,23 +432,14 @@ class SummaryService:
             ).group_by('year', 'month')
         )
 
-        # 4. Expenses from Investment model
-        investment_totals = get_monthly_totals(
-            select(
-                extract('year', Investment.date).label('year'),
-                extract('month', Investment.date).label('month'),
-                func.sum(Investment.amount).label('total')
-            ).filter(Investment.date >= start_date)
-            .group_by('year', 'month')
-        )
-
         summary = []
         for i in range(months - 1, -1, -1):
             d = today - relativedelta(months=i)
             key = (d.year, d.month)
 
             m_income = income_model_totals.get(key, Decimal(0)) + income_trans_totals.get(key, Decimal(0))
-            m_expense = expense_trans_totals.get(key, Decimal(0)) + investment_totals.get(key, Decimal(0))
+            # Exclude investments from cash flow expenses as per Stage 2 requirements
+            m_expense = expense_trans_totals.get(key, Decimal(0))
 
             summary.append(CashFlowSummary(
                 month=d.strftime("%Y-%m"),

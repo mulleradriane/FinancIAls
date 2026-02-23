@@ -9,7 +9,9 @@ import {
   ArrowDownCircle,
   TrendingUp,
   TrendingDown,
-  ArrowRight
+  ArrowRight,
+  Landmark,
+  Scale
 } from 'lucide-react';
 import {
   BarChart,
@@ -123,8 +125,11 @@ const Dashboard = () => {
     }
 
     // 3. Savings trend
-    if (data.balance_variation > 0) {
-      insights.push("Você está economizando mais do que no mês anterior.");
+    const monthlyResult = parseFloat(data.monthly_income) - parseFloat(data.monthly_expenses);
+    if (monthlyResult > 0) {
+      insights.push(`Este mês você já economizou ${formatCurrency(monthlyResult)}.`);
+    } else if (monthlyResult < 0) {
+      insights.push(`Atenção: Suas despesas superaram as receitas em ${formatCurrency(Math.abs(monthlyResult))}.`);
     }
 
     return insights;
@@ -183,11 +188,11 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Top Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {/* Primary Balance Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <Card className={cn(
           "border-none shadow-md overflow-hidden group transition-all duration-300",
-          data.current_balance < 0 && "bg-destructive/[0.03] border border-destructive/10"
+          data.available_balance < 0 && "bg-destructive/[0.03] border border-destructive/10"
         )}>
           <CardContent className="p-0">
             <div className="p-8">
@@ -195,20 +200,39 @@ const Dashboard = () => {
                 <div className="p-2.5 bg-primary/10 rounded-xl group-hover:scale-110 transition-transform">
                   <Wallet className="h-6 w-6 text-primary" />
                 </div>
-                <VariationBadge value={data.balance_variation} type="balance" />
               </div>
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Saldo Total</p>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Saldo Disponível</p>
               <h2 className={cn(
                 "text-4xl font-bold mt-2 tracking-tight",
-                data.current_balance >= 0 ? "text-foreground" : "text-foreground/90"
+                data.available_balance >= 0 ? "text-foreground" : "text-destructive"
               )}>
-                {formatCurrency(data.current_balance)}
+                {formatCurrency(data.available_balance)}
               </h2>
             </div>
             <div className="h-1 w-full bg-primary/10 group-hover:bg-primary/30 transition-colors" />
           </CardContent>
         </Card>
 
+        <Card className="border-none shadow-md overflow-hidden group transition-all duration-300">
+          <CardContent className="p-0">
+            <div className="p-8">
+              <div className="flex justify-between items-start mb-6">
+                <div className="p-2.5 bg-indigo-500/10 rounded-xl group-hover:scale-110 transition-transform">
+                  <Landmark className="h-6 w-6 text-indigo-500" />
+                </div>
+              </div>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Patrimônio Total</p>
+              <h2 className="text-4xl font-bold mt-2 tracking-tight">
+                {formatCurrency(data.total_net_worth)}
+              </h2>
+            </div>
+            <div className="h-1 w-full bg-indigo-500/10 group-hover:bg-indigo-500/30 transition-colors" />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Monthly Activity Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <Card className="border-none shadow-md overflow-hidden group">
           <CardContent className="p-0">
             <div className="p-8">
@@ -219,7 +243,7 @@ const Dashboard = () => {
                 <VariationBadge value={data.income_variation} type="income" />
               </div>
               <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Receitas do Mês</p>
-              <h2 className="text-4xl font-bold mt-2 text-success tracking-tight">
+              <h2 className="text-3xl font-bold mt-2 text-success tracking-tight">
                 {formatCurrency(data.monthly_income)}
               </h2>
             </div>
@@ -237,11 +261,41 @@ const Dashboard = () => {
                 <VariationBadge value={data.expenses_variation} type="expense" />
               </div>
               <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Despesas do Mês</p>
-              <h2 className="text-4xl font-bold mt-2 text-destructive tracking-tight">
+              <h2 className="text-3xl font-bold mt-2 text-destructive tracking-tight">
                 {formatCurrency(data.monthly_expenses)}
               </h2>
             </div>
             <div className="h-1 w-full bg-destructive/10 group-hover:bg-destructive/30 transition-colors" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-md overflow-hidden group">
+          <CardContent className="p-0">
+            <div className="p-8">
+              <div className="flex justify-between items-start mb-6">
+                <div className={cn(
+                  "p-2.5 rounded-xl group-hover:scale-110 transition-transform",
+                  (data.monthly_income - data.monthly_expenses) >= 0 ? "bg-primary/10" : "bg-destructive/10"
+                )}>
+                  <Scale className={cn(
+                    "h-6 w-6",
+                    (data.monthly_income - data.monthly_expenses) >= 0 ? "text-primary" : "text-destructive"
+                  )} />
+                </div>
+                <VariationBadge value={data.balance_variation} type="balance" />
+              </div>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Resultado do Mês</p>
+              <h2 className={cn(
+                "text-3xl font-bold mt-2 tracking-tight",
+                (data.monthly_income - data.monthly_expenses) >= 0 ? "text-primary" : "text-destructive"
+              )}>
+                {formatCurrency(data.monthly_income - data.monthly_expenses)}
+              </h2>
+            </div>
+            <div className={cn(
+              "h-1 w-full transition-colors",
+              (data.monthly_income - data.monthly_expenses) >= 0 ? "bg-primary/10 group-hover:bg-primary/30" : "bg-destructive/10 group-hover:bg-destructive/30"
+            )} />
           </CardContent>
         </Card>
       </div>
