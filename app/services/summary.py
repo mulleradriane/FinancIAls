@@ -35,7 +35,12 @@ class SummaryService:
             .filter(
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
-                Transaction.nature == TransactionNature.EXPENSE,
+                Transaction.amount < 0,
+                Transaction.nature.notin_([
+                    TransactionNature.TRANSFER,
+                    TransactionNature.INVESTMENT,
+                    TransactionNature.SYSTEM_ADJUSTMENT
+                ]),
                 Transaction.deleted_at == None
             )
             .group_by(Category.name)
@@ -49,7 +54,12 @@ class SummaryService:
             .filter(
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
-                Transaction.nature == TransactionNature.EXPENSE,
+                Transaction.amount < 0,
+                Transaction.nature.notin_([
+                    TransactionNature.TRANSFER,
+                    TransactionNature.INVESTMENT,
+                    TransactionNature.SYSTEM_ADJUSTMENT
+                ]),
                 Transaction.deleted_at == None
             )
             .order_by(Transaction.amount.asc())
@@ -197,6 +207,7 @@ class SummaryService:
         accounts = crud_account.get_multi_with_balance(db)
         total_actual_balance = sum((acc.balance for acc in accounts), Decimal(0))
 
+        # future_diff: sum of non-deleted transactions from today onwards
         future_diff = db.scalar(
             select(func.sum(Transaction.amount))
             .filter(Transaction.deleted_at == None, Transaction.date >= today)
@@ -206,7 +217,13 @@ class SummaryService:
 
         expenses = db.execute(
             select(Transaction.date, func.sum(Transaction.amount).label('amount'))
-            .filter(Transaction.nature == TransactionNature.EXPENSE, Transaction.deleted_at == None, Transaction.date >= today, Transaction.date <= end_of_month)
+            .filter(
+                Transaction.amount < 0,
+                Transaction.nature.notin_([TransactionNature.TRANSFER, TransactionNature.INVESTMENT, TransactionNature.SYSTEM_ADJUSTMENT]),
+                Transaction.deleted_at == None,
+                Transaction.date >= today,
+                Transaction.date <= end_of_month
+            )
             .group_by(Transaction.date)
         ).all()
 
@@ -218,7 +235,13 @@ class SummaryService:
 
         trans_incomes = db.execute(
             select(Transaction.date, func.sum(Transaction.amount).label('amount'))
-            .filter(Transaction.nature == TransactionNature.INCOME, Transaction.deleted_at == None, Transaction.date >= today, Transaction.date <= end_of_month)
+            .filter(
+                Transaction.amount > 0,
+                Transaction.nature.notin_([TransactionNature.TRANSFER, TransactionNature.INVESTMENT, TransactionNature.SYSTEM_ADJUSTMENT]),
+                Transaction.deleted_at == None,
+                Transaction.date >= today,
+                Transaction.date <= end_of_month
+            )
             .group_by(Transaction.date)
         ).all()
         for row in trans_incomes:
@@ -250,7 +273,8 @@ class SummaryService:
             select(func.sum(Transaction.amount))
             .filter(
                 extract('year', Transaction.date) == year,
-                Transaction.nature == TransactionNature.INCOME,
+                Transaction.amount > 0,
+                Transaction.nature.notin_([TransactionNature.TRANSFER, TransactionNature.INVESTMENT, TransactionNature.SYSTEM_ADJUSTMENT]),
                 Transaction.deleted_at == None
             )
         ) or Decimal(0)
@@ -259,7 +283,8 @@ class SummaryService:
             select(func.sum(Transaction.amount))
             .filter(
                 extract('year', Transaction.date) == year,
-                Transaction.nature == TransactionNature.EXPENSE,
+                Transaction.amount < 0,
+                Transaction.nature.notin_([TransactionNature.TRANSFER, TransactionNature.INVESTMENT, TransactionNature.SYSTEM_ADJUSTMENT]),
                 Transaction.deleted_at == None
             )
         ) or Decimal(0)

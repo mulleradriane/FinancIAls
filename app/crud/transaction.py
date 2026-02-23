@@ -2,7 +2,7 @@ from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import select
+from sqlalchemy import select, text, update
 from app.crud.base import CRUDBase
 from app.models.transaction import Transaction, TransactionNature
 from app.models.recurring_expense import RecurringExpense
@@ -54,15 +54,22 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
         obj = db.get(Transaction, id)
         if obj:
             now = datetime.now()
-            # If it belongs to a transfer group, delete both
+
+            # If it belongs to a transfer group, delete all related transactions
             if obj.transfer_group_id:
                 db.execute(
-                    f"UPDATE transactions SET deleted_at = :now WHERE transfer_group_id = :group_id",
-                    {"now": now, "group_id": obj.transfer_group_id}
+                    update(Transaction)
+                    .where(Transaction.transfer_group_id == obj.transfer_group_id)
+                    .where(Transaction.deleted_at == None)
+                    .values(deleted_at=now)
                 )
             else:
-                obj.deleted_at = now
-                db.add(obj)
+                db.execute(
+                    update(Transaction)
+                    .where(Transaction.id == id)
+                    .where(Transaction.deleted_at == None)
+                    .values(deleted_at=now)
+                )
 
             db.commit()
             db.refresh(obj)
