@@ -7,6 +7,11 @@ from datetime import datetime
 
 class GoalService:
     def create_goal(self, db: Session, goal_in: GoalCreate) -> Goal:
+        if goal_in.target_date <= goal_in.start_date:
+            raise ValueError("Target date must be after start date")
+        if goal_in.target_amount <= 0:
+            raise ValueError("Target amount must be greater than zero")
+
         db_goal = Goal(**goal_in.model_dump())
         db.add(db_goal)
         db.commit()

@@ -9,6 +9,7 @@ import Contas from './pages/Contas';
 import Patrimonio from './pages/Patrimonio';
 import Recorrentes from './pages/Recorrentes';
 import Relatorios from './pages/Relatorios';
+import Goals from './pages/Goals';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 import { ThemeProvider } from './context/ThemeContext';
@@ -45,6 +46,7 @@ function AppContent() {
         <Route path="contas" element={<Contas />} />
         <Route path="patrimonio" element={<Patrimonio />} />
         <Route path="recorrentes" element={<Recorrentes />} />
+        <Route path="metas" element={<Goals />} />
         <Route path="relatorios" element={<Relatorios />} />
         <Route path="settings" element={<Settings />} />
       </Route>
