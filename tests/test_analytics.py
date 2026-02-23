@@ -244,5 +244,5 @@ def test_burn_rate_three_months_exclusion(db):
     db.add_all([t_curr, t1, t2, t3])
     db.commit()
 
-    burn_rate = analytics_service.get_burn_rate(db)
-    assert burn_rate == Decimal("600.00")
+    burn_rate_data = analytics_service.get_burn_rate(db)
+    assert burn_rate_data["avg_monthly_expense_last_3m"] == Decimal("600.00")

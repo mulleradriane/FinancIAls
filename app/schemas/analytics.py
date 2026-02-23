@@ -21,6 +21,8 @@ class SavingsRate(BaseModel):
 class BurnRate(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     avg_monthly_expense_last_3m: Decimal
+    previous_3m_avg: Decimal
+    trend: str  # 'UP', 'DOWN', 'STABLE'
 
 class NetWorth(BaseModel):
     model_config = ConfigDict(from_attributes=True)
