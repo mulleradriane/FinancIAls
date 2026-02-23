@@ -18,7 +18,7 @@ import NetWorthCard from '@/components/dashboard/NetWorthCard';
 import MonthlySummaryCard from '@/components/dashboard/MonthlySummaryCard';
 import BurnRateCard from '@/components/dashboard/BurnRateCard';
 import EvolutionChart from '@/components/dashboard/EvolutionChart';
-import FuturePhasesCard from '@/components/dashboard/FuturePhasesCard';
+import GoalsCard from '@/components/dashboard/GoalsCard';
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -31,6 +31,7 @@ const Dashboard = () => {
   const [operationalMonthly, setOperationalMonthly] = useState([]);
   const [savingsRate, setSavingsRate] = useState([]);
   const [burnRate, setBurnRate] = useState({ avg_monthly_expense_last_3m: 0, previous_3m_avg: 0, trend: 'STABLE' });
+  const [goals, setGoals] = useState([]);
 
   // Form requirements
   const [categories, setCategories] = useState([]);
@@ -54,6 +55,7 @@ const Dashboard = () => {
         omRes,
         srRes,
         brRes,
+        goalsRes,
         categoriesRes,
         accountsRes
       ] = await Promise.all([
@@ -62,6 +64,7 @@ const Dashboard = () => {
         analyticsApi.getOperationalMonthly(),
         analyticsApi.getSavingsRate(),
         analyticsApi.getBurnRate(),
+        analyticsApi.getGoalsProgress(),
         api.get('/categories/'),
         api.get('/accounts/')
       ]);
@@ -71,6 +74,7 @@ const Dashboard = () => {
       setOperationalMonthly(omRes.data);
       setSavingsRate(srRes.data);
       setBurnRate(brRes.data);
+      setGoals(goalsRes.data);
       setCategories(categoriesRes.data);
       setAccounts(accountsRes.data);
     } catch (error) {
@@ -146,7 +150,7 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-8">
-        <FuturePhasesCard />
+        <GoalsCard goals={goals} loading={loading} />
       </div>
 
       {/* Transaction Modal */}

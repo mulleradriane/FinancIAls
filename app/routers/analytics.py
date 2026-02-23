@@ -6,6 +6,7 @@ from app.schemas.analytics import (
     OperationalMonthly, SavingsRate, AssetsLiabilities, AccountBalance,
     BurnRate, NetWorth
 )
+from app.schemas.goals import GoalProgress
 from typing import List
 from decimal import Decimal
 
@@ -36,3 +37,7 @@ def get_assets_liabilities(db: Session = Depends(get_db)):
 @router.get("/account-balances", response_model=List[AccountBalance])
 def get_account_balances(db: Session = Depends(get_db)):
     return analytics_service.get_account_balances(db)
+
+@router.get("/goals-progress", response_model=List[GoalProgress])
+def get_goals_progress(db: Session = Depends(get_db)):
+    return analytics_service.get_goals_progress(db)

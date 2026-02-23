@@ -4,6 +4,7 @@ from app.schemas.analytics import (
     OperationalMonthly, SavingsRate, BurnRate,
     NetWorth, AssetsLiabilities, AccountBalance
 )
+from app.schemas.goals import GoalProgress
 from typing import List
 from decimal import Decimal
 
@@ -72,5 +73,9 @@ class AnalyticsService:
     def get_account_balances(self, db: Session) -> List[AccountBalance]:
         result = db.execute(text("SELECT id, type, current_balance FROM v_account_balances")).all()
         return [AccountBalance.model_validate(row) for row in result]
+
+    def get_goals_progress(self, db: Session) -> List[GoalProgress]:
+        result = db.execute(text("SELECT * FROM v_goal_progress ORDER BY target_date ASC")).all()
+        return [GoalProgress.model_validate(row) for row in result]
 
 analytics_service = AnalyticsService()
