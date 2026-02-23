@@ -2,19 +2,59 @@ from sqlalchemy.orm import Session
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 from decimal import Decimal
+import uuid
 from app.crud.transaction import transaction as crud_transaction
 from app.crud.recurring_expense import recurring_expense as crud_recurring_expense
 from app.schemas.transaction import UnifiedTransactionCreate, TransactionCreate
 from app.schemas.recurring_expense import RecurringExpenseCreate
 from app.models.recurring_expense import RecurringType
+from app.models.transaction import TransactionNature
 
 def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate):
     if not obj_in.is_recurring:
-        # Normal transaction
+        # Handle Transfer and Investment (Dual Entry)
+        if obj_in.nature in [TransactionNature.TRANSFER, TransactionNature.INVESTMENT] and obj_in.to_account_id:
+            group_id = uuid.uuid4()
+
+            # 1. Outflow (Source Account)
+            source_in = TransactionCreate(
+                description=obj_in.description,
+                category_id=obj_in.category_id,
+                amount=-abs(obj_in.amount), # Ensure negative
+                nature=obj_in.nature,
+                date=obj_in.date,
+                account_id=obj_in.account_id,
+                transfer_group_id=group_id
+            )
+            source_trans = crud_transaction.create(db, obj_in=source_in)
+
+            # 2. Inflow (Destination Account)
+            dest_in = TransactionCreate(
+                description=obj_in.description,
+                category_id=obj_in.category_id,
+                amount=abs(obj_in.amount), # Ensure positive
+                nature=obj_in.nature,
+                date=obj_in.date,
+                account_id=obj_in.to_account_id,
+                transfer_group_id=group_id
+            )
+            crud_transaction.create(db, obj_in=dest_in)
+
+            return source_trans
+
+        # Normal transaction (Income, Expense, System Adjustment)
+        # For Income, ensure amount is positive. For Expense, ensure it is negative.
+        final_amount = obj_in.amount
+        if obj_in.nature == TransactionNature.EXPENSE:
+            final_amount = -abs(obj_in.amount)
+        elif obj_in.nature == TransactionNature.INCOME:
+            final_amount = abs(obj_in.amount)
+
         transaction_in = TransactionCreate(
             description=obj_in.description,
             category_id=obj_in.category_id,
-            amount=obj_in.amount,
+            amount=final_amount,
+            nature=obj_in.nature,
             date=obj_in.date,
             account_id=obj_in.account_id
         )
@@ -59,7 +99,8 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate):
             transaction_in = TransactionCreate(
                 description=f"{obj_in.description} ({i}/{num_installments})",
                 category_id=obj_in.category_id,
-                amount=current_installment_amount,
+                amount=-abs(current_installment_amount), # Recurring usually expense
+                nature=obj_in.nature,
                 date=installment_date,
                 recurring_expense_id=db_recurring.id,
                 installment_number=i,
@@ -74,7 +115,8 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate):
         transaction_in = TransactionCreate(
             description=obj_in.description,
             category_id=obj_in.category_id,
-            amount=obj_in.amount,
+            amount=-abs(obj_in.amount),
+            nature=obj_in.nature,
             date=obj_in.date,
             recurring_expense_id=db_recurring.id,
             account_id=obj_in.account_id

@@ -1,12 +1,11 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import extract, func, select
-from app.models.transaction import Transaction
-from app.models.income import Income
-from app.models.investment import Investment
+from app.models.transaction import Transaction, TransactionNature
 from app.models.account import Account, AccountType
 from app.models.balance_history import BalanceHistory
 from app.models.category import Category, CategoryType
 from app.crud.account import account as crud_account
+from app.services.financial_engine import financial_engine
 from app.schemas.summary import MonthlySummary, YearlySummary, DashboardData, DashboardChartData, CashFlowDay, TopTransaction, NetWorthData, NetWorthHistory, CashFlowSummary
 from decimal import Decimal
 from datetime import date, timedelta
@@ -15,78 +14,45 @@ from dateutil.relativedelta import relativedelta
 
 class SummaryService:
     def get_monthly_summary(self, db: Session, year: int, month: int) -> MonthlySummary:
-        # Total Income
-        total_income = db.scalar(
-            select(func.sum(Income.amount)).filter(
-                extract('year', Income.date) == year,
-                extract('month', Income.date) == month
-            )
-        ) or Decimal(0)
+        totals = financial_engine.get_monthly_totals(db, year, month)
+        total_income = totals["income"]
+        total_expenses = totals["expense"]
 
-        # Transações de Receita (Transaction where type == income)
-        # Excluir transações de categorias de sistema
-        total_income += db.scalar(
-            select(func.sum(Transaction.amount))
-            .join(Category)
-            .filter(
-                extract('year', Transaction.date) == year,
-                extract('month', Transaction.date) == month,
-                Transaction.type == "income",
-                Transaction.deleted_at == None,
-                Category.is_system == False
-            )
-        ) or Decimal(0)
-
-        # Total Expenses (Transactions where type == expense)
-        # Excluir transações de categorias de sistema
-        total_expenses = db.scalar(
-            select(func.sum(Transaction.amount))
-            .join(Category)
-            .filter(
-                extract('year', Transaction.date) == year,
-                extract('month', Transaction.date) == month,
-                Transaction.type == "expense",
-                Transaction.deleted_at == None,
-                Category.is_system == False
-            )
-        ) or Decimal(0)
-
-        # Total Invested
         total_invested = db.scalar(
-            select(func.sum(Investment.amount)).filter(
-                extract('year', Investment.date) == year,
-                extract('month', Investment.date) == month
+            select(func.sum(Transaction.amount))
+            .filter(
+                extract('year', Transaction.date) == year,
+                extract('month', Transaction.date) == month,
+                Transaction.nature == TransactionNature.INVESTMENT,
+                Transaction.amount > 0,
+                Transaction.deleted_at == None
             )
         ) or Decimal(0)
 
-        # Expenses by category
         expenses_by_cat = db.execute(
             select(Category.name, func.sum(Transaction.amount))
             .join(Category)
             .filter(
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
-                Transaction.type == "expense",
-                Transaction.deleted_at == None,
-                Category.is_system == False
+                Transaction.nature == TransactionNature.EXPENSE,
+                Transaction.deleted_at == None
             )
             .group_by(Category.name)
         ).all()
 
-        expenses_by_category = {name: amount for name, amount in expenses_by_cat}
+        expenses_by_category = {name: abs(amount) for name, amount in expenses_by_cat}
 
-        # Top 5 transactions
         top_trans_query = (
             select(Transaction, Category.name.label('cat_name'))
             .join(Category)
             .filter(
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
-                Transaction.type == "expense",
-                Transaction.deleted_at == None,
-                Category.is_system == False
+                Transaction.nature == TransactionNature.EXPENSE,
+                Transaction.deleted_at == None
             )
-            .order_by(Transaction.amount.desc())
+            .order_by(Transaction.amount.asc())
             .limit(5)
         )
         top_trans_results = db.execute(top_trans_query).all()
@@ -99,7 +65,7 @@ class SummaryService:
             ) for row in top_trans_results
         ]
 
-        balance = total_income - total_expenses
+        balance = totals["result"]
 
         return MonthlySummary(
             total_income=total_income,
@@ -114,23 +80,12 @@ class SummaryService:
         today = date.today()
         prev_month_date = today - relativedelta(months=1)
 
-        # Accounts with balance
         accounts = crud_account.get_multi_with_balance(db)
+        available_balance = financial_engine.calculate_available_balance(db)
 
-        # Available Balance (Liquidity: bank, wallet, savings)
-        available_balance = sum(
-            (acc.balance for acc in accounts if acc.type in [AccountType.bank, AccountType.wallet, AccountType.savings]),
-            Decimal(0)
-        )
+        net_worth_data = financial_engine.calculate_net_worth(db)
+        total_net_worth = net_worth_data["net_worth"]
 
-        # Total Net Worth (Assets - Liabilities)
-        total_net_worth = sum((acc.balance for acc in accounts), Decimal(0))
-
-        # Include legacy investments in net worth
-        total_legacy_investments = db.scalar(select(func.sum(Investment.amount))) or Decimal(0)
-        total_net_worth += total_legacy_investments
-
-        # Monthly Data
         monthly_summary = self.get_monthly_summary(db, today.year, today.month)
         prev_monthly_summary = self.get_monthly_summary(db, prev_month_date.year, prev_month_date.month)
 
@@ -143,51 +98,17 @@ class SummaryService:
         expenses_variation = calc_variation(monthly_summary.total_expenses, prev_monthly_summary.total_expenses)
         balance_variation = calc_variation(monthly_summary.balance, prev_monthly_summary.balance)
 
-        # Chart Data (Last 6 months)
         chart_data = []
         month_names_pt = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 
         for i in range(5, -1, -1):
             d = today - relativedelta(months=i)
             month_name = month_names_pt[d.month - 1]
-
-            # Monthly Income for this specific month
-            m_income = db.scalar(
-                select(func.sum(Income.amount)).filter(
-                    extract('year', Income.date) == d.year,
-                    extract('month', Income.date) == d.month
-                )
-            ) or Decimal(0)
-
-            m_income += db.scalar(
-                select(func.sum(Transaction.amount))
-                .join(Category)
-                .filter(
-                    extract('year', Transaction.date) == d.year,
-                    extract('month', Transaction.date) == d.month,
-                    Transaction.type == "income",
-                    Transaction.deleted_at == None,
-                    Category.is_system == False
-                )
-            ) or Decimal(0)
-
-            # Monthly Expenses for this specific month
-            m_expenses = db.scalar(
-                select(func.sum(Transaction.amount))
-                .join(Category)
-                .filter(
-                    extract('year', Transaction.date) == d.year,
-                    extract('month', Transaction.date) == d.month,
-                    Transaction.type == "expense",
-                    Transaction.deleted_at == None,
-                    Category.is_system == False
-                )
-            ) or Decimal(0)
-
+            m_totals = financial_engine.get_monthly_totals(db, d.year, d.month)
             chart_data.append(DashboardChartData(
                 month=month_name,
-                income=abs(m_income),
-                expenses=abs(m_expenses)
+                income=abs(m_totals["income"]),
+                expenses=abs(m_totals["expense"])
             ))
 
         return DashboardData(
@@ -214,30 +135,21 @@ class SummaryService:
         allocation = {}
 
         for acc in accounts:
-            # Map type for allocation
             type_label = acc.type.value
             allocation[type_label] = allocation.get(type_label, Decimal(0)) + acc.balance
 
-            if acc.type in [AccountType.wallet, AccountType.bank, AccountType.savings]:
+            if acc.type in [AccountType.banco, AccountType.carteira, AccountType.poupanca]:
                 total_accounts += acc.balance
-            elif acc.type == AccountType.investment:
+            elif acc.type == AccountType.investimento:
                 total_investments += acc.balance
-            elif acc.type == AccountType.credit_card:
+            elif acc.type == AccountType.cartao_credito:
                 total_debts += acc.balance
 
-            # Assets vs Liabilities
             if acc.balance > 0:
                 total_assets += acc.balance
             else:
                 total_liabilities += abs(acc.balance)
 
-        # Legacy investments
-        total_legacy_investments = db.scalar(select(func.sum(Investment.amount))) or Decimal(0)
-        total_investments += total_legacy_investments
-        total_assets += total_legacy_investments
-        allocation["investimento"] = allocation.get("investimento", Decimal(0)) + total_legacy_investments
-
-        # Historical data (Last 6 months)
         history = []
         month_names_pt = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
         today = date.today()
@@ -258,8 +170,6 @@ class SummaryService:
                 )
 
                 if balance_at_date is None:
-                    # Se não tem histórico até essa data, vamos assumir 0
-                    # (ou poderíamos tentar calcular o saldo retroativamente, mas é complexo)
                     balance_at_date = Decimal(0)
 
                 total_at_date += balance_at_date
@@ -287,39 +197,17 @@ class SummaryService:
         accounts = crud_account.get_multi_with_balance(db)
         total_actual_balance = sum((acc.balance for acc in accounts), Decimal(0))
 
-        # Para o fluxo de caixa, precisamos do saldo no início de hoje.
-        # Subtraímos tudo o que está no banco de hoje em diante para encontrar o ponto de partida.
-        future_income = db.scalar(select(func.sum(Income.amount)).filter(Income.date >= today)) or Decimal(0)
-        future_trans_income = db.scalar(
+        future_diff = db.scalar(
             select(func.sum(Transaction.amount))
-            .join(Category)
-            .filter(Transaction.type == "income", Transaction.deleted_at == None, Transaction.date >= today, Category.is_system == False)
-        ) or Decimal(0)
-        future_expenses = db.scalar(
-            select(func.sum(Transaction.amount))
-            .join(Category)
-            .filter(Transaction.type == "expense", Transaction.deleted_at == None, Transaction.date >= today, Category.is_system == False)
+            .filter(Transaction.deleted_at == None, Transaction.date >= today)
         ) or Decimal(0)
 
-        current_balance = total_actual_balance - future_income - future_trans_income + future_expenses
-
-        incomes = db.execute(
-            select(Income.date, func.sum(Income.amount).label('amount'))
-            .filter(Income.date >= today, Income.date <= end_of_month)
-            .group_by(Income.date)
-        ).all()
+        current_balance = total_actual_balance - future_diff
 
         expenses = db.execute(
             select(Transaction.date, func.sum(Transaction.amount).label('amount'))
-            .join(Category)
-            .filter(Transaction.type == "expense", Transaction.deleted_at == None, Transaction.date >= today, Transaction.date <= end_of_month, Category.is_system == False)
+            .filter(Transaction.nature == TransactionNature.EXPENSE, Transaction.deleted_at == None, Transaction.date >= today, Transaction.date <= end_of_month)
             .group_by(Transaction.date)
-        ).all()
-
-        investments = db.execute(
-            select(Investment.date, func.sum(Investment.amount).label('amount'))
-            .filter(Investment.date >= today, Investment.date <= end_of_month)
-            .group_by(Investment.date)
         ).all()
 
         daily_data = {}
@@ -328,21 +216,16 @@ class SummaryService:
             daily_data[d] = {"income": Decimal(0), "expense": Decimal(0)}
             d += timedelta(days=1)
 
-        for row in incomes:
-            daily_data[row.date]["income"] += row.amount
-
-        # Também incluir transações do tipo 'income' que não estão no modelo Income
         trans_incomes = db.execute(
             select(Transaction.date, func.sum(Transaction.amount).label('amount'))
-            .join(Category)
-            .filter(Transaction.type == "income", Transaction.deleted_at == None, Transaction.date >= today, Transaction.date <= end_of_month, Category.is_system == False)
+            .filter(Transaction.nature == TransactionNature.INCOME, Transaction.deleted_at == None, Transaction.date >= today, Transaction.date <= end_of_month)
             .group_by(Transaction.date)
         ).all()
         for row in trans_incomes:
             daily_data[row.date]["income"] += row.amount
 
         for row in expenses:
-            daily_data[row.date]["expense"] += row.amount
+            daily_data[row.date]["expense"] += abs(row.amount)
 
         cash_flow = []
         running_balance = current_balance
@@ -363,31 +246,37 @@ class SummaryService:
         return cash_flow
 
     def get_yearly_summary(self, db: Session, year: int) -> YearlySummary:
-        total_income = db.scalar(select(func.sum(Income.amount)).filter(extract('year', Income.date) == year)) or Decimal(0)
-        total_income += db.scalar(
+        total_income = db.scalar(
             select(func.sum(Transaction.amount))
-            .join(Category)
             .filter(
                 extract('year', Transaction.date) == year,
-                Transaction.type == "income",
-                Transaction.deleted_at == None,
-                Category.is_system == False
+                Transaction.nature == TransactionNature.INCOME,
+                Transaction.deleted_at == None
             )
         ) or Decimal(0)
 
-        total_expenses = db.scalar(
+        total_expenses_signed = db.scalar(
             select(func.sum(Transaction.amount))
-            .join(Category)
             .filter(
                 extract('year', Transaction.date) == year,
-                Transaction.type == "expense",
-                Transaction.deleted_at == None,
-                Category.is_system == False
+                Transaction.nature == TransactionNature.EXPENSE,
+                Transaction.deleted_at == None
             )
         ) or Decimal(0)
-        total_invested = db.scalar(select(func.sum(Investment.amount)).filter(extract('year', Investment.date) == year)) or Decimal(0)
 
-        balance = total_income - total_expenses
+        total_expenses = abs(total_expenses_signed)
+
+        total_invested = db.scalar(
+            select(func.sum(Transaction.amount))
+            .filter(
+                extract('year', Transaction.date) == year,
+                Transaction.nature == TransactionNature.INVESTMENT,
+                Transaction.amount > 0,
+                Transaction.deleted_at == None
+            )
+        ) or Decimal(0)
+
+        balance = total_income + total_expenses_signed
 
         return YearlySummary(
             total_income=total_income,
@@ -397,79 +286,14 @@ class SummaryService:
         )
 
     def get_cash_flow_summary(self, db: Session, months: int = 6) -> List[CashFlowSummary]:
-        today = date.today()
-        start_date = (today - relativedelta(months=months - 1)).replace(day=1)
-
-        # Helper to get monthly totals from a query
-        def get_monthly_totals(query):
-            results = db.execute(query).all()
-            return {(int(r.year), int(r.month)): r.total for r in results}
-
-        # 1. Income from Income model
-        income_model_totals = get_monthly_totals(
-            select(
-                extract('year', Income.date).label('year'),
-                extract('month', Income.date).label('month'),
-                func.sum(Income.amount).label('total')
-            ).filter(Income.date >= start_date)
-            .group_by('year', 'month')
-        )
-
-        # 2. Income from Transaction model
-        income_trans_totals = get_monthly_totals(
-            select(
-                extract('year', Transaction.date).label('year'),
-                extract('month', Transaction.date).label('month'),
-                func.sum(Transaction.amount).label('total')
-            ).join(Category)
-            .filter(
-                Transaction.date >= start_date,
-                Transaction.type == "income",
-                Transaction.deleted_at == None,
-                Category.is_system == False
-            ).group_by('year', 'month')
-        )
-
-        # 3. Expenses from Transaction model
-        expense_trans_totals = get_monthly_totals(
-            select(
-                extract('year', Transaction.date).label('year'),
-                extract('month', Transaction.date).label('month'),
-                func.sum(Transaction.amount).label('total')
-            ).join(Category)
-            .filter(
-                Transaction.date >= start_date,
-                Transaction.type == "expense",
-                Transaction.deleted_at == None,
-                Category.is_system == False
-            ).group_by('year', 'month')
-        )
-
-        # 4. Expenses from Investment model
-        investment_totals = get_monthly_totals(
-            select(
-                extract('year', Investment.date).label('year'),
-                extract('month', Investment.date).label('month'),
-                func.sum(Investment.amount).label('total')
-            ).filter(Investment.date >= start_date)
-            .group_by('year', 'month')
-        )
-
-        summary = []
-        for i in range(months - 1, -1, -1):
-            d = today - relativedelta(months=i)
-            key = (d.year, d.month)
-
-            m_income = income_model_totals.get(key, Decimal(0)) + income_trans_totals.get(key, Decimal(0))
-            m_expense = expense_trans_totals.get(key, Decimal(0))
-
-            summary.append(CashFlowSummary(
-                month=d.strftime("%Y-%m"),
-                income=m_income,
-                expense=m_expense,
-                net=m_income - m_expense
-            ))
-
-        return summary
+        results = financial_engine.get_cash_flow_evolution(db, months)
+        return [
+            CashFlowSummary(
+                month=r["month"],
+                income=r["income"],
+                expense=r["expense"],
+                net=r["net"]
+            ) for r in results
+        ]
 
 summary_service = SummaryService()

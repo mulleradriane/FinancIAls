@@ -4,9 +4,8 @@ from datetime import datetime
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import select
 from app.crud.base import CRUDBase
-from app.models.transaction import Transaction
+from app.models.transaction import Transaction, TransactionNature
 from app.models.recurring_expense import RecurringExpense
-from app.models.transfer import Transfer
 from app.models.account import Account
 from app.models.category import Category, CategoryType
 from app.schemas.transaction import TransactionCreate, TransactionUpdate, UnifiedTransactionResponse
@@ -14,12 +13,6 @@ from app.schemas.transaction import TransactionCreate, TransactionUpdate, Unifie
 class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate]):
     def create(self, db: Session, *, obj_in: TransactionCreate) -> Transaction:
         obj_in_data = obj_in.model_dump()
-
-        # Determine type from category
-        category = db.get(Category, obj_in.category_id)
-        if category:
-            obj_in_data["type"] = category.type
-
         db_obj = self.model(**obj_in_data)
         db.add(db_obj)
         db.commit()
@@ -37,11 +30,6 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
             update_data = obj_in
         else:
             update_data = obj_in.model_dump(exclude_unset=True)
-
-        if "category_id" in update_data and update_data["category_id"]:
-            category = db.get(Category, update_data["category_id"])
-            if category:
-                update_data["type"] = category.type
 
         return super().update(db, db_obj=db_obj, obj_in=update_data)
 
@@ -111,75 +99,22 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
                 id=t.id,
                 description=t.description,
                 amount=t.amount,
-                type=t.type,
+                nature=t.nature,
                 date=t.date,
                 category_name=t.category.name if t.category else "Sem Categoria",
                 category_icon=t.category.icon if t.category else "💰",
                 category_color=t.category.color if t.category else "#666666",
                 category_is_system=t.category.is_system if t.category else False,
-                is_transfer=False,
+                is_transfer=(t.nature == TransactionNature.TRANSFER),
                 installment_number=t.installment_number,
                 account_name=t.account.name if t.account else "Sem Conta",
-                account_type=t.account.type if t.account else None,
+                account_type=t.account.type.value if t.account else None,
                 is_recurring=t.recurring_expense_id is not None,
                 recurring_type=t.recurring_expense.type.value if t.recurring_expense else None,
                 total_installments=t.recurring_expense.total_installments if t.recurring_expense else None
             ))
 
-        # Get Transfers
-        # For transfers, we only filter by account_id and dates. Category filtering doesn't apply directly.
-        if not category_id:
-            query_tr = select(Transfer)
-            if account_id:
-                query_tr = query_tr.filter((Transfer.from_account_id == account_id) | (Transfer.to_account_id == account_id))
-            if start_date:
-                query_tr = query_tr.filter(Transfer.date >= start_date)
-            if end_date:
-                query_tr = query_tr.filter(Transfer.date <= end_date)
-
-            transfers = db.scalars(
-                query_tr.options(joinedload(Transfer.from_account), joinedload(Transfer.to_account))
-                .order_by(Transfer.date.desc())
-                .offset(skip)
-                .limit(limit)
-            ).all()
-
-            for tr in transfers:
-                # Entry for the source account (outgoing)
-                if not account_id or tr.from_account_id == account_id:
-                    unified_list.append(UnifiedTransactionResponse(
-                        id=tr.id,
-                        description=tr.description or "Transferência",
-                        amount=tr.amount * -1,
-                        type="expense",
-                        date=tr.date,
-                        category_name=f"Transferência para {tr.to_account.name}",
-                        is_transfer=True,
-                        account_name=tr.from_account.name,
-                        account_type=tr.from_account.type,
-                        from_account_name=tr.from_account.name,
-                        to_account_name=tr.to_account.name
-                    ))
-                # Entry for the destination account (incoming)
-                if not account_id or tr.to_account_id == account_id:
-                    unified_list.append(UnifiedTransactionResponse(
-                        id=tr.id,
-                        description=tr.description or "Transferência",
-                        amount=tr.amount,
-                        type="income",
-                        date=tr.date,
-                        category_name=f"Recebido de {tr.from_account.name}",
-                        is_transfer=True,
-                        account_name=tr.to_account.name,
-                        account_type=tr.to_account.type,
-                        from_account_name=tr.from_account.name,
-                        to_account_name=tr.to_account.name
-                    ))
-
-        # Re-sort combined list by date desc
-        unified_list.sort(key=lambda x: x.date, reverse=True)
-
-        return unified_list[:limit]
+        return unified_list
 
     def get_unique_descriptions(self, db: Session) -> List[str]:
         result = db.execute(

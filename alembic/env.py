@@ -21,10 +21,7 @@ from app.core.config import settings
 from app.models.category import Category
 from app.models.transaction import Transaction
 from app.models.recurring_expense import RecurringExpense
-from app.models.income import Income
-from app.models.investment import Investment
 from app.models.account import Account
-from app.models.transfer import Transfer
 
 target_metadata = Base.metadata
 

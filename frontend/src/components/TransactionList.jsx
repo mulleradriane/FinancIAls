@@ -125,9 +125,9 @@ const TransactionList = ({ transactions, onEdit, onDelete, highlightId }) => {
             <div className="flex flex-col items-end justify-center min-w-[130px]">
               <span className={cn(
                 "font-semibold text-2xl tracking-tighter leading-none mb-1",
-                t.type === 'expense' ? "text-destructive" : "text-success"
+                t.amount < 0 ? "text-destructive" : "text-success"
               )}>
-                {t.type === 'expense' ? '-' : '+'}{formatCurrency(Math.abs(t.amount))}
+                {t.amount < 0 ? '-' : '+'}{formatCurrency(Math.abs(t.amount))}
               </span>
             </div>
 

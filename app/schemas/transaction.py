@@ -5,11 +5,8 @@ import datetime
 from decimal import Decimal
 from app.schemas.category import Category
 from app.models.recurring_expense import RecurringType, FrequencyType
+from app.models.transaction import TransactionNature
 import enum
-
-class TransactionType(str, enum.Enum):
-    expense = "expense"
-    income = "income"
 
 # 🔹 Tipo decimal alinhado com o banco (Numeric(12,2))
 AmountDecimal = condecimal(max_digits=12, decimal_places=2)
@@ -17,13 +14,14 @@ AmountDecimal = condecimal(max_digits=12, decimal_places=2)
 
 class TransactionBase(BaseModel):
     description: str
-    category_id: UUID
+    category_id: UUID | None = None
     amount: AmountDecimal
-    type: TransactionType | None = None
+    nature: TransactionNature
     date: datetime.date
     recurring_expense_id: UUID | None = None
     installment_number: int | None = None
     account_id: UUID | None = None
+    transfer_group_id: UUID | None = None
 
 
 class TransactionCreate(TransactionBase):
@@ -32,10 +30,12 @@ class TransactionCreate(TransactionBase):
 
 class UnifiedTransactionCreate(BaseModel):
     description: str
-    category_id: UUID
+    category_id: UUID | None = None
     amount: AmountDecimal
+    nature: TransactionNature
     date: datetime.date
     account_id: UUID
+    to_account_id: UUID | None = None
     is_recurring: bool = False
     recurring_type: RecurringType | None = None
     frequency: FrequencyType | None = None
@@ -46,10 +46,12 @@ class TransactionUpdate(BaseModel):
     description: str | None = None
     category_id: UUID | None = None
     amount: AmountDecimal | None = None
+    nature: TransactionNature | None = None
     date: datetime.date | None = None
     recurring_expense_id: UUID | None = None
     installment_number: int | None = None
     account_id: UUID | None = None
+    transfer_group_id: UUID | None = None
 
 
 class Transaction(TransactionBase):
@@ -66,9 +68,9 @@ class UnifiedTransactionResponse(BaseModel):
     id: UUID
     description: str | None = None
     amount: AmountDecimal
-    type: TransactionType | None = None
+    nature: TransactionNature
     date: datetime.date
-    category_name: str
+    category_name: str | None = None
     category_icon: str | None = None
     category_color: str | None = None
     category_is_system: bool = False

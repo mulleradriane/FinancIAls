@@ -5,10 +5,7 @@ from sqlalchemy import select, func, or_, delete
 from app.crud.base import CRUDBase
 from app.models.account import Account
 from app.models.balance_history import BalanceHistory
-from app.models.transaction import Transaction
-from app.models.income import Income
-from app.models.investment import Investment
-from app.models.transfer import Transfer
+from app.models.transaction import Transaction, TransactionNature
 from app.models.recurring_expense import RecurringExpense
 from app.models.category import Category, CategoryType
 from app.schemas.account import AccountCreate, AccountUpdate
@@ -47,13 +44,10 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
             diff = Decimal(str(current_balance_input)) - actual_balance
 
             if diff != 0:
-                # Find adjustment category by name
                 category = db.scalar(
                     select(Category).filter(Category.name == "Ajuste de Saldo")
                 )
 
-                # If for some reason it doesn't exist (e.g. fresh DB without migrations),
-                # we create it as a system category.
                 if not category:
                     category = Category(
                         name="Ajuste de Saldo",
@@ -64,31 +58,18 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
                     db.commit()
                     db.refresh(category)
 
-                if diff > 0:
-                    adjustment = Transaction(
-                        description="Ajuste de Saldo",
-                        amount=diff,
-                        date=date.today(),
-                        category_id=category.id,
-                        account_id=db_obj.id,
-                        type="income"
-                    )
-                    db.add(adjustment)
-                else:
-                    # diff < 0, need an expense transaction
-                    adjustment = Transaction(
-                        description="Ajuste de Saldo",
-                        amount=abs(diff),
-                        date=date.today(),
-                        category_id=category.id,
-                        account_id=db_obj.id,
-                        type="expense"
-                    )
-                    db.add(adjustment)
+                adjustment = Transaction(
+                    description="Ajuste de Saldo",
+                    amount=diff,
+                    date=date.today(),
+                    category_id=category.id,
+                    account_id=db_obj.id,
+                    nature=TransactionNature.SYSTEM_ADJUSTMENT
+                )
+                db.add(adjustment)
 
                 db.commit()
 
-        # Record history snapshot for the current state
         new_balance = self.get_balance(db, db_obj.id)
         self._record_history(db, db_obj.id, new_balance)
 
@@ -132,72 +113,15 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
     def remove(self, db: Session, *, id: UUID) -> Optional[Account]:
         obj = db.get(Account, id)
         if obj:
-            # Delete associated transfers
-            db.execute(
-                delete(Transfer).where(
-                    or_(
-                        Transfer.from_account_id == id,
-                        Transfer.to_account_id == id
-                    )
-                )
-            )
-            # Delete associated recurring expenses
             db.execute(
                 delete(RecurringExpense).where(RecurringExpense.account_id == id)
             )
-            # Delete the account
             db.delete(obj)
             db.commit()
         return obj
 
     def get_balance(self, db: Session, account_id: UUID) -> Decimal:
-        account = db.get(Account, account_id)
-        if not account:
-            return Decimal(0)
-
-        initial_balance = account.initial_balance
-        start_date = account.initial_balance_date
-
-        incomes = db.scalar(
-            select(func.sum(Income.amount))
-            .filter(Income.account_id == account_id, Income.date >= start_date)
-        ) or Decimal(0)
-
-        expenses = db.scalar(
-            select(func.sum(Transaction.amount))
-            .filter(
-                Transaction.account_id == account_id,
-                Transaction.deleted_at == None,
-                Transaction.type == "expense",
-                Transaction.date >= start_date
-            )
-        ) or Decimal(0)
-
-        trans_income = db.scalar(
-            select(func.sum(Transaction.amount))
-            .filter(
-                Transaction.account_id == account_id,
-                Transaction.deleted_at == None,
-                Transaction.type == "income",
-                Transaction.date >= start_date
-            )
-        ) or Decimal(0)
-
-        investments = db.scalar(
-            select(func.sum(Investment.amount))
-            .filter(Investment.account_id == account_id, Investment.date >= start_date)
-        ) or Decimal(0)
-
-        transfers_to = db.scalar(
-            select(func.sum(Transfer.amount))
-            .filter(Transfer.to_account_id == account_id, Transfer.date >= start_date)
-        ) or Decimal(0)
-
-        transfers_from = db.scalar(
-            select(func.sum(Transfer.amount))
-            .filter(Transfer.from_account_id == account_id, Transfer.date >= start_date)
-        ) or Decimal(0)
-
-        return initial_balance + incomes + trans_income - expenses - investments + transfers_to - transfers_from
+        from app.services.financial_engine import financial_engine
+        return financial_engine.get_account_balance(db, account_id)
 
 account = CRUDAccount(Account)
