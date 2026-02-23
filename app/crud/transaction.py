@@ -53,8 +53,17 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
     def remove(self, db: Session, *, id: UUID) -> Optional[Transaction]:
         obj = db.get(Transaction, id)
         if obj:
-            obj.deleted_at = datetime.now()
-            db.add(obj)
+            now = datetime.now()
+            # If it belongs to a transfer group, delete both
+            if obj.transfer_group_id:
+                db.execute(
+                    f"UPDATE transactions SET deleted_at = :now WHERE transfer_group_id = :group_id",
+                    {"now": now, "group_id": obj.transfer_group_id}
+                )
+            else:
+                obj.deleted_at = now
+                db.add(obj)
+
             db.commit()
             db.refresh(obj)
         return obj

@@ -135,9 +135,9 @@ const Transactions = () => {
 
   const totals = transactions.reduce((acc, t) => {
     if (t.category_is_system) return acc;
-    const val = Math.abs(parseFloat(t.amount));
-    if (t.type === 'income') acc.incomes += val;
-    else acc.expenses += val;
+    const val = parseFloat(t.amount);
+    if (val > 0) acc.incomes += val;
+    else acc.expenses += Math.abs(val);
     return acc;
   }, { incomes: 0, expenses: 0 });
 
@@ -147,8 +147,7 @@ const Transactions = () => {
     const type = transaction.is_transfer ? 'transferência' : 'transação';
     if (window.confirm(`Tem certeza que deseja excluir esta ${type}?`)) {
       try {
-        const endpoint = transaction.is_transfer ? '/transfers' : '/transactions';
-        await api.delete(`${endpoint}/${transaction.id}`);
+        await api.delete(`/transactions/${transaction.id}`);
         toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} excluída!`);
         fetchTransactions();
       } catch (error) {
