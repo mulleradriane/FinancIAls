@@ -8,6 +8,7 @@ const analyticsApi = {
   getAssetsLiabilities: () => api.get('/analytics/assets-liabilities'),
   getAccountBalances: () => api.get('/analytics/account-balances'),
   getGoalsProgress: () => api.get('/analytics/goals-progress'),
+  getForecast: () => api.get('/analytics/forecast'),
 };
 
 export default analyticsApi;

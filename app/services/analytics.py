@@ -5,6 +5,7 @@ from app.schemas.analytics import (
     NetWorth, AssetsLiabilities, AccountBalance
 )
 from app.schemas.goals import GoalProgress
+from app.schemas.forecast import ForecastRead
 from typing import List
 from decimal import Decimal
 
@@ -77,5 +78,18 @@ class AnalyticsService:
     def get_goals_progress(self, db: Session) -> List[GoalProgress]:
         result = db.execute(text("SELECT * FROM v_goal_progress ORDER BY target_date ASC")).all()
         return [GoalProgress.model_validate(row) for row in result]
+
+    def get_forecast(self, db: Session) -> ForecastRead:
+        result = db.execute(text("SELECT * FROM v_financial_forecast")).first()
+        if not result:
+            # Fallback if view returns nothing (should not happen with COALESCE)
+            return ForecastRead(
+                current_net_worth=Decimal(0),
+                avg_monthly_result_last_3m=Decimal(0),
+                projected_3m=Decimal(0),
+                projected_6m=Decimal(0),
+                projected_12m=Decimal(0)
+            )
+        return ForecastRead.model_validate(result)
 
 analytics_service = AnalyticsService()

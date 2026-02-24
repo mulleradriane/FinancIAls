@@ -19,6 +19,7 @@ import MonthlySummaryCard from '@/components/dashboard/MonthlySummaryCard';
 import BurnRateCard from '@/components/dashboard/BurnRateCard';
 import EvolutionChart from '@/components/dashboard/EvolutionChart';
 import GoalsCard from '@/components/dashboard/GoalsCard';
+import ForecastCard from '@/components/dashboard/ForecastCard';
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -32,6 +33,7 @@ const Dashboard = () => {
   const [savingsRate, setSavingsRate] = useState([]);
   const [burnRate, setBurnRate] = useState({ avg_monthly_expense_last_3m: 0, previous_3m_avg: 0, trend: 'STABLE' });
   const [goals, setGoals] = useState([]);
+  const [forecast, setForecast] = useState(null);
 
   // Form requirements
   const [categories, setCategories] = useState([]);
@@ -56,6 +58,7 @@ const Dashboard = () => {
         srRes,
         brRes,
         goalsRes,
+        forecastRes,
         categoriesRes,
         accountsRes
       ] = await Promise.all([
@@ -65,6 +68,7 @@ const Dashboard = () => {
         analyticsApi.getSavingsRate(),
         analyticsApi.getBurnRate(),
         analyticsApi.getGoalsProgress(),
+        analyticsApi.getForecast(),
         api.get('/categories/'),
         api.get('/accounts/')
       ]);
@@ -75,6 +79,7 @@ const Dashboard = () => {
       setSavingsRate(srRes.data);
       setBurnRate(brRes.data);
       setGoals(goalsRes.data);
+      setForecast(forecastRes.data);
       setCategories(categoriesRes.data);
       setAccounts(accountsRes.data);
     } catch (error) {
@@ -151,6 +156,10 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 gap-8">
         <GoalsCard goals={goals} loading={loading} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-8">
+        <ForecastCard forecast={forecast} loading={loading} />
       </div>
 
       {/* Transaction Modal */}
