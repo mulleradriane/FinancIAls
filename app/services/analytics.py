@@ -3,7 +3,7 @@ from sqlalchemy import text
 from app.schemas.analytics import (
     OperationalMonthly, SavingsRate, BurnRate,
     NetWorth, AssetsLiabilities, AccountBalance,
-    DailyExpensesResponse
+    DailyExpensesResponse, SankeyResponse, SankeyNode, SankeyLink
 )
 from app.schemas.goals import GoalProgress
 from app.schemas.forecast import ForecastRead
@@ -105,6 +105,82 @@ class AnalyticsService:
                 projected_12m=Decimal(0)
             )
         return ForecastRead.model_validate(result)
+
+    def get_sankey_data(self, db: Session, user_id: UUID, year: int, month: int) -> SankeyResponse:
+        query = text("""
+            SELECT
+                COALESCE(c.name, 'Sem Categoria') as category_name,
+                c.color as category_color,
+                t.nature,
+                SUM(ABS(t.amount)) as total
+            FROM transactions t
+            LEFT JOIN categories c ON t.category_id = c.id
+            WHERE t.user_id = :user_id
+              AND t.deleted_at IS NULL
+              AND EXTRACT(YEAR FROM t.date) = :year
+              AND EXTRACT(MONTH FROM t.date) = :month
+              AND t.nature IN ('INCOME', 'EXPENSE', 'INVESTMENT')
+            GROUP BY c.name, c.color, t.nature
+        """)
+
+        results = db.execute(query, {
+            "user_id": str(user_id),
+            "year": year,
+            "month": month
+        }).all()
+
+        nodes = []
+        links = []
+        node_map = {}
+
+        def get_node_idx(name, color=None):
+            if name not in node_map:
+                node_map[name] = len(nodes)
+                nodes.append(SankeyNode(name=name, color=color))
+            return node_map[name]
+
+        # Define special nodes
+        # Green for Receita and Economizado, Red for Despesas
+        receita_idx = get_node_idx("Receita", "#22c55e")
+        despesas_idx = get_node_idx("Despesas", "#ef4444")
+
+        total_income = Decimal(0)
+        total_outflow = Decimal(0)
+
+        # Level 0 -> 1: Income Categories -> Receita
+        # Level 2 -> 3: Despesas -> Expense Categories
+        income_cats = []
+        outflow_cats = []
+
+        for row in results:
+            if row.nature == 'INCOME':
+                total_income += row.total
+                income_cats.append((row.category_name, row.category_color, row.total))
+            elif row.nature in ('EXPENSE', 'INVESTMENT'):
+                total_outflow += row.total
+                outflow_cats.append((row.category_name, row.category_color, row.total))
+
+        # Add income category links
+        for name, color, value in income_cats:
+            cat_idx = get_node_idx(name, color)
+            links.append(SankeyLink(source=cat_idx, target=receita_idx, value=value))
+
+        # Add outflow (Despesas + Investment) category links
+        for name, color, value in outflow_cats:
+            cat_idx = get_node_idx(name, color)
+            links.append(SankeyLink(source=despesas_idx, target=cat_idx, value=value))
+
+        # Link Level 1 -> 2: Receita -> Despesas
+        if total_outflow > 0:
+            links.append(SankeyLink(source=receita_idx, target=despesas_idx, value=total_outflow))
+
+        # Link Level 1 -> 2: Receita -> Economizado
+        if total_income > total_outflow:
+            economizado_val = total_income - total_outflow
+            economizado_idx = get_node_idx("Economizado", "#22c55e")
+            links.append(SankeyLink(source=receita_idx, target=economizado_idx, value=economizado_val))
+
+        return SankeyResponse(nodes=nodes, links=links)
 
     def get_daily_expenses(self, db: Session, user_id: UUID, year: int, month: int) -> dict:
         # Cumulative daily expenses for the requested month

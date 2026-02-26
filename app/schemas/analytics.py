@@ -53,3 +53,16 @@ class DailyExpenseEntry(BaseModel):
 class DailyExpensesResponse(BaseModel):
     daily_data: List[DailyExpenseEntry]
     previous_month_total: Decimal
+
+class SankeyNode(BaseModel):
+    name: str
+    color: Optional[str] = None
+
+class SankeyLink(BaseModel):
+    source: int
+    target: int
+    value: Decimal
+
+class SankeyResponse(BaseModel):
+    nodes: List[SankeyNode]
+    links: List[SankeyLink]

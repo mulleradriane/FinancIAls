@@ -4,7 +4,7 @@ from app.core.database import get_db
 from app.services.analytics import analytics_service
 from app.schemas.analytics import (
     OperationalMonthly, SavingsRate, AssetsLiabilities, AccountBalance,
-    BurnRate, NetWorth, DailyExpensesResponse
+    BurnRate, NetWorth, DailyExpensesResponse, SankeyResponse
 )
 from app.schemas.goals import GoalProgress
 from app.schemas.forecast import ForecastRead
@@ -81,3 +81,12 @@ def get_daily_expenses(
     current_user: User = Depends(get_current_user)
 ):
     return analytics_service.get_daily_expenses(db, user_id=current_user.id, year=year, month=month)
+
+@router.get("/sankey", response_model=SankeyResponse)
+def get_sankey_data(
+    year: int,
+    month: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return analytics_service.get_sankey_data(db, user_id=current_user.id, year=year, month=month)
