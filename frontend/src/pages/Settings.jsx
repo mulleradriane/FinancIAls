@@ -47,13 +47,26 @@ const Settings = () => {
     }));
   };
 
-  const handleSave = () => {
-    // In a real app, we would call an update endpoint here.
-    // For now, since we only have /auth/me for reading,
-    // and the prompt didn't strictly require a profile update endpoint,
-    // I'll just show a success message or implement it if I have time.
-    // Actually, I'll just keep it simple as requested.
-    toast.info('A edição de perfil será implementada em breve.');
+  const handleSave = async () => {
+    try {
+      const response = await authApi.updateMe({
+        username: profile.username,
+        display_name: profile.displayName
+      });
+
+      const updatedUser = response.data;
+
+      // Update localStorage
+      localStorage.setItem('username', updatedUser.username);
+      localStorage.setItem('display_name', updatedUser.display_name || updatedUser.username);
+
+      toast.success('Perfil atualizado com sucesso!');
+    } catch (error) {
+      console.error("Erro ao atualizar perfil", error);
+      const detail = error.response?.data?.detail;
+      const message = typeof detail === 'string' ? detail : "Não foi possível atualizar o perfil.";
+      toast.error(message);
+    }
   };
 
   if (loading) {
@@ -95,7 +108,6 @@ const Settings = () => {
                 value={profile.displayName}
                 onChange={handleChange}
                 className="rounded-xl"
-                disabled
               />
               <p className="text-[10px] text-muted-foreground px-1">
                 Nome exibido no sistema.
@@ -111,7 +123,6 @@ const Settings = () => {
                 value={profile.username}
                 onChange={handleChange}
                 className="rounded-xl"
-                disabled
               />
             </div>
 
@@ -152,7 +163,7 @@ const Settings = () => {
       </div>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave} className="rounded-xl px-8 shadow-lg shadow-primary/20 gap-2" disabled>
+        <Button onClick={handleSave} className="rounded-xl px-8 shadow-lg shadow-primary/20 gap-2">
           <Save size={18} />
           Salvar Alterações
         </Button>
