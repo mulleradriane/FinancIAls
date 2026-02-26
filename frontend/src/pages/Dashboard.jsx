@@ -20,6 +20,8 @@ import BurnRateCard from '@/components/dashboard/BurnRateCard';
 import EvolutionChart from '@/components/dashboard/EvolutionChart';
 import GoalsCard from '@/components/dashboard/GoalsCard';
 import ForecastCard from '@/components/dashboard/ForecastCard';
+import RecentTransactionsCard from '@/components/dashboard/RecentTransactionsCard';
+import UpcomingExpensesCard from '@/components/dashboard/UpcomingExpensesCard';
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -159,6 +161,11 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 gap-8">
         <ForecastCard forecast={forecast} loading={loading} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <RecentTransactionsCard />
+        <UpcomingExpensesCard />
       </div>
 
       {/* Transaction Modal */}
