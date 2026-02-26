@@ -8,6 +8,7 @@ Create Date: 2026-02-25 12:00:00.000000
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = 'c62d3bd6a69d'
@@ -16,15 +17,13 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
-    with op.batch_alter_table('categories', schema=None) as batch_op:
-        batch_op.alter_column('user_id', existing_type=sa.UUID(), nullable=True)
+    op.alter_column('categories', 'user_id', existing_type=postgresql.UUID(as_uuid=True), nullable=True)
 
     # Set user_id to NULL for system categories
-    op.execute("UPDATE categories SET user_id = NULL WHERE is_system = 1")
+    op.execute("UPDATE categories SET user_id = NULL WHERE is_system = true")
 
 def downgrade() -> None:
     # We can't easily go back to NOT NULL if we have NULLs, but for the sake of completion:
     # We would need to assign a user_id to those NULL categories.
     op.execute("UPDATE categories SET user_id = (SELECT id FROM users LIMIT 1) WHERE user_id IS NULL")
-    with op.batch_alter_table('categories', schema=None) as batch_op:
-        batch_op.alter_column('user_id', existing_type=sa.UUID(), nullable=False)
+    op.alter_column('categories', 'user_id', existing_type=postgresql.UUID(as_uuid=True), nullable=False)
