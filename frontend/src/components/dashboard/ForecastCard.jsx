@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Sparkles, TrendingUp, AlertTriangle, Minus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import PrivateValue from '@/components/ui/PrivateValue';
 
 // Função de formatação local
 const formatCurrency = (value) => {
@@ -91,13 +92,13 @@ const ForecastCard = ({ forecast, loading }) => {
       <CardContent className="space-y-6">
         <div>
           <div className="text-4xl font-bold tracking-tight text-slate-900 mb-1">
-            {formatCurrency(current_net_worth)}
+            <PrivateValue value={formatCurrency(current_net_worth)} />
           </div>
           <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest flex items-center gap-2">
             Patrimônio Atual
             {avg_monthly_result_last_3m !== 0 && (
               <span className={`flex items-center gap-0.5 ${avg_monthly_result_last_3m > 0 ? 'text-green-600' : 'text-destructive'}`}>
-                ({avg_monthly_result_last_3m > 0 ? '+' : ''}{formatCurrency(avg_monthly_result_last_3m)}/mês)
+                (<PrivateValue value={`${avg_monthly_result_last_3m > 0 ? '+' : ''}${formatCurrency(avg_monthly_result_last_3m)}`} />/mês)
               </span>
             )}
           </div>
@@ -107,19 +108,19 @@ const ForecastCard = ({ forecast, loading }) => {
           <div className="p-4 rounded-xl bg-slate-50/50 border border-slate-100/50">
             <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Em 3 Meses</div>
             <div className={`text-xl font-semibold ${projected_3m >= 0 ? 'text-slate-900' : 'text-destructive'}`}>
-              {formatCurrency(projected_3m)}
+              <PrivateValue value={formatCurrency(projected_3m)} />
             </div>
           </div>
           <div className="p-4 rounded-xl bg-slate-50/50 border border-slate-100/50">
             <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Em 6 Meses</div>
             <div className={`text-xl font-semibold ${projected_6m >= 0 ? 'text-slate-900' : 'text-destructive'}`}>
-              {formatCurrency(projected_6m)}
+              <PrivateValue value={formatCurrency(projected_6m)} />
             </div>
           </div>
           <div className="p-4 rounded-xl bg-slate-50/50 border border-slate-100/50">
             <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Em 1 Ano</div>
             <div className={`text-xl font-semibold ${projected_12m >= 0 ? 'text-slate-900' : 'text-destructive'}`}>
-              {formatCurrency(projected_12m)}
+              <PrivateValue value={formatCurrency(projected_12m)} />
             </div>
           </div>
         </div>

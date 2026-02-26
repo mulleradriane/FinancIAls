@@ -11,8 +11,10 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { usePrivacy } from '@/context/PrivacyContext';
 
 const EvolutionChart = ({ data, loading }) => {
+  const { isPrivate } = usePrivacy();
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -57,7 +59,7 @@ const EvolutionChart = ({ data, loading }) => {
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                tickFormatter={(value) => `R$${value >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
+                tickFormatter={(value) => isPrivate ? '•••' : `R$${value >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
               />
               <Tooltip
                 cursor={{ fill: 'hsl(var(--muted) / 0.4)' }}
@@ -70,7 +72,7 @@ const EvolutionChart = ({ data, loading }) => {
                           <div key={index} className="flex items-center gap-2 text-xs mb-1">
                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
                             <span className="text-muted-foreground">{entry.name}:</span>
-                            <span className="font-bold">{formatCurrency(entry.value)}</span>
+                            <span className="font-bold">{isPrivate ? '•••••' : formatCurrency(entry.value)}</span>
                           </div>
                         ))}
                       </Card>

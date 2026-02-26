@@ -6,8 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Wallet, PieChartIcon, ArrowRight, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import PrivateValue from '@/components/ui/PrivateValue';
+import { usePrivacy } from '@/context/PrivacyContext';
 
 const Relatorios = () => {
+  const { isPrivate } = usePrivacy();
   const [summary, setSummary] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -95,19 +98,19 @@ const Relatorios = () => {
             <Card className="border-none shadow-md bg-success/5">
               <CardContent className="p-6">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Receitas</p>
-                <h3 className="text-2xl font-bold text-success mt-1">{formatCurrency(summary?.total_income || 0)}</h3>
+                <h3 className="text-2xl font-bold text-success mt-1"><PrivateValue value={formatCurrency(summary?.total_income || 0)} /></h3>
               </CardContent>
             </Card>
             <Card className="border-none shadow-md bg-destructive/5">
               <CardContent className="p-6">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Despesas</p>
-                <h3 className="text-2xl font-bold text-destructive mt-1">{formatCurrency(summary?.total_expenses || 0)}</h3>
+                <h3 className="text-2xl font-bold text-destructive mt-1"><PrivateValue value={formatCurrency(summary?.total_expenses || 0)} /></h3>
               </CardContent>
             </Card>
             <Card className="border-none shadow-md bg-primary/5">
               <CardContent className="p-6">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Investido</p>
-                <h3 className="text-2xl font-bold text-primary mt-1">{formatCurrency(summary?.total_invested || 0)}</h3>
+                <h3 className="text-2xl font-bold text-primary mt-1"><PrivateValue value={formatCurrency(summary?.total_invested || 0)} /></h3>
               </CardContent>
             </Card>
             <Card className="border-none shadow-md bg-secondary/30">
@@ -117,7 +120,7 @@ const Relatorios = () => {
                   "text-2xl font-bold mt-1",
                   (summary?.balance || 0) >= 0 ? "text-foreground" : "text-destructive"
                 )}>
-                  {formatCurrency(summary?.balance || 0)}
+                  <PrivateValue value={formatCurrency(summary?.balance || 0)} />
                 </h3>
               </CardContent>
             </Card>
@@ -160,7 +163,7 @@ const Relatorios = () => {
                                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill }} />
                                     <span className="font-bold text-sm">{payload[0].name}</span>
                                   </div>
-                                  <p className="text-xs font-bold mt-1">{formatCurrency(payload[0].value)}</p>
+                                  <p className="text-xs font-bold mt-1">{isPrivate ? '•••••' : formatCurrency(payload[0].value)}</p>
                                 </Card>
                               );
                             }
@@ -208,7 +211,7 @@ const Relatorios = () => {
                             </Badge>
                           </div>
                         </div>
-                        <p className="font-black text-destructive">{formatCurrency(t.amount)}</p>
+                        <p className="font-black text-destructive"><PrivateValue value={formatCurrency(t.amount)} /></p>
                       </div>
                     );
                   })}

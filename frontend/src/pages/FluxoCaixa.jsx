@@ -24,8 +24,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import PrivateValue from '@/components/ui/PrivateValue';
+import { usePrivacy } from '@/context/PrivacyContext';
 
 const FluxoCaixa = () => {
+  const { isPrivate } = usePrivacy();
   const [cashFlowData, setCashFlowData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState(6);
@@ -130,7 +133,7 @@ const FluxoCaixa = () => {
                     axisLine={false}
                     tickLine={false}
                     tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                    tickFormatter={(value) => `R$${Math.abs(value) >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
+                    tickFormatter={(value) => isPrivate ? '•••' : `R$${Math.abs(value) >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
                   />
                   <Tooltip
                     cursor={{ fill: 'hsl(var(--muted) / 0.4)' }}
@@ -143,7 +146,7 @@ const FluxoCaixa = () => {
                               <div key={index} className="flex items-center gap-2 text-xs mb-1">
                                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
                                 <span className="text-muted-foreground">{entry.name}:</span>
-                                <span className="font-bold">{formatCurrency(entry.value)}</span>
+                                <span className="font-bold">{isPrivate ? '•••••' : formatCurrency(entry.value)}</span>
                               </div>
                             ))}
                           </Card>
@@ -191,7 +194,7 @@ const FluxoCaixa = () => {
                 </div>
                 <div>
                   <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Receitas do Mês</p>
-                  <h3 className="text-2xl font-bold text-success mt-0.5">{formatCurrency(lastMonth.income)}</h3>
+                  <h3 className="text-2xl font-bold text-success mt-0.5"><PrivateValue value={formatCurrency(lastMonth.income)} /></h3>
                 </div>
               </div>
             </CardContent>
@@ -205,7 +208,7 @@ const FluxoCaixa = () => {
                 </div>
                 <div>
                   <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Despesas do Mês</p>
-                  <h3 className="text-2xl font-bold text-destructive mt-0.5">{formatCurrency(lastMonth.expense)}</h3>
+                  <h3 className="text-2xl font-bold text-destructive mt-0.5"><PrivateValue value={formatCurrency(lastMonth.expense)} /></h3>
                 </div>
               </div>
             </CardContent>
@@ -229,7 +232,7 @@ const FluxoCaixa = () => {
                     "text-2xl font-bold mt-0.5",
                     lastMonth.net >= 0 ? "text-success" : "text-destructive"
                   )}>
-                    {formatCurrency(lastMonth.net)}
+                    <PrivateValue value={formatCurrency(lastMonth.net)} />
                   </h3>
                 </div>
               </div>

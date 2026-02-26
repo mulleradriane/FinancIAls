@@ -30,6 +30,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import PrivateValue from '@/components/ui/PrivateValue';
 
 function Categories() {
   const [categories, setCategories] = useState([]);

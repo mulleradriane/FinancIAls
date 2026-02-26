@@ -16,6 +16,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
+import PrivateValue from '@/components/ui/PrivateValue';
 
 const Goals = () => {
   const [goals, setGoals] = useState([]);
@@ -139,9 +140,9 @@ const Goals = () => {
                       <div className="text-right space-y-1">
                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Acumulado / Alvo</p>
                          <p className="text-sm font-bold">
-                            {formatCurrency(goal.current_amount)}
+                            <PrivateValue value={formatCurrency(goal.current_amount)} />
                             <span className="text-muted-foreground mx-1">/</span>
-                            <span className="text-primary">{formatCurrency(goal.target_amount)}</span>
+                            <span className="text-primary"><PrivateValue value={formatCurrency(goal.target_amount)} /></span>
                          </p>
                       </div>
                    </div>
@@ -151,7 +152,7 @@ const Goals = () => {
                       <div className="flex items-center gap-1 text-muted-foreground">
                          <TrendingUp size={12} />
                          <span className="text-[10px] font-bold uppercase tracking-tighter">
-                            Faltam {formatCurrency(goal.remaining_amount)}
+                            Faltam <PrivateValue value={formatCurrency(goal.remaining_amount)} />
                          </span>
                       </div>
                       <div className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">
