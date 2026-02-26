@@ -26,45 +26,23 @@ class AnalyticsService:
         return [SavingsRate.model_validate(row) for row in result]
 
     def get_burn_rate(self, db: Session, user_id: UUID) -> dict:
-        # Get last 3 months (excluding current)
+        # Get last 3 months (excluding current) - Versão PostgreSQL apenas
         last_3m = db.execute(text("""
             SELECT COALESCE(AVG(total_expense), 0)
             FROM v_operational_monthly
             WHERE user_id = :user_id
-              AND month >= (
-                CASE WHEN :dialect = 'postgresql'
-                THEN date_trunc('month', now()) - interval '3 months'
-                ELSE date('now', 'start of month', '-3 months') END
-              )
-              AND month < (
-                CASE WHEN :dialect = 'postgresql'
-                THEN date_trunc('month', now())
-                ELSE date('now', 'start of month') END
-              )
-        """), {
-            "user_id": str(user_id),
-            "dialect": db.bind.dialect.name
-        }).scalar()
+              AND month >= date_trunc('month', now()) - interval '3 months'
+              AND month < date_trunc('month', now())
+        """), {"user_id": str(user_id)}).scalar()
 
         # Get previous 3 months (months -6 to -4)
         prev_3m = db.execute(text("""
             SELECT COALESCE(AVG(total_expense), 0)
             FROM v_operational_monthly
             WHERE user_id = :user_id
-              AND month >= (
-                CASE WHEN :dialect = 'postgresql'
-                THEN date_trunc('month', now()) - interval '6 months'
-                ELSE date('now', 'start of month', '-6 months') END
-              )
-              AND month < (
-                CASE WHEN :dialect = 'postgresql'
-                THEN date_trunc('month', now()) - interval '3 months'
-                ELSE date('now', 'start of month', '-3 months') END
-              )
-        """), {
-            "user_id": str(user_id),
-            "dialect": db.bind.dialect.name
-        }).scalar()
+              AND month >= date_trunc('month', now()) - interval '6 months'
+              AND month < date_trunc('month', now()) - interval '3 months'
+        """), {"user_id": str(user_id)}).scalar()
 
         avg_last = Decimal(last_3m or 0)
         avg_prev = Decimal(prev_3m or 0)

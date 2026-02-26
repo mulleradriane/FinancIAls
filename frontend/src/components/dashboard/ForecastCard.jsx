@@ -1,8 +1,17 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Sparkles, TrendingUp, TrendingDown, AlertTriangle, Minus } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { Sparkles, TrendingUp, AlertTriangle, Minus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+
+// Função de formatação local
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
 
 const ForecastCard = ({ forecast, loading }) => {
   if (loading) {
