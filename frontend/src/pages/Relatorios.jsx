@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '@/api/api';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -25,6 +25,10 @@ const Relatorios = () => {
         api.get('/summary/month', { params: { year, month } }),
         api.get('/categories/')
       ]);
+      
+      // Log para debug (remova depois)
+      console.log('Dados do resumo:', summaryRes.data);
+      
       setSummary(summaryRes.data);
       setCategories(categoriesRes.data);
     } catch (error) {
@@ -38,10 +42,20 @@ const Relatorios = () => {
     fetchData();
   }, [year, month]);
 
-  const chartData = summary ? Object.entries(summary.expenses_by_category).map(([name, value]) => ({
-    name,
-    value: Math.abs(parseFloat(value))
-  })) : [];
+  // Dados para o gráfico de pizza - com tratamento seguro
+  const chartData = useMemo(() => {
+    // Verifica se existe expenses_by_category e se é um objeto
+    if (!summary?.expenses_by_category || typeof summary.expenses_by_category !== 'object') {
+      return [];
+    }
+    
+    return Object.entries(summary.expenses_by_category)
+      .map(([name, value]) => ({
+        name,
+        value: Math.abs(parseFloat(value || 0))
+      }))
+      .filter(item => item.value > 0); // Remove categorias com valor zero
+  }, [summary]);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -98,19 +112,25 @@ const Relatorios = () => {
             <Card className="border-none shadow-md bg-success/5">
               <CardContent className="p-6">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Receitas</p>
-                <h3 className="text-2xl font-bold text-success mt-1"><PrivateValue value={formatCurrency(summary?.total_income || 0)} /></h3>
+                <h3 className="text-2xl font-bold text-success mt-1">
+                  <PrivateValue value={formatCurrency(summary?.total_income || 0)} />
+                </h3>
               </CardContent>
             </Card>
             <Card className="border-none shadow-md bg-destructive/5">
               <CardContent className="p-6">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Despesas</p>
-                <h3 className="text-2xl font-bold text-destructive mt-1"><PrivateValue value={formatCurrency(summary?.total_expenses || 0)} /></h3>
+                <h3 className="text-2xl font-bold text-destructive mt-1">
+                  <PrivateValue value={formatCurrency(summary?.total_expenses || 0)} />
+                </h3>
               </CardContent>
             </Card>
             <Card className="border-none shadow-md bg-primary/5">
               <CardContent className="p-6">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Investido</p>
-                <h3 className="text-2xl font-bold text-primary mt-1"><PrivateValue value={formatCurrency(summary?.total_invested || 0)} /></h3>
+                <h3 className="text-2xl font-bold text-primary mt-1">
+                  <PrivateValue value={formatCurrency(summary?.total_invested || 0)} />
+                </h3>
               </CardContent>
             </Card>
             <Card className="border-none shadow-md bg-secondary/30">
@@ -163,7 +183,9 @@ const Relatorios = () => {
                                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill }} />
                                     <span className="font-bold text-sm">{payload[0].name}</span>
                                   </div>
-                                  <p className="text-xs font-bold mt-1">{isPrivate ? '•••••' : formatCurrency(payload[0].value)}</p>
+                                  <p className="text-xs font-bold mt-1">
+                                    {isPrivate ? '•••••' : formatCurrency(payload[0].value)}
+                                  </p>
                                 </Card>
                               );
                             }
@@ -193,29 +215,35 @@ const Relatorios = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {summary?.top_transactions.map((t, i) => {
-                    const category = categories.find(c => c.name === t.category_name);
-                    return (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-secondary/20 hover:bg-secondary/30 transition-colors group">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-10 h-10 rounded-full flex items-center justify-center text-lg border"
-                            style={{ backgroundColor: `${category?.color}15`, borderColor: `${category?.color}30` }}
-                          >
-                            {category?.icon || '💰'}
+                  {summary?.top_transactions && summary.top_transactions.length > 0 ? (
+                    summary.top_transactions.map((t, i) => {
+                      const category = categories.find(c => c.name === t.category_name);
+                      return (
+                        <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-secondary/20 hover:bg-secondary/30 transition-colors group">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-10 h-10 rounded-full flex items-center justify-center text-lg border"
+                              style={{ 
+                                backgroundColor: `${category?.color}15`, 
+                                borderColor: `${category?.color}30` 
+                              }}
+                            >
+                              {category?.icon || '💰'}
+                            </div>
+                            <div>
+                              <p className="font-bold text-sm">{t.description}</p>
+                              <Badge variant="outline" className="text-[9px] font-bold uppercase h-4 px-1 mt-0.5">
+                                {t.category_name}
+                              </Badge>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-bold text-sm">{t.description}</p>
-                            <Badge variant="outline" className="text-[9px] font-bold uppercase h-4 px-1 mt-0.5">
-                              {t.category_name}
-                            </Badge>
-                          </div>
+                          <p className="font-black text-destructive">
+                            <PrivateValue value={formatCurrency(t.amount)} />
+                          </p>
                         </div>
-                        <p className="font-black text-destructive"><PrivateValue value={formatCurrency(t.amount)} /></p>
-                      </div>
-                    );
-                  })}
-                  {summary?.top_transactions.length === 0 && (
+                      );
+                    })
+                  ) : (
                     <div className="text-center py-20 text-muted-foreground italic">
                       Nenhum gasto relevante identificado.
                     </div>
