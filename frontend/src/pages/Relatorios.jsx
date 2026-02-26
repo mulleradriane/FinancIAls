@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '@/api/api';
+import analyticsApi from '@/api/analyticsApi';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -8,10 +9,12 @@ import { TrendingUp, TrendingDown, Wallet, PieChartIcon, ArrowRight, BarChart3 }
 import { cn } from '@/lib/utils';
 import PrivateValue from '@/components/ui/PrivateValue';
 import { usePrivacy } from '@/context/PrivacyContext';
+import SankeyDiagram from '@/components/reports/SankeyDiagram';
 
 const Relatorios = () => {
   const { isPrivate } = usePrivacy();
   const [summary, setSummary] = useState(null);
+  const [sankeyData, setSankeyData] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const today = new Date();
@@ -21,16 +24,15 @@ const Relatorios = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [summaryRes, categoriesRes] = await Promise.all([
+      const [summaryRes, categoriesRes, sankeyRes] = await Promise.all([
         api.get('/summary/month', { params: { year, month } }),
-        api.get('/categories/')
+        api.get('/categories/'),
+        analyticsApi.getSankeyData(year, month)
       ]);
-      
-      // Log para debug (remova depois)
-      console.log('Dados do resumo:', summaryRes.data);
       
       setSummary(summaryRes.data);
       setCategories(categoriesRes.data);
+      setSankeyData(sankeyRes.data);
     } catch (error) {
       console.error('Error fetching reporting data:', error);
     } finally {
@@ -101,6 +103,12 @@ const Relatorios = () => {
           </Select>
         </div>
       </div>
+
+      {!loading && sankeyData && (
+        <div className="w-full">
+          <SankeyDiagram data={sankeyData} />
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center h-[50vh]">

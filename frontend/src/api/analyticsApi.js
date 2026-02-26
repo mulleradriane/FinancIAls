@@ -10,6 +10,7 @@ const analyticsApi = {
   getGoalsProgress: () => api.get('/analytics/goals-progress'),
   getForecast: () => api.get('/analytics/forecast'),
   getDailyExpenses: (year, month) => api.get(`/analytics/daily-expenses?year=${year}&month=${month}`),
+  getSankeyData: (year, month) => api.get(`/analytics/sankey?year=${year}&month=${month}`),
 };
 
 export default analyticsApi;
