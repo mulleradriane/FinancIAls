@@ -51,7 +51,13 @@ class Transaction(Base):
         ForeignKey("accounts.id"),
         nullable=True
     )
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id"),
+        nullable=False
+    )
 
+    user = relationship("User")
     category = relationship("Category")
     recurring_expense = relationship("RecurringExpense", back_populates="transactions")
     account = relationship("Account", back_populates="transactions")

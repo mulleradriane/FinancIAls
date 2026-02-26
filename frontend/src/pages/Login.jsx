@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Moon, Sun, Lock, User, ArrowRight, UserPlus, LogIn } from 'lucide-react';
+import { Moon, Sun, Lock, User, ArrowRight, UserPlus, LogIn, Key } from 'lucide-react';
 import { toast } from 'sonner';
+import { authApi } from '@/api/api';
 
 const Login = () => {
   const { theme, toggleTheme } = useTheme();
@@ -14,6 +15,8 @@ const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [inviteRequired, setInviteRequired] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const videoRef = useRef(null);
@@ -27,34 +30,61 @@ const Login = () => {
     }
   }, [theme]);
 
-  const handleAuth = (e) => {
+  // Check if invite code is required
+  useEffect(() => {
+    const checkConfig = async () => {
+      try {
+        const response = await authApi.getConfig();
+        setInviteRequired(response.data.invite_required);
+      } catch (error) {
+        console.error("Erro ao carregar configuração de autenticação", error);
+      }
+    };
+    checkConfig();
+  }, []);
+
+  const handleAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate a small delay for premium feel
-    setTimeout(() => {
+    try {
       if (isSignUp) {
         // Register logic
-        const newUser = { displayName, username, password };
-        localStorage.setItem('userSettings', JSON.stringify(newUser));
-        localStorage.setItem('isAuthenticated', 'true');
-        toast.success(`Conta criada! Bem-vinda(o), ${displayName || username}!`);
-        navigate('/');
+        const response = await authApi.register({
+          username,
+          password,
+          display_name: displayName,
+          invite_code: inviteRequired ? inviteCode : undefined
+        });
+
+        toast.success(`Conta criada! Agora você já pode acessar sua conta.`);
+        setIsSignUp(false);
+        setPassword(''); // Clear password for login
       } else {
         // Login logic
-        const savedSettings = localStorage.getItem('userSettings');
-        const user = savedSettings ? JSON.parse(savedSettings) : { username: 'admin', password: 'password' };
+        const response = await authApi.login({ username, password });
+        const { access_token } = response.data;
 
-        if (username === user.username && password === user.password) {
-          localStorage.setItem('isAuthenticated', 'true');
-          toast.success(`Bem-vindo de volta, ${user.displayName || user.username}!`);
-          navigate('/');
-        } else {
-          toast.error('Credenciais inválidas. Tente novamente.');
-        }
+        localStorage.setItem('token', access_token);
+
+        // Fetch user data to save display_name and username
+        const userResponse = await authApi.me();
+        const user = userResponse.data;
+
+        localStorage.setItem('username', user.username);
+        localStorage.setItem('display_name', user.display_name || user.username);
+
+        toast.success(`Bem-vindo de volta, ${user.display_name || user.username}!`);
+        navigate('/');
       }
+    } catch (error) {
+      console.error("Erro na autenticação", error);
+      const detail = error.response?.data?.detail;
+      const message = typeof detail === 'string' ? detail : 'Ocorreu um erro na autenticação. Tente novamente.';
+      toast.error(message);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -150,6 +180,22 @@ const Login = () => {
                   />
                 </div>
               </div>
+
+              {isSignUp && inviteRequired && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="relative">
+                    <Key className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Código de convite"
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value)}
+                      className="pl-10 h-12 bg-background/50 border-none rounded-2xl focus-visible:ring-primary/30"
+                      required={isSignUp && inviteRequired}
+                    />
+                  </div>
+                </div>
+              )}
+
               <Button
                 type="submit"
                 className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -171,7 +217,11 @@ const Login = () => {
 
             <div className="mt-6 flex flex-col items-center gap-2">
                <button
-                onClick={() => setIsSignUp(!isSignUp)}
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setDisplayName('');
+                  setInviteCode('');
+                }}
                 className="text-sm font-semibold text-primary hover:underline underline-offset-4 transition-all"
                >
                  {isSignUp ? 'Já tem uma conta? Entre aqui' : 'Não tem uma conta? Crie uma agora'}

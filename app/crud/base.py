@@ -2,6 +2,7 @@ from typing import Any, Generic, List, Optional, Type, TypeVar, Union
 from uuid import UUID
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 from app.core.database import Base
 
 ModelType = TypeVar("ModelType", bound=Base)
@@ -15,15 +16,24 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def get(self, db: Session, id: Any) -> Optional[ModelType]:
         return db.get(self.model, id)
 
-    def get_multi(
-        self, db: Session, *, skip: int = 0, limit: int = 100
-    ) -> List[ModelType]:
-        from sqlalchemy import select
-        return db.scalars(select(self.model).offset(skip).limit(limit)).all()
+    def get_by_user(self, db: Session, id: Any, user_id: UUID) -> Optional[ModelType]:
+        return db.scalar(
+            select(self.model).filter(self.model.id == id, self.model.user_id == user_id)
+        )
 
-    def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
+    def get_multi_by_user(
+        self, db: Session, *, user_id: UUID, skip: int = 0, limit: int = 100
+    ) -> List[ModelType]:
+        return db.scalars(
+            select(self.model)
+            .filter(self.model.user_id == user_id)
+            .offset(skip)
+            .limit(limit)
+        ).all()
+
+    def create_with_user(self, db: Session, *, obj_in: CreateSchemaType, user_id: UUID) -> ModelType:
         obj_in_data = obj_in.model_dump()
-        db_obj = self.model(**obj_in_data)
+        db_obj = self.model(**obj_in_data, user_id=user_id)
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
@@ -50,6 +60,13 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     def remove(self, db: Session, *, id: UUID) -> Optional[ModelType]:
         obj = db.get(self.model, id)
+        if obj:
+            db.delete(obj)
+            db.commit()
+        return obj
+
+    def remove_by_user(self, db: Session, *, id: UUID, user_id: UUID) -> Optional[ModelType]:
+        obj = self.get_by_user(db, id, user_id)
         if obj:
             db.delete(obj)
             db.commit()

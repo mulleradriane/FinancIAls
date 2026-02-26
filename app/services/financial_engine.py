@@ -5,6 +5,7 @@ from app.models.account import Account, AccountType
 from decimal import Decimal
 from datetime import date
 from typing import Dict, Any, List
+from uuid import UUID
 
 class FinancialEngine:
     def get_account_balance(self, db: Session, account_id: Any) -> Decimal:
@@ -30,11 +31,11 @@ class FinancialEngine:
 
         return initial_balance + total_transactions
 
-    def calculate_available_balance(self, db: Session) -> Decimal:
+    def calculate_available_balance(self, db: Session, user_id: UUID) -> Decimal:
         """
         Saldo Disponível (Liquidez): Somatório de contas Banco, Carteira e Poupança.
         """
-        accounts = db.scalars(select(Account)).all()
+        accounts = db.scalars(select(Account).filter(Account.user_id == user_id)).all()
         total = Decimal(0)
         liquid_types = [AccountType.banco, AccountType.carteira, AccountType.poupanca]
         for acc in accounts:
@@ -42,13 +43,13 @@ class FinancialEngine:
                 total += self.get_account_balance(db, acc.id)
         return total
 
-    def calculate_net_worth(self, db: Session) -> Dict[str, Decimal]:
+    def calculate_net_worth(self, db: Session, user_id: UUID) -> Dict[str, Decimal]:
         """
         Patrimônio Total: Total Ativos - Total Passivos
         Ativos: Banco, Carteira, Poupança, Investimento, Outros Ativos
         Passivos: Cartão de Crédito, Outros Passivos
         """
-        accounts = db.scalars(select(Account)).all()
+        accounts = db.scalars(select(Account).filter(Account.user_id == user_id)).all()
 
         assets = Decimal(0)
         liabilities = Decimal(0)
@@ -81,7 +82,7 @@ class FinancialEngine:
             "net_worth": assets - liabilities
         }
 
-    def get_monthly_totals(self, db: Session, year: int, month: int) -> Dict[str, Decimal]:
+    def get_monthly_totals(self, db: Session, year: int, month: int, user_id: UUID) -> Dict[str, Decimal]:
         """
         Calcula Totais do Mês: Receitas, Despesas e Resultado.
         Conforme Regras 4.3 e 4.4 da especificação.
@@ -90,6 +91,7 @@ class FinancialEngine:
         income = db.scalar(
             select(func.sum(Transaction.amount))
             .filter(
+                Transaction.user_id == user_id,
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
                 Transaction.nature == TransactionNature.INCOME,
@@ -101,6 +103,7 @@ class FinancialEngine:
         expense_sum = db.scalar(
             select(func.sum(Transaction.amount))
             .filter(
+                Transaction.user_id == user_id,
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
                 Transaction.nature == TransactionNature.EXPENSE,
@@ -118,13 +121,14 @@ class FinancialEngine:
             "result": monthly_result
         }
 
-    def calculate_operational_expenses(self, db: Session, year: int, month: int) -> Decimal:
+    def calculate_operational_expenses(self, db: Session, year: int, month: int, user_id: UUID) -> Decimal:
         """
         Despesa Operacional: Somatório apenas de nature == 'EXPENSE' (Regra 4.4)
         """
         expense = db.scalar(
             select(func.sum(Transaction.amount))
             .filter(
+                Transaction.user_id == user_id,
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
                 Transaction.nature == TransactionNature.EXPENSE,
@@ -133,7 +137,7 @@ class FinancialEngine:
         ) or Decimal(0)
         return abs(expense)
 
-    def get_cash_flow_evolution(self, db: Session, months: int = 6) -> List[Dict[str, Any]]:
+    def get_cash_flow_evolution(self, db: Session, user_id: UUID, months: int = 6) -> List[Dict[str, Any]]:
         """
         Evolução do Fluxo de Caixa (Mês a Mês)
         Retorna: month, income, expense, net
@@ -145,7 +149,7 @@ class FinancialEngine:
         results = []
         for i in range(months - 1, -1, -1):
             d = today - relativedelta(months=i)
-            totals = self.get_monthly_totals(db, d.year, d.month)
+            totals = self.get_monthly_totals(db, d.year, d.month, user_id)
             results.append({
                 "month": d.strftime("%Y-%m"),
                 "income": totals["income"],

@@ -1,7 +1,8 @@
 import uuid
 import enum
-from sqlalchemy import Column, String, Enum, Numeric, Date, DateTime, UUID
+from sqlalchemy import Column, String, Enum, Numeric, Date, DateTime, UUID, ForeignKey
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 class GoalType(str, enum.Enum):
@@ -17,7 +18,9 @@ class Goal(Base):
     start_date = Column(Date, nullable=False)
     target_date = Column(Date, nullable=False)
     goal_type = Column(Enum(GoalType), nullable=False, default=GoalType.SAVINGS)
+    user_id = Column(UUID, ForeignKey("users.id"), nullable=False)
 
+    user = relationship("User")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     deleted_at = Column(DateTime(timezone=True), nullable=True)

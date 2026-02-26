@@ -92,8 +92,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchData();
-    const userSettings = JSON.parse(localStorage.getItem('userSettings') || '{}');
-    const name = userSettings.displayName || "Usuário";
+    const name = localStorage.getItem('display_name') || "Usuário";
     setGreeting(`${getGreeting()}, ${name}.`);
   }, []);
 
