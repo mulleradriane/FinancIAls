@@ -45,3 +45,11 @@ class AnalyticsSummary(BaseModel):
     burn_rate: Decimal
     net_worth: Decimal
     assets_liabilities: List[AssetsLiabilities]
+
+class DailyExpenseEntry(BaseModel):
+    day: int
+    cumulative: Decimal
+
+class DailyExpensesResponse(BaseModel):
+    daily_data: List[DailyExpenseEntry]
+    previous_month_total: Decimal

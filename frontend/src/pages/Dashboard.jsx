@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 // Dashboard Components
 import NetWorthCard from '@/components/dashboard/NetWorthCard';
 import MonthlySummaryCard from '@/components/dashboard/MonthlySummaryCard';
+import SpendingPaceCard from '@/components/dashboard/SpendingPaceCard';
 import BurnRateCard from '@/components/dashboard/BurnRateCard';
 import EvolutionChart from '@/components/dashboard/EvolutionChart';
 import GoalsCard from '@/components/dashboard/GoalsCard';
@@ -34,6 +35,7 @@ const Dashboard = () => {
   const [burnRate, setBurnRate] = useState({ avg_monthly_expense_last_3m: 0, previous_3m_avg: 0, trend: 'STABLE' });
   const [goals, setGoals] = useState([]);
   const [forecast, setForecast] = useState(null);
+  const [dailyExpenses, setDailyExpenses] = useState(null);
 
   // Form requirements
   const [categories, setCategories] = useState([]);
@@ -51,6 +53,10 @@ const Dashboard = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+
       const [
         netWorthRes,
         alRes,
@@ -59,6 +65,7 @@ const Dashboard = () => {
         brRes,
         goalsRes,
         forecastRes,
+        dailyExpensesRes,
         categoriesRes,
         accountsRes
       ] = await Promise.all([
@@ -69,6 +76,7 @@ const Dashboard = () => {
         analyticsApi.getBurnRate(),
         analyticsApi.getGoalsProgress(),
         analyticsApi.getForecast(),
+        analyticsApi.getDailyExpenses(year, month),
         api.get('/categories/'),
         api.get('/accounts/')
       ]);
@@ -80,6 +88,7 @@ const Dashboard = () => {
       setBurnRate(brRes.data);
       setGoals(goalsRes.data);
       setForecast(forecastRes.data);
+      setDailyExpenses(dailyExpensesRes.data);
       setCategories(categoriesRes.data);
       setAccounts(accountsRes.data);
     } catch (error) {
@@ -143,6 +152,15 @@ const Dashboard = () => {
           result={currentMonthData.net_result}
           savingsRate={currentSavingsRate}
           loading={loading}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-8">
+        <SpendingPaceCard
+          data={dailyExpenses}
+          loading={loading}
+          year={new Date().getFullYear()}
+          month={new Date().getMonth() + 1}
         />
       </div>
 
