@@ -12,6 +12,7 @@ class UserCreate(UserBase):
     invite_code: Optional[str] = None
 
 class UserUpdate(BaseModel):
+    username: Optional[str] = None
     display_name: Optional[str] = None
     password: Optional[str] = None
 

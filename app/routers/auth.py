@@ -9,7 +9,7 @@ import re
 
 from app.core.database import get_db
 from app.core.config import settings
-from app.schemas.user import User, UserCreate
+from app.schemas.user import User, UserCreate, UserUpdate
 from app.schemas.auth import Token, TokenData, Login
 from app.models.user import User as UserModel
 from app.services.auth import (
@@ -121,6 +121,56 @@ def login(
 def read_user_me(
     current_user: UserModel = Depends(get_current_user),
 ) -> Any:
+    return current_user
+
+@router.put("/me", response_model=User)
+def update_user_me(
+    *,
+    db: Session = Depends(get_db),
+    user_in: UserUpdate,
+    current_user: UserModel = Depends(get_current_user)
+) -> Any:
+    """
+    Update current user.
+    """
+    if user_in.username:
+        # Validate Username format
+        if not re.match(r"^[a-zA-Z0-9_]+$", user_in.username):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="O nome de usuário deve conter apenas letras, números e underscores"
+            )
+        if len(user_in.username) < 3:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="O nome de usuário deve ter pelo menos 3 caracteres"
+            )
+
+        # Check if new username is already taken by someone else
+        if user_in.username != current_user.username:
+            user = db.scalar(select(UserModel).filter(UserModel.username == user_in.username))
+            if user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Este nome de usuário já está em uso",
+                )
+            current_user.username = user_in.username
+
+    if user_in.display_name:
+        current_user.display_name = user_in.display_name
+
+    if user_in.password:
+        # Validate Password
+        if len(user_in.password) < 6:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A senha deve ter pelo menos 6 caracteres"
+            )
+        current_user.hashed_password = get_password_hash(user_in.password)
+
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
     return current_user
 
 @router.get("/config")

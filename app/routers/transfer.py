@@ -5,27 +5,46 @@ from sqlalchemy.orm import Session
 from app.crud.transfer import transfer as crud_transfer
 from app.schemas.transfer import Transfer, TransferCreate
 from app.core.database import get_db
+from app.routers.auth import get_current_user
+from app.models.user import User
 
 router = APIRouter()
 
 @router.post("/", response_model=Transfer)
-def create_transfer(obj_in: TransferCreate, db: Session = Depends(get_db)):
-    return crud_transfer.create(db, obj_in=obj_in)
+def create_transfer(
+    obj_in: TransferCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return crud_transfer.create_with_user(db, obj_in=obj_in, user_id=current_user.id)
 
 @router.get("/", response_model=List[Transfer])
-def read_transfers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return crud_transfer.get_multi(db, skip=skip, limit=limit)
+def read_transfers(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return crud_transfer.get_multi_by_user(db, user_id=current_user.id, skip=skip, limit=limit)
 
 @router.get("/{id}", response_model=Transfer)
-def read_transfer(id: UUID, db: Session = Depends(get_db)):
+def read_transfer(
+    id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     db_obj = crud_transfer.get(db, id=id)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Transfer not found")
     return db_obj
 
 @router.delete("/{id}", response_model=Transfer)
-def delete_transfer(id: UUID, db: Session = Depends(get_db)):
-    db_obj = crud_transfer.get(db, id=id)
+def delete_transfer(
+    id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    db_obj = crud_transfer.get_by_user(db, id=id, user_id=current_user.id)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Transfer not found")
-    return crud_transfer.remove(db, id=id)
+    return crud_transfer.remove_by_user(db, id=id, user_id=current_user.id)
