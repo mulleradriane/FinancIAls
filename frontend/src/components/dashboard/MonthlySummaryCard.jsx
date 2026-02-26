@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowUpCircle, ArrowDownCircle, Scale, PiggyBank } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import PrivateValue from '@/components/ui/PrivateValue';
 
 const MonthlySummaryCard = ({ income, expense, result, savingsRate, loading }) => {
   const formatCurrency = (value) => {
@@ -32,7 +33,7 @@ const MonthlySummaryCard = ({ income, expense, result, savingsRate, loading }) =
               </div>
               <div>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Receitas</p>
-                <p className="text-2xl font-bold text-success mt-1">{formatCurrency(income)}</p>
+                <p className="text-2xl font-bold text-success mt-1"><PrivateValue value={formatCurrency(income)} /></p>
               </div>
             </div>
 
@@ -42,7 +43,7 @@ const MonthlySummaryCard = ({ income, expense, result, savingsRate, loading }) =
               </div>
               <div>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Despesas</p>
-                <p className="text-2xl font-bold text-destructive mt-1">{formatCurrency(expense)}</p>
+                <p className="text-2xl font-bold text-destructive mt-1"><PrivateValue value={formatCurrency(expense)} /></p>
               </div>
             </div>
 
@@ -56,7 +57,7 @@ const MonthlySummaryCard = ({ income, expense, result, savingsRate, loading }) =
                   "text-2xl font-bold mt-1",
                   result >= 0 ? "text-success" : "text-destructive"
                 )}>
-                  {formatCurrency(result)}
+                  <PrivateValue value={formatCurrency(result)} />
                 </p>
               </div>
             </div>

@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
+import PrivateValue from '@/components/ui/PrivateValue';
 
 const Contas = () => {
   const [accounts, setAccounts] = useState([]);
@@ -155,7 +156,7 @@ const Contas = () => {
                     "text-2xl font-black mt-1",
                     account.balance >= 0 ? "text-success" : "text-destructive"
                   )}>
-                    {formatCurrency(account.balance)}
+                    <PrivateValue value={formatCurrency(account.balance)} />
                   </div>
                 </div>
               </CardContent>

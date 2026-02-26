@@ -19,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import PrivateValue from '@/components/ui/PrivateValue';
 
 const TransactionList = ({ transactions, onEdit, onDelete, highlightId }) => {
   const getAccountIcon = (type) => {
@@ -127,7 +128,7 @@ const TransactionList = ({ transactions, onEdit, onDelete, highlightId }) => {
                 "font-semibold text-2xl tracking-tighter leading-none mb-1",
                 t.amount < 0 ? "text-destructive" : "text-success"
               )}>
-                {t.amount < 0 ? '-' : '+'}{formatCurrency(Math.abs(t.amount))}
+                <PrivateValue value={`${t.amount < 0 ? '-' : '+'}${formatCurrency(Math.abs(t.amount))}`} />
               </span>
             </div>
 

@@ -25,6 +25,7 @@ import {
   Tooltip
 } from 'recharts';
 import { cn } from '@/lib/utils';
+import PrivateValue from '@/components/ui/PrivateValue';
 
 const Recorrentes = () => {
   const [activeTab, setActiveTab] = useState('despesas');
@@ -131,7 +132,7 @@ const Recorrentes = () => {
             <div className="flex-1 space-y-4">
               <div>
                 <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest">Comprometimento Mensal</p>
-                <h2 className="text-4xl font-black mt-1 text-primary">{formatCurrency(summary.total_recurring)}</h2>
+                <h2 className="text-4xl font-black mt-1 text-primary"><PrivateValue value={formatCurrency(summary.total_recurring)} /></h2>
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2">
@@ -140,14 +141,14 @@ const Recorrentes = () => {
                     <div className="w-3 h-3 rounded-full bg-amber-500" />
                     <span className="text-xs font-semibold text-muted-foreground">Parcelas</span>
                   </div>
-                  <p className="text-lg font-bold">{formatCurrency(summary.total_installments)}</p>
+                  <p className="text-lg font-bold"><PrivateValue value={formatCurrency(summary.total_installments)} /></p>
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-blue-500" />
                     <span className="text-xs font-semibold text-muted-foreground">Assinaturas</span>
                   </div>
-                  <p className="text-lg font-bold">{formatCurrency(summary.total_subscriptions)}</p>
+                  <p className="text-lg font-bold"><PrivateValue value={formatCurrency(summary.total_subscriptions)} /></p>
                 </div>
               </div>
             </div>
@@ -223,7 +224,7 @@ const Recorrentes = () => {
                                 <Trash2 size={14} />
                               </Button>
                             </div>
-                            <p className="font-black text-lg">{formatCurrency(item.amount)}</p>
+                            <p className="font-black text-lg"><PrivateValue value={formatCurrency(item.amount)} /></p>
                             <p className="text-[10px] font-bold text-muted-foreground uppercase">Fim em {endDate.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}</p>
                           </div>
                         </div>
@@ -274,7 +275,7 @@ const Recorrentes = () => {
                             <Trash2 size={14} />
                           </Button>
                         </div>
-                        <p className="font-black text-lg">{formatCurrency(item.amount)}</p>
+                        <p className="font-black text-lg"><PrivateValue value={formatCurrency(item.amount)} /></p>
                       </div>
                     </CardContent>
                   </Card>

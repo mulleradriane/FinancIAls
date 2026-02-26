@@ -2,6 +2,7 @@ import React from 'react';
 import { Flame, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import PrivateValue from '@/components/ui/PrivateValue';
 
 const BurnRateCard = ({ avgMonthlyExpense, trend, previousAvg, loading }) => {
   const formatCurrency = (value) => {
@@ -62,12 +63,12 @@ const BurnRateCard = ({ avgMonthlyExpense, trend, previousAvg, loading }) => {
 
           <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Burn Rate (Média 3 meses)</p>
           <h2 className="text-4xl font-bold mt-2 tracking-tight">
-            {formatCurrency(avgMonthlyExpense)}
+            <PrivateValue value={formatCurrency(avgMonthlyExpense)} />
           </h2>
 
           <div className="mt-6 flex items-center gap-2 text-xs text-muted-foreground">
             <span className="font-medium">Média anterior:</span>
-            <span className="font-bold">{formatCurrency(previousAvg)}</span>
+            <span className="font-bold"><PrivateValue value={formatCurrency(previousAvg)} /></span>
           </div>
         </div>
         <div className="h-1.5 w-full bg-orange-500/10" />

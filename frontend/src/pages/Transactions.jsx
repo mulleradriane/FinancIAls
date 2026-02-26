@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
+import PrivateValue from '@/components/ui/PrivateValue';
 
 const Transactions = () => {
   const [categories, setCategories] = useState([]);
@@ -179,7 +180,7 @@ const Transactions = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Entradas</p>
-              <h3 className="text-2xl font-bold text-success">{formatCurrency(totals.incomes)}</h3>
+              <h3 className="text-2xl font-bold text-success"><PrivateValue value={formatCurrency(totals.incomes)} /></h3>
             </div>
           </CardContent>
         </Card>
@@ -190,7 +191,7 @@ const Transactions = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Saídas</p>
-              <h3 className="text-2xl font-bold text-destructive">{formatCurrency(totals.expenses)}</h3>
+              <h3 className="text-2xl font-bold text-destructive"><PrivateValue value={formatCurrency(totals.expenses)} /></h3>
             </div>
           </CardContent>
         </Card>
@@ -201,7 +202,7 @@ const Transactions = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Saldo do Período</p>
-              <h3 className="text-2xl font-bold text-primary">{formatCurrency(totals.incomes - totals.expenses)}</h3>
+              <h3 className="text-2xl font-bold text-primary"><PrivateValue value={formatCurrency(totals.incomes - totals.expenses)} /></h3>
             </div>
           </CardContent>
         </Card>

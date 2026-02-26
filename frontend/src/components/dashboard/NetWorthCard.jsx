@@ -2,6 +2,7 @@ import React from 'react';
 import { Landmark, TrendingUp, TrendingDown, Wallet, ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import PrivateValue from '@/components/ui/PrivateValue';
 
 const NetWorthCard = ({ netWorth, assets, liabilities, loading }) => {
   const formatCurrency = (value) => {
@@ -42,7 +43,7 @@ const NetWorthCard = ({ netWorth, assets, liabilities, loading }) => {
 
           <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Patrimônio Líquido Total</p>
           <h2 className="text-4xl font-bold mt-2 tracking-tight">
-            {formatCurrency(netWorth)}
+            <PrivateValue value={formatCurrency(netWorth)} />
           </h2>
 
           <div className="grid grid-cols-2 gap-4 mt-8">
@@ -51,14 +52,14 @@ const NetWorthCard = ({ netWorth, assets, liabilities, loading }) => {
                 <ArrowUpRight size={14} />
                 <span className="text-[10px] font-bold uppercase tracking-wider">Ativos</span>
               </div>
-              <p className="text-lg font-bold">{formatCurrency(assets)}</p>
+              <p className="text-lg font-bold"><PrivateValue value={formatCurrency(assets)} /></p>
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 text-destructive">
                 <ArrowDownRight size={14} />
                 <span className="text-[10px] font-bold uppercase tracking-wider">Passivos</span>
               </div>
-              <p className="text-lg font-bold">{formatCurrency(liabilities)}</p>
+              <p className="text-lg font-bold"><PrivateValue value={formatCurrency(liabilities)} /></p>
             </div>
           </div>
         </div>

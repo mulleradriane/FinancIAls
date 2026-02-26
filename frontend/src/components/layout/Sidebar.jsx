@@ -12,12 +12,15 @@ import {
   FileText,
   Sun,
   Moon,
+  Eye,
+  EyeOff,
   ChevronLeft,
   ChevronRight,
   Settings,
   LogOut
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
+import { usePrivacy } from '@/context/PrivacyContext';
 
 // Importar as imagens
 import logoLight from '@/assets/images/logo-light.png';
@@ -37,6 +40,7 @@ const menuItems = [
 
 export function Sidebar() {
   const { theme, toggleTheme } = useTheme();
+  const { isPrivate, togglePrivacy } = usePrivacy();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const navigate = useNavigate();
 
@@ -253,6 +257,39 @@ export function Sidebar() {
           <Settings size={20} />
           {!isCollapsed && <span style={{ fontWeight: 500 }}>Configurações</span>}
         </NavLink>
+
+        {/* Botão de Privacidade */}
+        <button
+          onClick={togglePrivacy}
+          style={{
+            width: isCollapsed ? '2.5rem' : '100%',
+            height: '2.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            justifyContent: isCollapsed ? 'center' : 'flex-start',
+            padding: isCollapsed ? '0' : '0 0.75rem',
+            borderRadius: '0.75rem',
+            border: `1px solid ${currentStyle.border}`,
+            backgroundColor: 'transparent',
+            color: currentStyle.text,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            margin: isCollapsed ? '0 auto' : '0',
+            marginBottom: '0.5rem',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = currentStyle.hover;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          {isPrivate ? <EyeOff size={20} /> : <Eye size={20} />}
+          {!isCollapsed && (
+            <span>{isPrivate ? 'Modo Público' : 'Modo Privado'}</span>
+          )}
+        </button>
 
         {/* Botão de tema */}
         <button

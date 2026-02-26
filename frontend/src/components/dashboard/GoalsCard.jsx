@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import PrivateValue from '@/components/ui/PrivateValue';
 
 const GoalItem = ({ goal }) => {
   // Ensure percentage is between 0 and 100 for the Progress component
@@ -45,8 +46,10 @@ const GoalItem = ({ goal }) => {
           <div className="flex flex-col items-end text-right">
             <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Acumulado / Alvo</span>
             <span className="text-sm font-medium">
-              R$ {parseFloat(goal.current_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} /
-              <span className="text-primary ml-1">R$ {parseFloat(goal.target_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              <PrivateValue value={`R$ ${parseFloat(goal.current_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} /> /
+              <span className="text-primary ml-1">
+                <PrivateValue value={`R$ ${parseFloat(goal.target_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
+              </span>
             </span>
           </div>
         </div>

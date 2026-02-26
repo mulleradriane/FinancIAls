@@ -21,8 +21,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import PrivateValue from '@/components/ui/PrivateValue';
+import { usePrivacy } from '@/context/PrivacyContext';
 
 const Patrimonio = () => {
+  const { isPrivate } = usePrivacy();
   const [data, setData] = useState(null);
   const [investments, setInvestments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -136,7 +139,7 @@ const Patrimonio = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Ativos</p>
-                  <h3 className="text-2xl font-bold text-success">{formatCurrency(data?.total_assets)}</h3>
+                  <h3 className="text-2xl font-bold text-success"><PrivateValue value={formatCurrency(data?.total_assets)} /></h3>
                 </div>
               </CardContent>
             </Card>
@@ -148,7 +151,7 @@ const Patrimonio = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Passivos</p>
-                  <h3 className="text-2xl font-bold text-destructive">{formatCurrency(data?.total_liabilities)}</h3>
+                  <h3 className="text-2xl font-bold text-destructive"><PrivateValue value={formatCurrency(data?.total_liabilities)} /></h3>
                 </div>
               </CardContent>
             </Card>
@@ -164,7 +167,7 @@ const Patrimonio = () => {
                 "text-5xl font-black tracking-tighter",
                 data?.net_worth >= 0 ? "text-primary" : "text-destructive"
               )}>
-                {formatCurrency(data?.net_worth)}
+                <PrivateValue value={formatCurrency(data?.net_worth)} />
               </h1>
             </CardContent>
           </Card>
@@ -202,7 +205,7 @@ const Patrimonio = () => {
                               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill }} />
                               <span className="font-bold text-sm">{payload[0].name}</span>
                             </div>
-                            <p className="text-xs font-bold mt-1">{formatCurrency(payload[0].value)}</p>
+                            <p className="text-xs font-bold mt-1">{isPrivate ? '•••••' : formatCurrency(payload[0].value)}</p>
                           </Card>
                         );
                       }
@@ -238,7 +241,7 @@ const Patrimonio = () => {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                  tickFormatter={(value) => `R$${value >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
+                  tickFormatter={(value) => isPrivate ? '•••' : `R$${value >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
                 />
                 <Tooltip
                   content={({ active, payload, label }) => {
@@ -246,7 +249,7 @@ const Patrimonio = () => {
                       return (
                         <Card className="p-3 shadow-xl border-none bg-background/90 backdrop-blur-sm">
                           <p className="font-bold text-sm mb-1">{label}</p>
-                          <p className="text-primary font-black text-base">{formatCurrency(payload[0].value)}</p>
+                          <p className="text-primary font-black text-base">{isPrivate ? '•••••' : formatCurrency(payload[0].value)}</p>
                         </Card>
                       );
                     }
@@ -280,7 +283,7 @@ const Patrimonio = () => {
                 <CardContent className="p-5 flex justify-between items-center">
                   <div className="space-y-1">
                     <p className="text-sm font-semibold truncate max-w-[150px]">{acc.name}</p>
-                    <p className="text-xl font-bold text-success">{formatCurrency(acc.balance)}</p>
+                    <p className="text-xl font-bold text-success"><PrivateValue value={formatCurrency(acc.balance)} /></p>
                   </div>
                   <Button
                     variant="outline"

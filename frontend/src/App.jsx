@@ -13,6 +13,7 @@ import Goals from './pages/Goals';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 import { ThemeProvider } from './context/ThemeContext';
+import { PrivacyProvider } from './context/PrivacyContext';
 import { Toaster } from 'sonner';
 import './App.css';
 
@@ -58,10 +59,12 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-      <Toaster position="top-right" richColors />
-      <Router>
-        <AppContent />
-      </Router>
+      <PrivacyProvider>
+        <Toaster position="top-right" richColors />
+        <Router>
+          <AppContent />
+        </Router>
+      </PrivacyProvider>
     </ThemeProvider>
   );
 }
