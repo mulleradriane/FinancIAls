@@ -1,3 +1,4 @@
+from app.models.user import User
 from app.models.category import Category, CategoryType
 from app.models.transaction import Transaction, TransactionNature
 from app.models.recurring_expense import RecurringExpense, FrequencyType, RecurringType

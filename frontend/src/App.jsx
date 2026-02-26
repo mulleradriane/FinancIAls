@@ -17,7 +17,7 @@ import { Toaster } from 'sonner';
 import './App.css';
 
 const ProtectedRoute = ({ children }) => {
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  const isAuthenticated = !!localStorage.getItem('token');
   const location = useLocation();
 
   if (!isAuthenticated) {

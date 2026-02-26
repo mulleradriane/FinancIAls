@@ -1,12 +1,14 @@
-from typing import Any, Dict, Union
+from typing import Any, Dict, Union, List, Optional
+from uuid import UUID
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import select, or_
 from app.crud.base import CRUDBase
 from app.models.category import Category
 from app.schemas.category import CategoryCreate, CategoryUpdate
 
 class CRUDCategory(CRUDBase[Category, CategoryCreate, CategoryUpdate]):
-    def create(self, db: Session, *, obj_in: CategoryCreate) -> Category:
+    def create_with_user(self, db: Session, *, obj_in: CategoryCreate, user_id: UUID) -> Category:
         # Prevent manual creation of category with system-reserved name (case-insensitive)
         if obj_in.name.strip().lower() == "ajuste de saldo":
             raise HTTPException(
@@ -18,11 +20,28 @@ class CRUDCategory(CRUDBase[Category, CategoryCreate, CategoryUpdate]):
         obj_in_data = obj_in.model_dump()
         obj_in_data["is_system"] = False
 
-        db_obj = self.model(**obj_in_data)
+        db_obj = self.model(**obj_in_data, user_id=user_id)
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
         return db_obj
+
+    def get_by_user(self, db: Session, id: UUID, user_id: UUID) -> Optional[Category]:
+        return db.scalar(
+            select(Category).filter(
+                Category.id == id,
+                or_(Category.user_id == user_id, Category.is_system == True)
+            )
+        )
+
+    def get_multi_by_user(self, db: Session, *, user_id: UUID, skip: int = 0, limit: int = 100) -> List[Category]:
+        return db.scalars(
+            select(Category)
+            .filter(or_(Category.user_id == user_id, Category.is_system == True))
+            .order_by(Category.is_system.desc(), Category.name)
+            .offset(skip)
+            .limit(limit)
+        ).all()
 
     def update(
         self, db: Session, *, db_obj: Category, obj_in: Union[CategoryUpdate, Dict[str, Any]]
@@ -36,10 +55,8 @@ class CRUDCategory(CRUDBase[Category, CategoryCreate, CategoryUpdate]):
         # Check if they are trying to rename another category to "Ajuste de Saldo" (case-insensitive)
         if isinstance(obj_in, dict):
             name = obj_in.get("name")
-            is_system = obj_in.get("is_system")
         else:
             name = obj_in.name
-            is_system = obj_in.is_system
 
         if name and name.strip().lower() == "ajuste de saldo":
             raise HTTPException(
@@ -52,13 +69,16 @@ class CRUDCategory(CRUDBase[Category, CategoryCreate, CategoryUpdate]):
             if "is_system" in obj_in:
                 obj_in["is_system"] = False
         else:
-            obj_in.is_system = False
+            if hasattr(obj_in, 'is_system'):
+                obj_in.is_system = False
 
         return super().update(db, db_obj=db_obj, obj_in=obj_in)
 
-    def remove(self, db: Session, *, id: Any) -> Category:
-        obj = db.query(Category).get(id)
-        if obj and obj.is_system:
+    def remove_by_user(self, db: Session, *, id: UUID, user_id: UUID) -> Category:
+        obj = self.get_by_user(db, id, user_id)
+        if not obj:
+            return None
+        if obj.is_system:
             raise HTTPException(
                 status_code=400,
                 detail="Categorias de sistema não podem ser removidas."

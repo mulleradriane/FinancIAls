@@ -27,10 +27,12 @@ class RecurringExpense(Base):
     start_date = Column(Date, nullable=False)
     active = Column(Boolean, default=True)
     account_id = Column(UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="CASCADE"), nullable=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    user = relationship("User")
     category = relationship("Category")
     transactions = relationship("Transaction", back_populates="recurring_expense")
     account = relationship("Account")

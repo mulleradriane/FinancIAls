@@ -13,12 +13,13 @@ from decimal import Decimal
 from datetime import date
 
 class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
-    def create(self, db: Session, *, obj_in: AccountCreate) -> Account:
+    def create_with_user(self, db: Session, *, obj_in: AccountCreate, user_id: UUID) -> Account:
         db_obj = Account(
             name=obj_in.name,
             type=obj_in.type,
             initial_balance=obj_in.initial_balance,
-            initial_balance_date=obj_in.initial_balance_date or date.today()
+            initial_balance_date=obj_in.initial_balance_date or date.today(),
+            user_id=user_id
         )
         db.add(db_obj)
         db.commit()
@@ -44,15 +45,20 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
             diff = Decimal(str(current_balance_input)) - actual_balance
 
             if diff != 0:
+                # System adjustment category is SHARED (no user_id)
                 category = db.scalar(
-                    select(Category).filter(Category.name == "Ajuste de Saldo")
+                    select(Category).filter(
+                        Category.name == "Ajuste de Saldo",
+                        Category.is_system == True
+                    )
                 )
 
                 if not category:
                     category = Category(
                         name="Ajuste de Saldo",
                         type=CategoryType.income,
-                        is_system=True
+                        is_system=True,
+                        user_id=None
                     )
                     db.add(category)
                     db.commit()
@@ -64,7 +70,8 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
                     date=date.today(),
                     category_id=category.id,
                     account_id=db_obj.id,
-                    nature=TransactionNature.SYSTEM_ADJUSTMENT
+                    nature=TransactionNature.SYSTEM_ADJUSTMENT,
+                    user_id=db_obj.user_id
                 )
                 db.add(adjustment)
 
@@ -94,24 +101,20 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
             db.add(history)
         db.commit()
 
-    def get_with_balance(self, db: Session, id: UUID) -> Optional[Account]:
-        account = db.get(Account, id)
+    def get_with_balance(self, db: Session, id: UUID, user_id: UUID) -> Optional[Account]:
+        account = self.get_by_user(db, id, user_id)
         if account:
             account.balance = self.get_balance(db, id)
         return account
 
-    def get_multi_with_balance(self, db: Session, *, skip: int = 0, limit: int = 100) -> List[Account]:
-        accounts = db.scalars(
-            select(Account)
-            .offset(skip)
-            .limit(limit)
-        ).all()
+    def get_multi_with_balance(self, db: Session, *, user_id: UUID, skip: int = 0, limit: int = 100) -> List[Account]:
+        accounts = self.get_multi_by_user(db, user_id=user_id, skip=skip, limit=limit)
         for account in accounts:
             account.balance = self.get_balance(db, account.id)
         return accounts
 
-    def remove(self, db: Session, *, id: UUID) -> Optional[Account]:
-        obj = db.get(Account, id)
+    def remove_by_user(self, db: Session, *, id: UUID, user_id: UUID) -> Optional[Account]:
+        obj = self.get_by_user(db, id, user_id)
         if obj:
             db.execute(
                 delete(RecurringExpense).where(RecurringExpense.account_id == id)

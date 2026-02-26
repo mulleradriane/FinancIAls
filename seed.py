@@ -2,6 +2,7 @@ import random
 import logging
 from app.core.database import SessionLocal
 from app.models.category import Category
+from app.models.user import User
 
 # Configuração de logs
 logging.basicConfig(level=logging.INFO)
@@ -25,6 +26,12 @@ def seed_categories():
     try:
         logger.info("🌱 Semeando Novas Categorias...")
 
+        # Get admin user
+        admin = db.query(User).filter_by(username="admin").first()
+        if not admin:
+            logger.error("❌ Usuário 'admin' não encontrado. Execute as migrações primeiro.")
+            return
+
         categories_to_create = [
             {"name": "Salário", "type": "income"},
             {"name": "Pets", "type": "expense"},
@@ -34,19 +41,20 @@ def seed_categories():
         ]
 
         for cat_data in categories_to_create:
-            # Verifica se já existe para não duplicar
-            exists = db.query(Category).filter_by(name=cat_data["name"]).first()
+            # Verifica se já existe para este usuário
+            exists = db.query(Category).filter_by(name=cat_data["name"], user_id=admin.id).first()
             if not exists:
                 new_category = Category(
                     name=cat_data["name"],
                     type=cat_data["type"],
                     icon=random.choice(EMOJIS),
-                    color=random.choice(COLORS)
+                    color=random.choice(COLORS),
+                    user_id=admin.id
                 )
                 db.add(new_category)
                 logger.info(f"✅ Categoria '{cat_data['name']}' ({cat_data['type']}) criada com cor e ícone aleatórios!")
             else:
-                logger.info(f"ℹ️ Categoria '{cat_data['name']}' já existe.")
+                logger.info(f"ℹ️ Categoria '{cat_data['name']}' já existe para o usuário admin.")
 
         db.commit()
         logger.info("✨ Processo de seed finalizado!")

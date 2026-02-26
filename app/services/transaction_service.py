@@ -9,8 +9,9 @@ from app.schemas.transaction import UnifiedTransactionCreate, TransactionCreate
 from app.schemas.recurring_expense import RecurringExpenseCreate
 from app.models.recurring_expense import RecurringType
 from app.models.transaction import TransactionNature
+from uuid import UUID
 
-def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate):
+def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate, user_id: UUID):
     if not obj_in.is_recurring:
         # Handle Transfer and Investment (Dual Entry)
         if obj_in.nature in [TransactionNature.TRANSFER, TransactionNature.INVESTMENT] and obj_in.to_account_id:
@@ -26,7 +27,7 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate):
                 account_id=obj_in.account_id,
                 transfer_group_id=group_id
             )
-            source_trans = crud_transaction.create(db, obj_in=source_in)
+            source_trans = crud_transaction.create_with_user(db, obj_in=source_in, user_id=user_id)
 
             # 2. Inflow (Destination Account)
             dest_in = TransactionCreate(
@@ -38,7 +39,7 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate):
                 account_id=obj_in.to_account_id,
                 transfer_group_id=group_id
             )
-            crud_transaction.create(db, obj_in=dest_in)
+            crud_transaction.create_with_user(db, obj_in=dest_in, user_id=user_id)
 
             return source_trans
 
@@ -58,7 +59,7 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate):
             date=obj_in.date,
             account_id=obj_in.account_id
         )
-        return crud_transaction.create(db, obj_in=transaction_in)
+        return crud_transaction.create_with_user(db, obj_in=transaction_in, user_id=user_id)
 
     # Create RecurringExpense master record
     recurring_in = RecurringExpenseCreate(
@@ -72,7 +73,7 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate):
         active=True,
         account_id=obj_in.account_id
     )
-    db_recurring = crud_recurring_expense.create(db, obj_in=recurring_in)
+    db_recurring = crud_recurring_expense.create_with_user(db, obj_in=recurring_in, user_id=user_id)
 
     # Create associated transactions
     if obj_in.recurring_type == RecurringType.installment:
@@ -106,7 +107,7 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate):
                 installment_number=i,
                 account_id=obj_in.account_id
             )
-            db_transaction = crud_transaction.create(db, obj_in=transaction_in)
+            db_transaction = crud_transaction.create_with_user(db, obj_in=transaction_in, user_id=user_id)
             if i == 1:
                 first_transaction = db_transaction
         return first_transaction
@@ -121,4 +122,4 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate):
             recurring_expense_id=db_recurring.id,
             account_id=obj_in.account_id
         )
-        return crud_transaction.create(db, obj_in=transaction_in)
+        return crud_transaction.create_with_user(db, obj_in=transaction_in, user_id=user_id)
