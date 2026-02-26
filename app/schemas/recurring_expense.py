@@ -12,7 +12,9 @@ class RecurringExpenseBase(BaseModel):
     type: RecurringType = RecurringType.subscription
     frequency: FrequencyType | None = None
     total_installments: int | None = None
+    current_installment: int | None = None
     start_date: datetime.date
+    end_date: datetime.date | None = None
     active: bool = True
     account_id: UUID | None = None
 
@@ -26,7 +28,9 @@ class RecurringExpenseUpdate(BaseModel):
     type: RecurringType | None = None
     frequency: FrequencyType | None = None
     total_installments: int | None = None
+    current_installment: int | None = None
     start_date: datetime.date | None = None
+    end_date: datetime.date | None = None
     active: bool | None = None
 
 from app.schemas.transaction import Transaction
@@ -44,5 +48,11 @@ class RecurringSummary(BaseModel):
     total_recurring: Decimal
     total_subscriptions: Decimal
     total_installments: Decimal
+
+    subscriptions_paid: Decimal = Decimal(0)
+    subscriptions_total: Decimal = Decimal(0)
+    installments_paid: Decimal = Decimal(0)
+    installments_total: Decimal = Decimal(0)
+
     total_income: Decimal
     commitment_percentage: float

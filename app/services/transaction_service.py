@@ -61,6 +61,11 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate, us
         )
         return crud_transaction.create_with_user(db, obj_in=transaction_in, user_id=user_id)
 
+    # Calculate end_date for installments
+    end_date = None
+    if obj_in.recurring_type == RecurringType.installment and obj_in.total_installments:
+        end_date = obj_in.date + relativedelta(months=obj_in.total_installments - 1)
+
     # Create RecurringExpense master record
     recurring_in = RecurringExpenseCreate(
         description=obj_in.description,
@@ -69,7 +74,9 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate, us
         type=obj_in.recurring_type,
         frequency=obj_in.frequency,
         total_installments=obj_in.total_installments,
+        current_installment=1 if obj_in.recurring_type == RecurringType.installment else None,
         start_date=obj_in.date,
+        end_date=end_date,
         active=True,
         account_id=obj_in.account_id
     )
