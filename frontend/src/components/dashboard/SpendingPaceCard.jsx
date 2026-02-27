@@ -27,48 +27,35 @@ const SpendingPaceCard = ({ data, loading, year, month }) => {
     );
   }
 
-  const { daily_data, previous_month_total } = data;
+  const { current_month, previous_month } = data;
   const now = new Date();
   const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
+  const currentMonthNum = now.getMonth() + 1;
   const currentDay = now.getDate();
-  const isCurrentMonth = year === currentYear && month === currentMonth;
+  const isCurrentMonth = year === currentYear && month === currentMonthNum;
 
-  const daysInMonth = new Date(year, month, 0).getDate();
+  const totalDays = Math.max(current_month.length, previous_month.length);
+  const chartData = [];
 
-  const chartData = daily_data.map(d => {
-    const entry = { day: d.day };
+  for (let i = 1; i <= totalDays; i++) {
+    const entry = { day: i };
+    const curr = current_month.find(d => d.day === i);
+    const prev = previous_month.find(d => d.day === i);
 
-    // Este mês line
-    if (!isCurrentMonth || d.day <= currentDay) {
-      entry.actual = parseFloat(d.cumulative);
+    if (curr && (!isCurrentMonth || i <= currentDay)) {
+      entry.actual = parseFloat(curr.cumulative);
     }
-
-    // Ritmo ideal line (only if previous_month_total > 0)
-    if (previous_month_total > 0) {
-      entry.ideal = (parseFloat(previous_month_total) / daysInMonth) * d.day;
+    if (prev) {
+      entry.previous = parseFloat(prev.cumulative);
     }
-
-    return entry;
-  });
-
-  const lastActual = parseFloat(daily_data.find(d => d.day === (isCurrentMonth ? currentDay : daysInMonth))?.cumulative || 0);
-
-  // Projection logic
-  let projection = null;
-  let paceStatus = null; // 'ABOVE', 'BELOW', 'STABLE'
-
-  if (isCurrentMonth && currentDay > 0) {
-    projection = (lastActual / currentDay) * daysInMonth;
-
-    const idealPaceToday = (parseFloat(previous_month_total) / daysInMonth) * currentDay;
-    if (previous_month_total > 0) {
-      const diff = (lastActual / idealPaceToday) - 1;
-      if (diff > 0.05) paceStatus = 'ABOVE';
-      else if (diff < -0.05) paceStatus = 'BELOW';
-      else paceStatus = 'STABLE';
-    }
+    chartData.push(entry);
   }
+
+  const lastActual = parseFloat(current_month.find(d => d.day === (isCurrentMonth ? currentDay : current_month.length))?.cumulative || 0);
+  const prevMonthSameDay = parseFloat(previous_month.find(d => d.day === (isCurrentMonth ? currentDay : current_month.length))?.cumulative || 0);
+
+  const diff = lastActual - prevMonthSameDay;
+  const paceStatus = diff > 0 ? 'ABOVE' : 'BELOW';
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -84,34 +71,23 @@ const SpendingPaceCard = ({ data, loading, year, month }) => {
           <CardTitle className="text-xl">Ritmo de Gastos</CardTitle>
           <CardDescription>Acompanhamento diário comparado ao mês anterior</CardDescription>
         </div>
-        {projection !== null && (
-          <div className="md:text-right">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Projeção p/ o mês</p>
-            <p className="text-xl font-bold">
-              <PrivateValue value={formatCurrency(projection)} />
-            </p>
-            {paceStatus && (
-              <div className="mt-1 flex md:justify-end">
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "font-bold border-none",
-                    paceStatus === 'ABOVE' ? "bg-destructive/10 text-destructive" :
-                    paceStatus === 'BELOW' ? "bg-success/10 text-success" :
-                    "bg-muted text-muted-foreground"
-                  )}
-                >
-                  {paceStatus === 'ABOVE' ? <TrendingUp className="w-3 h-3 mr-1" /> :
-                   paceStatus === 'BELOW' ? <TrendingDown className="w-3 h-3 mr-1" /> :
-                   <Minus className="w-3 h-3 mr-1" />}
-                  {paceStatus === 'ABOVE' ? 'Acima do ritmo' :
-                   paceStatus === 'BELOW' ? 'Abaixo do ritmo' :
-                   'No ritmo'}
-                </Badge>
-              </div>
-            )}
+        <div className="md:text-right">
+          <div className="mt-1 flex md:justify-end">
+            <Badge
+              variant="outline"
+              className={cn(
+                "font-bold border-none text-sm px-3 py-1",
+                paceStatus === 'ABOVE' ? "bg-destructive/10 text-destructive" :
+                paceStatus === 'BELOW' ? "bg-success/10 text-success" :
+                "bg-muted text-muted-foreground"
+              )}
+            >
+              {paceStatus === 'ABOVE' ? <TrendingUp className="w-4 h-4 mr-1.5" /> :
+                <TrendingDown className="w-4 h-4 mr-1.5" />}
+              <PrivateValue value={`${formatCurrency(Math.abs(diff))} ${paceStatus === 'ABOVE' ? 'acima' : 'abaixo'}`} />
+            </Badge>
           </div>
-        )}
+        </div>
       </CardHeader>
       <CardContent className="p-8">
         <div className="h-[300px] w-full">
@@ -163,18 +139,18 @@ const SpendingPaceCard = ({ data, loading, year, month }) => {
                 strokeWidth={3}
                 dot={false}
                 activeDot={{ r: 6 }}
+                connectNulls
               />
-              {previous_month_total > 0 && (
-                <Line
-                  type="monotone"
-                  dataKey="ideal"
-                  name="Ritmo ideal"
-                  stroke="hsl(var(--muted-foreground))"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={false}
-                />
-              )}
+              <Line
+                type="monotone"
+                dataKey="previous"
+                name="Mês passado"
+                stroke="hsl(var(--muted-foreground))"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={false}
+                connectNulls
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
