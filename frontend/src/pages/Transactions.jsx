@@ -30,6 +30,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import PrivateValue from '@/components/ui/PrivateValue';
+import { cn } from '@/lib/utils';
+
 
 const Transactions = () => {
   const [categories, setCategories] = useState([]);

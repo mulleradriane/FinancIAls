@@ -28,11 +28,44 @@ const SankeyDiagram = ({ data }) => {
   }, []);
 
   useEffect(() => {
-    if (!data || !data.nodes.length || dimensions.width === 0) return;
+    // Validação rigorosa dos dados
+    if (!data) {
+      console.log('SankeyDiagram: Nenhum dado fornecido');
+      return;
+    }
+    
+    if (!data.nodes || !Array.isArray(data.nodes) || data.nodes.length === 0) {
+      console.log('SankeyDiagram: Nós ausentes ou vazios');
+      return;
+    }
+    
+    if (!data.links || !Array.isArray(data.links) || data.links.length === 0) {
+      console.log('SankeyDiagram: Links ausentes ou vazios');
+      return;
+    }
+    
+    if (dimensions.width === 0) {
+      console.log('SankeyDiagram: Largura zero, aguardando resize');
+      return;
+    }
+
+    // Valida se todos os links têm source, target e value válidos
+    const invalidLinks = data.links.filter(l => 
+      l.source === undefined || 
+      l.target === undefined || 
+      typeof l.value !== 'number' || 
+      isNaN(l.value) || 
+      l.value <= 0
+    );
+    
+    if (invalidLinks.length > 0) {
+      console.warn('SankeyDiagram: Links inválidos encontrados:', invalidLinks);
+      return;
+    }
 
     const margin = { top: 20, right: 100, bottom: 20, left: 100 };
-    const width = dimensions.width - margin.left - margin.right;
-    const height = dimensions.height - margin.top - margin.bottom;
+    const width = Math.max(100, dimensions.width - margin.left - margin.right);
+    const height = Math.max(100, dimensions.height - margin.top - margin.bottom);
 
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
@@ -45,7 +78,7 @@ const SankeyDiagram = ({ data }) => {
       .nodePadding(20)
       .extent([[0, 0], [width, height]]);
 
-    // D3-sankey modifies the input data, so we clone it
+    // D3-sankey modifica os dados de entrada, então clonamos
     const inputData = {
       nodes: data.nodes.map(d => ({ ...d })),
       links: data.links.map(d => ({ ...d }))
@@ -53,6 +86,17 @@ const SankeyDiagram = ({ data }) => {
 
     try {
       const { nodes, links } = sankeyGenerator(inputData);
+      
+      // Verifica se o layout foi calculado corretamente
+      const invalidNodes = nodes.filter(n => 
+        isNaN(n.x0) || isNaN(n.x1) || isNaN(n.y0) || isNaN(n.y1) ||
+        n.x0 === undefined || n.x1 === undefined || n.y0 === undefined || n.y1 === undefined
+      );
+      
+      if (invalidNodes.length > 0) {
+        console.warn('SankeyDiagram: Nós com layout inválido:', invalidNodes);
+        return;
+      }
 
       // Links
       g.append("g")
@@ -119,7 +163,7 @@ const SankeyDiagram = ({ data }) => {
       console.error("Sankey diagram error:", e);
     }
 
-  }, [data, dimensions]);
+  }, [data, dimensions, isPrivate]);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -127,6 +171,12 @@ const SankeyDiagram = ({ data }) => {
       currency: 'BRL',
     }).format(value);
   };
+
+  // Verificação rápida para o estado de carregamento/dados vazios
+  const hasValidData = data && 
+    Array.isArray(data.nodes) && data.nodes.length > 0 &&
+    Array.isArray(data.links) && data.links.length > 0 &&
+    data.links.every(l => l.value > 0);
 
   return (
     <div ref={containerRef} className="w-full relative min-h-[500px] bg-card/30 rounded-3xl p-4 border border-border/50">
@@ -136,7 +186,7 @@ const SankeyDiagram = ({ data }) => {
         height={dimensions.height}
         className="w-full h-auto overflow-visible"
       />
-      {hoveredLink && (
+      {hoveredLink && hasValidData && (
         <div
           className="fixed z-[100] pointer-events-none transition-transform duration-75"
           style={{
@@ -159,7 +209,7 @@ const SankeyDiagram = ({ data }) => {
           </Card>
         </div>
       )}
-      {!data || !data.nodes.length && (
+      {!hasValidData && (
         <div className="absolute inset-0 flex items-center justify-center text-muted-foreground italic">
           Nenhum dado disponível para o diagrama.
         </div>

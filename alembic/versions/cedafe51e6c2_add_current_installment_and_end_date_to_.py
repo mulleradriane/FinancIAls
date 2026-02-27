@@ -1,7 +1,7 @@
 """add_current_installment_and_end_date_to_recurring
 
 Revision ID: cedafe51e6c2
-Revises: coloque_aqui_o_id_gerado
+Revises: c194840f9bb1
 Create Date: 2026-02-26 13:21:30.641109
 
 """
