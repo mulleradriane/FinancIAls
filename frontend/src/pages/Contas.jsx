@@ -11,17 +11,25 @@ import {
 } from "@/components/ui/dialog";
 import AccountForm from '@/components/AccountForm';
 import TransferForm from '@/components/TransferForm';
-import { Plus, ArrowLeftRight, CreditCard, Landmark, Wallet, PiggyBank, Briefcase, Pencil, Trash2 } from 'lucide-react';
+import { Plus, ArrowLeftRight, CreditCard, Landmark, Wallet, PiggyBank, Briefcase, Pencil, Trash2, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import PrivateValue from '@/components/ui/PrivateValue';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 const Contas = () => {
   const [accounts, setAccounts] = useState([]);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -41,8 +49,8 @@ const Contas = () => {
     fetchAccounts();
   }, []);
 
-  const getAccountIcon = (type) => {
-    const props = { size: 24 };
+  const getAccountIcon = (type, size = 24) => {
+    const props = { size };
     switch (type) {
       case 'carteira': return <Wallet {...props} />;
       case 'banco': return <Landmark {...props} />;
@@ -51,6 +59,19 @@ const Contas = () => {
       case 'cartao_credito': return <CreditCard {...props} />;
       default: return <Landmark {...props} />;
     }
+  };
+
+  const getAccountTypeName = (type) => {
+    const types = {
+      banco: "CONTA BANCÁRIA",
+      carteira: "CARTEIRA",
+      cartao_credito: "CARTÃO DE CRÉDITO",
+      poupanca: "POUPANÇA",
+      investimento: "INVESTIMENTO",
+      outros_ativos: "OUTROS ATIVOS",
+      outros_passivos: "OUTROS PASSIVOS",
+    };
+    return types[type] || type.replace('_', ' ').toUpperCase();
   };
 
   const formatCurrency = (value) => {
@@ -63,6 +84,7 @@ const Contas = () => {
   const handleEdit = (account) => {
     setEditingAccount(account);
     setIsAccountModalOpen(true);
+    setIsDetailsOpen(false);
   };
 
   const handleDelete = async (id) => {
@@ -70,6 +92,7 @@ const Contas = () => {
       try {
         await api.delete(`/accounts/${id}`);
         toast.success('Conta excluída!');
+        setIsDetailsOpen(false);
         fetchAccounts();
       } catch (error) {
         console.error('Error deleting account:', error);
@@ -115,7 +138,11 @@ const Contas = () => {
           accounts.map((account) => (
             <Card
               key={account.id}
-              className="group border-none shadow-md hover:shadow-lg transition-all duration-300 rounded-2xl overflow-hidden"
+              onClick={() => {
+                setSelectedAccount(account);
+                setIsDetailsOpen(true);
+              }}
+              className="group border-none shadow-md hover:shadow-lg transition-all duration-300 rounded-2xl overflow-hidden cursor-pointer"
             >
               <CardContent className="p-6">
                 <div className="flex justify-between items-start">
@@ -129,24 +156,6 @@ const Contas = () => {
                         {account.type.replace('_', ' ')}
                       </Badge>
                     </div>
-                  </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(account)}
-                      className="h-8 w-8 rounded-full"
-                    >
-                      <Pencil size={14} className="text-primary" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(account.id)}
-                      className="h-8 w-8 rounded-full"
-                    >
-                      <Trash2 size={14} className="text-destructive" />
-                    </Button>
                   </div>
                 </div>
 
@@ -208,6 +217,72 @@ const Contas = () => {
           />
         </DialogContent>
       </Dialog>
+
+      <Sheet open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <SheetContent className="w-[320px] sm:w-[320px] p-0 border-l border-border/50">
+          {selectedAccount && (
+            <div className="flex flex-col h-full">
+              <SheetHeader className="p-6 pb-0">
+                <div className="flex items-center gap-2 text-muted-foreground mb-4">
+                  {getAccountIcon(selectedAccount.type, 18)}
+                  <span className="text-[10px] font-bold tracking-widest uppercase">
+                    {getAccountTypeName(selectedAccount.type)}
+                  </span>
+                </div>
+                <SheetTitle className="text-2xl font-black leading-tight">
+                  {selectedAccount.name}
+                </SheetTitle>
+              </SheetHeader>
+
+              <div className="flex-1 px-6 pt-8">
+                <div className="bg-primary/5 rounded-3xl p-6 mb-8 border border-primary/10">
+                  <p className="text-[10px] font-bold text-primary/60 uppercase tracking-widest mb-1">Saldo Atual</p>
+                  <div className={cn(
+                    "text-3xl font-black tracking-tight",
+                    selectedAccount.balance >= 0 ? "text-success" : "text-destructive"
+                  )}>
+                    <PrivateValue value={formatCurrency(selectedAccount.balance)} />
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <Info size={12} /> Informações
+                    </h4>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center bg-secondary/20 p-3 rounded-xl">
+                        <span className="text-xs text-muted-foreground font-medium">Nome de exibição</span>
+                        <span className="text-xs font-bold">{selectedAccount.name}</span>
+                      </div>
+                      <div className="flex justify-between items-center bg-secondary/20 p-3 rounded-xl">
+                        <span className="text-xs text-muted-foreground font-medium">Saldo inicial</span>
+                        <span className="text-xs font-bold">{formatCurrency(selectedAccount.initial_balance)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 bg-secondary/10 border-t border-border/50 flex flex-col gap-3">
+                <Button
+                  onClick={() => handleEdit(selectedAccount)}
+                  className="w-full rounded-xl h-12 font-bold shadow-sm"
+                >
+                  <Pencil size={16} className="mr-2" /> Editar Conta
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleDelete(selectedAccount.id)}
+                  className="w-full rounded-xl h-12 font-bold text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/20"
+                >
+                  <Trash2 size={16} className="mr-2" /> Excluir Conta
+                </Button>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
