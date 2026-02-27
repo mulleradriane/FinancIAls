@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Enum, Boolean, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, String, Enum, Boolean, ForeignKey, UniqueConstraint, Numeric
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -19,6 +19,7 @@ class Category(Base):
     color = Column(String, nullable=True)
     is_system = Column(Boolean, nullable=False, default=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    monthly_budget = Column(Numeric(12, 2), nullable=True)
 
     user = relationship("User")
 
