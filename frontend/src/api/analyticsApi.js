@@ -11,6 +11,7 @@ const analyticsApi = {
   getForecast: () => api.get('/analytics/forecast'),
   getDailyExpenses: (year, month) => api.get(`/analytics/daily-expenses?year=${year}&month=${month}`),
   getSankeyData: (year, month) => api.get(`/analytics/sankey?year=${year}&month=${month}`),
+  getProjection: (months = 6) => api.get(`/analytics/projection?months=${months}`),
 };
 
 export default analyticsApi;

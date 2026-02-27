@@ -66,3 +66,23 @@ class SankeyLink(BaseModel):
 class SankeyResponse(BaseModel):
     nodes: List[SankeyNode]
     links: List[SankeyLink]
+
+class ProjectionItem(BaseModel):
+    description: str
+    amount: Decimal
+
+class MonthlyProjection(BaseModel):
+    month: date
+    initial_balance: Decimal
+    recurring_expenses: Decimal
+    installments: Decimal
+    variable_expenses: Decimal
+    income: Decimal
+    projected_balance: Decimal
+    recurring_items: List[ProjectionItem]
+    installment_items: List[ProjectionItem]
+    income_items: List[ProjectionItem]
+
+class ProjectionResponse(BaseModel):
+    projections: List[MonthlyProjection]
+    has_recurring_income: bool

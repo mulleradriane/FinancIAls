@@ -3,7 +3,8 @@ from sqlalchemy import text
 from app.schemas.analytics import (
     OperationalMonthly, SavingsRate, BurnRate,
     NetWorth, AssetsLiabilities, AccountBalance,
-    DailyExpensesResponse, SankeyResponse, SankeyNode, SankeyLink
+    DailyExpensesResponse, SankeyResponse, SankeyNode, SankeyLink,
+    ProjectionResponse, MonthlyProjection, ProjectionItem
 )
 from app.schemas.goals import GoalProgress
 from app.schemas.forecast import ForecastRead
@@ -182,6 +183,115 @@ class AnalyticsService:
             links.append(SankeyLink(source=receita_idx, target=economizado_idx, value=economizado_val))
 
         return SankeyResponse(nodes=nodes, links=links)
+
+    def get_projection(self, db: Session, user_id: UUID, months: int) -> ProjectionResponse:
+        from app.services.financial_engine import financial_engine
+        from app.models.recurring_expense import RecurringExpense, RecurringType
+        from app.models.category import Category, CategoryType
+        from dateutil.relativedelta import relativedelta
+        from sqlalchemy import select
+
+        # 1. Initial Balance (Available Balance: banco, carteira, poupanca)
+        current_balance = financial_engine.calculate_available_balance(db, user_id)
+
+        # 2. Variable Expenses Average (Last 3 closed months)
+        # Expense transactions without recurring_expense_id
+        # We divide by 3 explicitly to account for months with zero expenses
+        avg_var_expense = db.execute(text("""
+            SELECT COALESCE(ABS(SUM(amount)) / 3.0, 0)
+            FROM transactions
+            WHERE user_id = :user_id
+              AND nature = 'EXPENSE'
+              AND recurring_expense_id IS NULL
+              AND deleted_at IS NULL
+              AND date >= date_trunc('month', now()) - interval '3 months'
+              AND date < date_trunc('month', now())
+        """), {"user_id": str(user_id)}).scalar() or Decimal(0)
+
+        # 3. Income Average (Last 3 closed months)
+        # We divide by 3 explicitly to account for months with zero income
+        avg_income = db.execute(text("""
+            SELECT COALESCE(SUM(amount) / 3.0, 0)
+            FROM transactions
+            WHERE user_id = :user_id
+              AND nature = 'INCOME'
+              AND deleted_at IS NULL
+              AND date >= date_trunc('month', now()) - interval '3 months'
+              AND date < date_trunc('month', now())
+        """), {"user_id": str(user_id)}).scalar() or Decimal(0)
+
+        # 4. Fetch Active Recurring Expenses
+        active_recurring = db.execute(
+            select(RecurringExpense, Category.type.label("cat_type"))
+            .join(Category)
+            .filter(RecurringExpense.user_id == user_id, RecurringExpense.active == True)
+        ).all()
+
+        has_recurring_income = any(row.cat_type == CategoryType.income for row in active_recurring)
+
+        projections = []
+        today = date.today()
+        running_balance = current_balance
+
+        for i in range(1, months + 1):
+            projection_month_date = (today + relativedelta(months=i)).replace(day=1)
+
+            month_recurring_expenses = Decimal(0)
+            month_installments = Decimal(0)
+            month_income_recorrente = Decimal(0)
+
+            recurring_items = []
+            installment_items = []
+            income_items = []
+
+            for rec, cat_type in active_recurring:
+                # Check if recurring is active in this future month
+                # For subscriptions: start_date <= month_date
+                # For installments: start_date <= month_date AND (end_date is NULL OR end_date >= month_date)
+
+                is_active_this_month = rec.start_date <= projection_month_date
+                if rec.end_date and rec.end_date < projection_month_date:
+                    is_active_this_month = False
+
+                if is_active_this_month:
+                    item = ProjectionItem(description=rec.description, amount=rec.amount)
+                    if cat_type == CategoryType.income:
+                        month_income_recorrente += rec.amount
+                        income_items.append(item)
+                    else:
+                        if rec.type == RecurringType.subscription:
+                            month_recurring_expenses += abs(rec.amount)
+                            recurring_items.append(item)
+                        else:
+                            month_installments += abs(rec.amount)
+                            installment_items.append(item)
+
+            # Use average income if no recurring income?
+            # The prompt says: "income: média dos últimos 3 meses de receitas (ou zero se não houver padrão)"
+            # Let's use the average income calculated earlier.
+
+            # Balance at end of month: balance_start + income - recurring - installments - variable
+            projected_end_balance = running_balance + avg_income - month_recurring_expenses - month_installments - avg_var_expense
+
+            projections.append(MonthlyProjection(
+                month=projection_month_date,
+                initial_balance=running_balance,
+                recurring_expenses=month_recurring_expenses,
+                installments=month_installments,
+                variable_expenses=avg_var_expense,
+                income=avg_income,
+                projected_balance=projected_end_balance,
+                recurring_items=recurring_items,
+                installment_items=installment_items,
+                income_items=income_items
+            ))
+
+            running_balance = projected_end_balance
+
+        return ProjectionResponse(
+            projections=projections,
+            has_recurring_income=has_recurring_income
+        )
 
     def get_daily_expenses(self, db: Session, user_id: UUID, year: int, month: int) -> dict:
         def get_cumulative_for_month(y: int, m: int):

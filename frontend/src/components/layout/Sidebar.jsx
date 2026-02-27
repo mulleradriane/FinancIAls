@@ -32,6 +32,7 @@ const menuItems = [
   { path: '/fluxo-caixa', label: 'Fluxo de Caixa', icon: BarChart3 },
   { path: '/contas', label: 'Contas', icon: Landmark },
   { path: '/patrimonio', label: 'Patrimônio', icon: TrendingUp },
+  { path: '/projecao', label: 'Projeção', icon: TrendingUp },
   { path: '/recorrentes', label: 'Recorrentes', icon: RefreshCw },
   { path: '/metas', label: 'Metas', icon: Target },
   { path: '/categories', label: 'Categorias', icon: Tags },
