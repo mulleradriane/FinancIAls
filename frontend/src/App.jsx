@@ -14,6 +14,7 @@ import Settings from './pages/Settings';
 import Login from './pages/Login';
 import { ThemeProvider } from './context/ThemeContext';
 import { PrivacyProvider } from './context/PrivacyContext';
+import { BudgetProvider } from './context/BudgetContext';
 import { Toaster } from 'sonner';
 import './App.css';
 
@@ -60,10 +61,12 @@ function App() {
   return (
     <ThemeProvider>
       <PrivacyProvider>
-        <Toaster position="top-right" richColors />
-        <Router>
-          <AppContent />
-        </Router>
+        <BudgetProvider>
+          <Toaster position="top-right" richColors />
+          <Router>
+            <AppContent />
+          </Router>
+        </BudgetProvider>
       </PrivacyProvider>
     </ThemeProvider>
   );
