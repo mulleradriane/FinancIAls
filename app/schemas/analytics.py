@@ -51,8 +51,8 @@ class DailyExpenseEntry(BaseModel):
     cumulative: Decimal
 
 class DailyExpensesResponse(BaseModel):
-    daily_data: List[DailyExpenseEntry]
-    previous_month_total: Decimal
+    current_month: List[DailyExpenseEntry]
+    previous_month: List[DailyExpenseEntry]
 
 class SankeyNode(BaseModel):
     name: str

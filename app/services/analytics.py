@@ -10,6 +10,7 @@ from app.schemas.forecast import ForecastRead
 from typing import List
 from decimal import Decimal
 from uuid import UUID
+from datetime import date, timedelta
 
 class AnalyticsService:
     def get_operational_monthly(self, db: Session, user_id: UUID) -> List[OperationalMonthly]:
@@ -183,62 +184,49 @@ class AnalyticsService:
         return SankeyResponse(nodes=nodes, links=links)
 
     def get_daily_expenses(self, db: Session, user_id: UUID, year: int, month: int) -> dict:
-        # Cumulative daily expenses for the requested month
-        # Using AT TIME ZONE 'America/Sao_Paulo' as requested
-        daily_query = text("""
-            WITH days AS (
-                SELECT generate_series(
-                    date_trunc('month', make_date(:year, :month, 1)),
-                    date_trunc('month', make_date(:year, :month, 1)) + interval '1 month' - interval '1 day',
-                    interval '1 day'
-                )::date AS day
-            ),
-            daily_expenses AS (
+        def get_cumulative_for_month(y: int, m: int):
+            query = text("""
+                WITH days AS (
+                    SELECT generate_series(
+                        date_trunc('month', make_date(:year, :month, 1)),
+                        date_trunc('month', make_date(:year, :month, 1)) + interval '1 month' - interval '1 day',
+                        interval '1 day'
+                    )::date AS day
+                ),
+                daily_expenses AS (
+                    SELECT
+                        (date AT TIME ZONE 'America/Sao_Paulo')::date AS day,
+                        SUM(-amount) AS amount
+                    FROM transactions
+                    WHERE user_id = :user_id
+                      AND nature = 'EXPENSE'
+                      AND deleted_at IS NULL
+                      AND date_trunc('month', date AT TIME ZONE 'America/Sao_Paulo') =
+                          date_trunc('month', make_date(:year, :month, 1) AT TIME ZONE 'America/Sao_Paulo')
+                    GROUP BY 1
+                )
                 SELECT
-                    (date AT TIME ZONE 'America/Sao_Paulo')::date AS day,
-                    SUM(-amount) AS amount
-                FROM transactions
-                WHERE user_id = :user_id
-                  AND nature = 'EXPENSE'
-                  AND deleted_at IS NULL
-                  AND date_trunc('month', date AT TIME ZONE 'America/Sao_Paulo') =
-                      date_trunc('month', make_date(:year, :month, 1) AT TIME ZONE 'America/Sao_Paulo')
-                GROUP BY 1
-            )
-            SELECT
-                EXTRACT(DAY FROM d.day)::int AS day,
-                COALESCE(SUM(de.amount) OVER (ORDER BY d.day), 0) AS cumulative
-            FROM days d
-            LEFT JOIN daily_expenses de ON d.day = de.day
-            ORDER BY d.day;
-        """)
+                    EXTRACT(DAY FROM d.day)::int AS day,
+                    COALESCE(SUM(de.amount) OVER (ORDER BY d.day), 0) AS cumulative
+                FROM days d
+                LEFT JOIN daily_expenses de ON d.day = de.day
+                ORDER BY d.day;
+            """)
+            return db.execute(query, {"user_id": str(user_id), "year": y, "month": m}).all()
 
-        daily_results = db.execute(daily_query, {
-            "user_id": str(user_id),
-            "year": year,
-            "month": month
-        }).all()
+        current_results = get_cumulative_for_month(year, month)
 
-        # Total expenses for the previous month
-        prev_month_query = text("""
-            SELECT COALESCE(SUM(-amount), 0)
-            FROM transactions
-            WHERE user_id = :user_id
-              AND nature = 'EXPENSE'
-              AND deleted_at IS NULL
-              AND date_trunc('month', date AT TIME ZONE 'America/Sao_Paulo') =
-                  date_trunc('month', (make_date(:year, :month, 1) - interval '1 month') AT TIME ZONE 'America/Sao_Paulo')
-        """)
+        # Calculate previous month
+        first_day_current = date(year, month, 1)
+        last_day_prev = first_day_current - timedelta(days=1)
+        prev_year = last_day_prev.year
+        prev_month = last_day_prev.month
 
-        prev_month_total = db.execute(prev_month_query, {
-            "user_id": str(user_id),
-            "year": year,
-            "month": month
-        }).scalar()
+        previous_results = get_cumulative_for_month(prev_year, prev_month)
 
         return {
-            "daily_data": [{"day": row.day, "cumulative": row.cumulative} for row in daily_results],
-            "previous_month_total": Decimal(prev_month_total or 0)
+            "current_month": [{"day": row.day, "cumulative": row.cumulative} for row in current_results],
+            "previous_month": [{"day": row.day, "cumulative": row.cumulative} for row in previous_results]
         }
 
 analytics_service = AnalyticsService()

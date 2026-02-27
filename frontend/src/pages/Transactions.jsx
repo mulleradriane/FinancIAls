@@ -3,7 +3,7 @@ import api from '@/api/api';
 import { toast } from 'sonner';
 import TransactionForm from '@/components/TransactionForm';
 import TransactionList from '@/components/TransactionList';
-import { Plus, Filter, X, ArrowUpCircle, ArrowDownCircle, Wallet, SearchX } from 'lucide-react';
+import { Plus, Filter, X, ArrowUpCircle, ArrowDownCircle, Wallet, SearchX, Download, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -19,6 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  PopoverClose,
+} from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -66,30 +72,56 @@ const Transactions = () => {
       if (accountId !== 'all') params.account_id = accountId;
       if (categoryId !== 'all') params.category_id = categoryId;
 
-      let start = startDate;
-      let end = endDate;
+      let start = '';
+      let end = '';
 
-      if (period !== 'custom') {
-        const now = new Date();
-        const today = now.toISOString().split('T')[0];
-        end = today;
+      const now = new Date();
+      const today = now.toISOString().split('T')[0];
 
-        if (period === '30days') {
-          const d = new Date();
-          d.setDate(d.getDate() - 30);
-          start = d.toISOString().split('T')[0];
-        } else if (period === '60days') {
-          const d = new Date();
-          d.setDate(d.getDate() - 60);
-          start = d.toISOString().split('T')[0];
-        } else if (period === '90days') {
-          const d = new Date();
-          d.setDate(d.getDate() - 90);
-          start = d.toISOString().split('T')[0];
-        } else if (period === 'month') {
-          const d = new Date(now.getFullYear(), now.getMonth(), 1);
-          start = d.toISOString().split('T')[0];
-        }
+      switch (period) {
+        case '30days':
+          end = today;
+          const d30 = new Date();
+          d30.setDate(d30.getDate() - 30);
+          start = d30.toISOString().split('T')[0];
+          break;
+        case '90days':
+          end = today;
+          const d90 = new Date();
+          d90.setDate(d90.getDate() - 90);
+          start = d90.toISOString().split('T')[0];
+          break;
+        case 'month':
+          start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+          end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+          break;
+        case 'last_month':
+          start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+          end = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+          break;
+        case '6months':
+          end = today;
+          const d6m = new Date();
+          d6m.setDate(d6m.getDate() - 180); // Corridos
+          start = d6m.toISOString().split('T')[0];
+          break;
+        case 'year':
+          start = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+          end = new Date(now.getFullYear(), 11, 31).toISOString().split('T')[0];
+          break;
+        case 'last_year':
+          start = new Date(now.getFullYear() - 1, 0, 1).toISOString().split('T')[0];
+          end = new Date(now.getFullYear() - 1, 11, 31).toISOString().split('T')[0];
+          break;
+        case 'custom':
+          start = startDate;
+          end = endDate;
+          break;
+        case 'all':
+        default:
+          start = '';
+          end = '';
+          break;
       }
 
       if (start) params.start_date = start;
@@ -127,12 +159,26 @@ const Transactions = () => {
   };
 
   const clearFilters = () => {
-    setPeriod('month');
+    setPeriod('all');
     setAccountId('all');
     setCategoryId('all');
     setStartDate('');
     setEndDate('');
   };
+
+  const periodOptions = [
+    { value: 'all', label: 'Todo período' },
+    { value: '30days', label: 'Últimos 30 dias' },
+    { value: '90days', label: 'Últimos 90 dias' },
+    { value: 'month', label: 'Este mês' },
+    { value: 'last_month', label: 'Mês passado' },
+    { value: '6months', label: 'Últimos 6 meses' },
+    { value: 'year', label: 'Este ano' },
+    { value: 'last_year', label: 'Ano passado' },
+    { value: 'custom', label: 'Personalizado' },
+  ];
+
+  const currentPeriodLabel = periodOptions.find(o => o.value === period)?.label || 'Período';
 
   const totals = transactions.reduce((acc, t) => {
     if (t.category_is_system) return acc;
@@ -159,6 +205,47 @@ const Transactions = () => {
     }
   };
 
+  const exportToCSV = () => {
+    if (transactions.length === 0) {
+      toast.error('Nenhuma transação para exportar');
+      return;
+    }
+
+    const natureMap = {
+      'INCOME': 'Receita',
+      'EXPENSE': 'Despesa',
+      'INVESTMENT': 'Investimento',
+      'TRANSFER': 'Transferência',
+      'SYSTEM_ADJUSTMENT': 'Ajuste'
+    };
+
+    const headers = ['Data', 'Descrição', 'Categoria', 'Conta', 'Valor', 'Natureza'];
+    const rows = transactions.map(t => [
+      new Date(t.date).toLocaleDateString('pt-BR'),
+      t.description,
+      t.category_name || (t.category_is_system ? 'Sistema' : 'Sem Categoria'),
+      t.account_name,
+      t.amount.toString().replace('.', ','),
+      natureMap[t.nature] || t.nature
+    ]);
+
+    const csvContent = [
+      headers.join(';'),
+      ...rows.map(row => row.join(';'))
+    ].join('\n');
+
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `transacoes_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-8 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -166,9 +253,14 @@ const Transactions = () => {
           <h1 className="text-3xl font-bold tracking-tight">Transações</h1>
           <p className="text-muted-foreground mt-1">Gerencie suas movimentações financeiras.</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} size="lg" className="rounded-xl shadow-lg shadow-primary/20">
-          <Plus className="mr-2 h-5 w-5" /> Nova Transação
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={exportToCSV} size="lg" className="rounded-xl">
+            <Download className="mr-2 h-5 w-5" /> Exportar CSV
+          </Button>
+          <Button onClick={() => setIsModalOpen(true)} size="lg" className="rounded-xl shadow-lg shadow-primary/20">
+            <Plus className="mr-2 h-5 w-5" /> Nova Transação
+          </Button>
+        </div>
       </div>
 
       {/* Resumo Rápido */}
@@ -214,18 +306,31 @@ const Transactions = () => {
           <div className="flex flex-col lg:flex-row items-end gap-4">
             <div className="w-full lg:w-auto space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Período</label>
-              <Select value={period} onValueChange={setPeriod}>
-                <SelectTrigger className="w-full lg:w-[180px] bg-background rounded-xl border-none shadow-sm">
-                  <SelectValue placeholder="Período" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="month">Mês Atual</SelectItem>
-                  <SelectItem value="30days">Últimos 30 dias</SelectItem>
-                  <SelectItem value="60days">Últimos 60 dias</SelectItem>
-                  <SelectItem value="90days">Últimos 90 dias</SelectItem>
-                  <SelectItem value="custom">Personalizado</SelectItem>
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full lg:w-[200px] justify-start bg-background rounded-xl border-none shadow-sm font-normal">
+                    <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                    {currentPeriodLabel}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-0" align="start">
+                  <div className="flex flex-col">
+                    {periodOptions.map((option) => (
+                      <PopoverClose key={option.value} asChild>
+                        <button
+                          onClick={() => setPeriod(option.value)}
+                          className={cn(
+                            "flex items-center px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground w-full text-left",
+                            period === option.value ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground"
+                          )}
+                        >
+                          {option.label}
+                        </button>
+                      </PopoverClose>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {period === 'custom' && (
