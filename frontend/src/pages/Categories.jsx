@@ -43,8 +43,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import PrivateValue from '@/components/ui/PrivateValue';
+import { useBudget } from '@/context/BudgetContext';
 
 function Categories() {
+  const { showBudget } = useBudget();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -327,7 +329,7 @@ function Categories() {
                       </div>
                     </div>
                   </div>
-                  {(() => {
+                  {showBudget && (() => {
                     const spending = parseFloat(category.current_spending || 0);
                     const limit = parseFloat(category.monthly_budget || 0);
                     const hasLimit = limit > 0;
