@@ -196,28 +196,34 @@ class AnalyticsService:
 
         # 2. Variable Expenses Average (Last 3 closed months)
         # Expense transactions without recurring_expense_id
-        # We divide by 3 explicitly to account for months with zero expenses
         avg_var_expense = db.execute(text("""
-            SELECT COALESCE(ABS(SUM(amount)) / 3.0, 0)
-            FROM transactions
-            WHERE user_id = :user_id
-              AND nature = 'EXPENSE'
-              AND recurring_expense_id IS NULL
-              AND deleted_at IS NULL
-              AND date >= date_trunc('month', now()) - interval '3 months'
-              AND date < date_trunc('month', now())
+            SELECT COALESCE(ABS(AVG(monthly_total)), 0)
+            FROM (
+                SELECT SUM(amount) as monthly_total
+                FROM transactions
+                WHERE user_id = :user_id
+                  AND nature = 'EXPENSE'
+                  AND recurring_expense_id IS NULL
+                  AND deleted_at IS NULL
+                  AND date >= date_trunc('month', now()) - interval '3 months'
+                  AND date < date_trunc('month', now())
+                GROUP BY date_trunc('month', date)
+            ) s
         """), {"user_id": str(user_id)}).scalar() or Decimal(0)
 
         # 3. Income Average (Last 3 closed months)
-        # We divide by 3 explicitly to account for months with zero income
         avg_income = db.execute(text("""
-            SELECT COALESCE(SUM(amount) / 3.0, 0)
-            FROM transactions
-            WHERE user_id = :user_id
-              AND nature = 'INCOME'
-              AND deleted_at IS NULL
-              AND date >= date_trunc('month', now()) - interval '3 months'
-              AND date < date_trunc('month', now())
+            SELECT COALESCE(AVG(monthly_total), 0)
+            FROM (
+                SELECT SUM(amount) as monthly_total
+                FROM transactions
+                WHERE user_id = :user_id
+                  AND nature = 'INCOME'
+                  AND deleted_at IS NULL
+                  AND date >= date_trunc('month', now()) - interval '3 months'
+                  AND date < date_trunc('month', now())
+                GROUP BY date_trunc('month', date)
+            ) s
         """), {"user_id": str(user_id)}).scalar() or Decimal(0)
 
         # 4. Fetch Active Recurring Expenses
