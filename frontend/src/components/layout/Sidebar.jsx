@@ -33,6 +33,7 @@ const menuItems = [
   { path: '/contas', label: 'Contas', icon: Landmark },
   { path: '/patrimonio', label: 'Patrimônio', icon: TrendingUp },
   { path: '/recorrentes', label: 'Recorrentes', icon: RefreshCw },
+  { path: '/projecao', label: 'Projeção', icon: TrendingUp },
   { path: '/metas', label: 'Metas', icon: Target },
   { path: '/categories', label: 'Categorias', icon: Tags },
   { path: '/relatorios', label: 'Relatórios', icon: FileText },
