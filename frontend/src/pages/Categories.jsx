@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '@/api/api';
 import { toast } from 'sonner';
 import EmojiPicker from 'emoji-picker-react';
-import { Edit2, Trash2, Plus, X, Search, Tag, ShieldCheck } from 'lucide-react';
+import { Edit2, Trash2, Plus, X, Search, Tag, ShieldCheck, MoreVertical, Target, Ban } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,6 +11,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -47,6 +59,10 @@ function Categories() {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
+
+  // Budget state
+  const [budgetAmount, setBudgetAmount] = useState('');
+  const [activeBudgetPopover, setActiveBudgetPopover] = useState(null);
 
   const fetchCategories = async () => {
     try {
@@ -125,6 +141,32 @@ function Categories() {
     }
   };
 
+  const handleSetBudget = async (category) => {
+    try {
+      await api.put(`/categories/${category.id}`, {
+        monthly_budget: budgetAmount === '' ? null : parseFloat(budgetAmount)
+      });
+      toast.success(budgetAmount === '' ? 'Limite removido!' : 'Limite definido!');
+      setActiveBudgetPopover(null);
+      setBudgetAmount('');
+      fetchCategories();
+    } catch (err) {
+      toast.error('Erro ao definir limite.');
+      console.error(err);
+    }
+  };
+
+  const handleRemoveBudget = async (category) => {
+    try {
+      await api.put(`/categories/${category.id}`, { monthly_budget: null });
+      toast.success('Limite removido!');
+      fetchCategories();
+    } catch (err) {
+      toast.error('Erro ao remover limite.');
+      console.error(err);
+    }
+  };
+
   const filteredCategories = categories.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -181,8 +223,8 @@ function Categories() {
                         >
                           {category.icon || '💰'}
                         </div>
-                        <div>
-                          <h3 className="font-bold text-lg truncate max-w-[120px]">{category.name}</h3>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-bold text-lg truncate pr-2">{category.name}</h3>
                           <div className="flex flex-wrap gap-1 mt-1">
                             <Badge variant="outline" className={cn(
                               "text-[10px] uppercase font-bold",
@@ -195,48 +237,124 @@ function Categories() {
                                 Sistema
                               </Badge>
                             )}
+                            {category.monthly_budget && (
+                              <Badge variant="outline" className="text-[10px] uppercase font-bold border-primary/20 bg-primary/5 text-primary">
+                                Limite: <PrivateValue value={category.monthly_budget} />
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       </div>
-                      <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex flex-col gap-1">
                         {category.is_system ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="p-2 text-primary/40">
-                                <ShieldCheck size={18} />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              Categoria protegida pelo sistema
-                            </TooltipContent>
-                          </Tooltip>
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="p-2 text-primary/40">
+                                  <ShieldCheck size={18} />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Categoria protegida pelo sistema
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
                         ) : (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openEditModal(category)}
-                              className="h-8 w-8 rounded-full"
-                            >
-                              <Edit2 size={14} className="text-primary" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(category)}
-                              className="h-8 w-8 rounded-full"
-                            >
-                              <Trash2 size={14} className="text-destructive" />
-                            </Button>
-                          </>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreVertical size={18} className="text-muted-foreground" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                              <DropdownMenuItem onClick={() => openEditModal(category)} className="cursor-pointer gap-2 py-2.5">
+                                <Edit2 size={14} className="text-primary" />
+                                <span>Editar</span>
+                              </DropdownMenuItem>
+
+                              {category.type === 'expense' && (
+                                <>
+                                  <Popover
+                                    open={activeBudgetPopover === category.id}
+                                    onOpenChange={(open) => {
+                                      setActiveBudgetPopover(open ? category.id : null);
+                                      if (open) setBudgetAmount(category.monthly_budget || '');
+                                    }}
+                                  >
+                                    <PopoverTrigger asChild>
+                                      <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer gap-2 py-2.5">
+                                        <Target size={14} className="text-success" />
+                                        <span>Definir limite</span>
+                                      </DropdownMenuItem>
+                                    </PopoverTrigger>
+                                    <PopoverContent side="left" align="start" className="w-64 p-4 rounded-xl shadow-xl">
+                                      <div className="space-y-3">
+                                        <div className="space-y-1">
+                                          <h4 className="font-semibold text-sm">Limite Mensal</h4>
+                                          <p className="text-xs text-muted-foreground">Defina o gasto máximo para {category.name}</p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <Input
+                                            type="number"
+                                            value={budgetAmount}
+                                            onChange={(e) => setBudgetAmount(e.target.value)}
+                                            placeholder="R$ 0,00"
+                                            className="h-9"
+                                          />
+                                          <Button size="sm" onClick={() => handleSetBudget(category)}>Salvar</Button>
+                                        </div>
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+
+                                  {category.monthly_budget && (
+                                    <DropdownMenuItem onClick={() => handleRemoveBudget(category)} className="cursor-pointer gap-2 py-2.5 text-destructive">
+                                      <Ban size={14} />
+                                      <span>Remover limite</span>
+                                    </DropdownMenuItem>
+                                  )}
+                                </>
+                              )}
+
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleDelete(category)} className="cursor-pointer gap-2 py-2.5 text-destructive">
+                                <Trash2 size={14} />
+                                <span>Excluir</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
                       </div>
                     </div>
                   </div>
-                  <div
-                    className="h-1.5 w-full"
-                    style={{ backgroundColor: category.color || '#2563eb' }}
-                  />
+                  {(() => {
+                    const spending = parseFloat(category.current_spending || 0);
+                    const limit = parseFloat(category.monthly_budget || 0);
+                    const hasLimit = limit > 0;
+                    const percent = hasLimit ? (spending / limit) * 100 : 0;
+
+                    let barColor = category.color || '#2563eb';
+                    if (hasLimit) {
+                      if (percent < 80) barColor = '#22c55e'; // Verde
+                      else if (percent <= 100) barColor = '#eab308'; // Amarelo
+                      else barColor = '#ef4444'; // Vermelho
+                    }
+
+                    return (
+                      <div className="h-1.5 w-full bg-secondary/20 relative overflow-hidden">
+                        <div
+                          className="h-full transition-all duration-500"
+                          style={{
+                            backgroundColor: barColor,
+                            width: hasLimit ? `${Math.min(percent, 100)}%` : '100%'
+                          }}
+                        />
+                        {hasLimit && percent > 100 && (
+                          <div className="absolute inset-0 bg-destructive/20 animate-pulse" />
+                        )}
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             ))
