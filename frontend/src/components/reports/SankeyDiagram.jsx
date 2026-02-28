@@ -176,17 +176,19 @@ const SankeyDiagram = ({ data }) => {
   const hasValidData = data && 
     Array.isArray(data.nodes) && data.nodes.length > 0 &&
     Array.isArray(data.links) && data.links.length > 0 &&
-    data.links.every(l => l.value > 0);
+    data.links.some(l => l.value > 0);
+
+  if (!hasValidData) return null;
 
   return (
-    <div ref={containerRef} className="w-full relative min-h-[500px] bg-card/30 rounded-3xl p-4 border border-border/50">
+    <div ref={containerRef} className="w-full relative min-h-[500px] bg-card/30 rounded-3xl p-4 border border-border/50 mb-8">
       <svg
         ref={svgRef}
         width={dimensions.width}
         height={dimensions.height}
         className="w-full h-auto overflow-visible"
       />
-      {hoveredLink && hasValidData && (
+      {hoveredLink && (
         <div
           className="fixed z-[100] pointer-events-none transition-transform duration-75"
           style={{
@@ -207,11 +209,6 @@ const SankeyDiagram = ({ data }) => {
               <PrivateValue value={formatCurrency(hoveredLink.value)} />
             </p>
           </Card>
-        </div>
-      )}
-      {!hasValidData && (
-        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground italic">
-          Nenhum dado disponível para o diagrama.
         </div>
       )}
     </div>

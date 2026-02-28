@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Wallet, PieChartIcon, ArrowRight, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import PrivateValue from '@/components/ui/PrivateValue';
 import { usePrivacy } from '@/context/PrivacyContext';
 import SankeyDiagram from '@/components/reports/SankeyDiagram';
@@ -23,21 +24,34 @@ const Relatorios = () => {
 
   const fetchData = async () => {
     setLoading(true);
+
+    // Fetch categories independently
     try {
-      const [summaryRes, categoriesRes, sankeyRes] = await Promise.all([
-        api.get('/summary/month', { params: { year, month } }),
-        api.get('/categories/'),
-        analyticsApi.getSankeyData(year, month)
-      ]);
-      
-      setSummary(summaryRes.data);
+      const categoriesRes = await api.get('/categories/');
       setCategories(categoriesRes.data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+
+    // Fetch summary and sankeyData with allSettled or individual try/catch
+    try {
+      const summaryRes = await api.get('/summary/month', { params: { year, month } });
+      setSummary(summaryRes.data);
+    } catch (error) {
+      console.error('Error fetching monthly summary:', error);
+      setSummary(null);
+      toast.error('Erro ao carregar resumo mensal. Verifique sua conexão.');
+    }
+
+    try {
+      const sankeyRes = await analyticsApi.getSankeyData(year, month);
       setSankeyData(sankeyRes.data);
     } catch (error) {
-      console.error('Error fetching reporting data:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching sankey data:', error);
+      setSankeyData(null);
     }
+
+    setLoading(false);
   };
 
   useEffect(() => {

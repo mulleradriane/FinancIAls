@@ -31,7 +31,7 @@ class AnalyticsService:
     def get_burn_rate(self, db: Session, user_id: UUID) -> dict:
         # Get last 3 months (excluding current) - Versão PostgreSQL apenas
         last_3m = db.execute(text("""
-            SELECT COALESCE(AVG(total_expense), 0)
+            SELECT COALESCE(AVG(total_expenses), 0)
             FROM v_operational_monthly
             WHERE user_id = :user_id
               AND month >= date_trunc('month', now()) - interval '3 months'
@@ -40,7 +40,7 @@ class AnalyticsService:
 
         # Get previous 3 months (months -6 to -4)
         prev_3m = db.execute(text("""
-            SELECT COALESCE(AVG(total_expense), 0)
+            SELECT COALESCE(AVG(total_expenses), 0)
             FROM v_operational_monthly
             WHERE user_id = :user_id
               AND month >= date_trunc('month', now()) - interval '6 months'
