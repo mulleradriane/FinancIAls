@@ -1,8 +1,14 @@
 import React from 'react';
-import { Flame, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Flame, TrendingUp, TrendingDown, Minus, Info } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import PrivateValue from '@/components/ui/PrivateValue';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const BurnRateCard = ({ avgMonthlyExpense, trend, previousAvg, loading }) => {
   const formatCurrency = (value) => {
@@ -61,7 +67,19 @@ const BurnRateCard = ({ avgMonthlyExpense, trend, previousAvg, loading }) => {
             </div>
           </div>
 
-          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Burn Rate (Média 3 meses)</p>
+          <div className="flex items-center gap-2">
+            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Burn Rate (Média 3 meses)</p>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-[14px] w-[14px] text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[250px] text-center">
+                  <p>Média dos seus gastos mensais nos últimos 3 meses. Indica o ritmo de consumo do seu dinheiro. Tendência de alta significa que você está gastando mais do que antes.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <h2 className="text-4xl font-bold mt-2 tracking-tight">
             <PrivateValue value={formatCurrency(avgMonthlyExpense)} />
           </h2>

@@ -1,8 +1,14 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Sparkles, TrendingUp, AlertTriangle, Minus } from "lucide-react";
+import { Sparkles, TrendingUp, AlertTriangle, Minus, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import PrivateValue from '@/components/ui/PrivateValue';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Função de formatação local
 const formatCurrency = (value) => {
@@ -80,10 +86,22 @@ const ForecastCard = ({ forecast, loading }) => {
   return (
     <Card className="border-none shadow-sm bg-white/50 backdrop-blur-sm hover:bg-white/80 transition-all duration-300">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
-        <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-          <Sparkles className="w-3 h-3 text-blue-500" />
-          Projeção Financeira
-        </CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <Sparkles className="w-3 h-3 text-blue-500" />
+            Projeção Financeira
+          </CardTitle>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-[14px] w-[14px] text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[250px] text-center">
+                <p>Projeção do patrimônio com base na média de resultado dos últimos 3 meses. É uma estimativa e pode variar conforme mudanças nos seus hábitos financeiros.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
         <Badge variant="outline" className={`${status.color} border flex items-center gap-1.5 py-0.5`}>
           {status.icon}
           {status.label}

@@ -13,8 +13,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { usePrivacy } from '@/context/PrivacyContext';
 import PrivateValue from '@/components/ui/PrivateValue';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip as UiTooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const SpendingPaceCard = ({ data, loading, year, month }) => {
   const { isPrivate } = usePrivacy();
@@ -68,7 +74,19 @@ const SpendingPaceCard = ({ data, loading, year, month }) => {
     <Card className="border-none shadow-md rounded-2xl h-full">
       <CardHeader className="p-8 pb-0 flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
         <div>
-          <CardTitle className="text-xl">Ritmo de Gastos</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-xl">Ritmo de Gastos</CardTitle>
+            <TooltipProvider>
+              <UiTooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-[14px] w-[14px] text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[250px] text-center">
+                  <p>Compara o ritmo atual dos seus gastos com o mês passado no mesmo período. Ajuda a identificar se você está gastando mais ou menos do que o esperado para este ponto do mês.</p>
+                </TooltipContent>
+              </UiTooltip>
+            </TooltipProvider>
+          </div>
           <CardDescription>Acompanhamento diário comparado ao mês anterior</CardDescription>
         </div>
         <div className="md:text-right">

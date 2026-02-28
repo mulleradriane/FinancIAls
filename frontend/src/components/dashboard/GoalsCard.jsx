@@ -1,10 +1,16 @@
 import React from 'react';
-import { Target, Clock } from 'lucide-react';
+import { Target, Clock, Info } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import PrivateValue from '@/components/ui/PrivateValue';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const GoalItem = ({ goal }) => {
   // Ensure percentage is between 0 and 100 for the Progress component
@@ -84,6 +90,16 @@ const GoalsCard = ({ goals, loading }) => {
               <Target className="h-4 w-4 text-white" />
             </div>
             <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Metas Financeiras</p>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-[14px] w-[14px] text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[250px] text-center">
+                  <p>Progresso das suas metas financeiras ativas. O percentual é calculado com base no patrimônio atual em relação ao valor alvo definido.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <Badge variant="outline" className="text-[10px] font-bold text-muted-foreground uppercase">
             {goals?.length || 0} {goals?.length === 1 ? 'Ativa' : 'Ativas'}

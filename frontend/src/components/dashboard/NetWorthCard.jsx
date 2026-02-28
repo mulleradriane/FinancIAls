@@ -1,8 +1,14 @@
 import React from 'react';
-import { Landmark, TrendingUp, TrendingDown, Wallet, ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { Landmark, TrendingUp, TrendingDown, Wallet, ArrowDownRight, ArrowUpRight, Info } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import PrivateValue from '@/components/ui/PrivateValue';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const NetWorthCard = ({ netWorth, assets, liabilities, loading }) => {
   const formatCurrency = (value) => {
@@ -41,7 +47,19 @@ const NetWorthCard = ({ netWorth, assets, liabilities, loading }) => {
             </div>
           </div>
 
-          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Patrimônio Líquido Total</p>
+          <div className="flex items-center gap-2">
+            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Patrimônio Líquido Total</p>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-[14px] w-[14px] text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[250px] text-center">
+                  <p>Patrimônio Líquido = Total de Ativos (contas bancárias, investimentos) menos Total de Passivos (cartão de crédito, dívidas). Representa sua riqueza real.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <h2 className="text-4xl font-bold mt-2 tracking-tight">
             <PrivateValue value={formatCurrency(netWorth)} />
           </h2>
