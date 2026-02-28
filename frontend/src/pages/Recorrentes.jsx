@@ -11,7 +11,8 @@ import {
   CreditCard,
   Calendar,
   Info,
-  Plus
+  Plus,
+  Repeat
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -377,11 +378,147 @@ const Recorrentes = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="receitas" className="mt-6">
-           {/* Same structure but for income... reusing logic if needed, but the backend filter takes care of it */}
-           <div className="p-10 text-center border-dashed border-2 rounded-2xl bg-secondary/5">
-             <p className="text-muted-foreground italic font-medium">Listagem de receitas recorrentes em desenvolvimento ou filtradas acima.</p>
-           </div>
+        <TabsContent value="receitas" className="mt-6 space-y-12">
+          {/* Summary Cards for Income */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="border-none shadow-sm bg-emerald-500/5">
+              <CardContent className="p-6 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 border border-emerald-500/20">
+                  <TrendingUp size={24} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Mensal</p>
+                  <h3 className="text-2xl font-black text-emerald-600">
+                    <PrivateValue value={formatCurrency(recurringExpenses.reduce((acc, curr) => acc + Number(curr.amount), 0))} />
+                  </h3>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-none shadow-sm bg-emerald-500/5">
+              <CardContent className="p-6 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 border border-emerald-500/20">
+                  <Calendar size={24} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Receitas Ativas</p>
+                  <h3 className="text-2xl font-black text-emerald-600">{recurringExpenses.length}</h3>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="space-y-6">
+            <h3 className="text-xl font-bold flex items-center gap-2 px-1">
+              <Package className="text-emerald-500" size={20} />
+              Parcelamentos
+              <Badge variant="secondary" className="rounded-full">{installments.length}</Badge>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {installments.map(item => {
+                const total = item.total_installments || 1;
+                const completed = item.current_installment || 0;
+                const progress = (completed / total) * 100;
+
+                const endDateStr = item.end_date ? new Date(item.end_date).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : '-';
+
+                return (
+                  <Card key={item.id} className="group border-none shadow-sm hover:shadow-md transition-all rounded-2xl overflow-hidden bg-card/50 backdrop-blur-sm">
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start">
+                        <div className="flex gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 border border-emerald-500/20">
+                            <Package size={22} />
+                          </div>
+                          <div>
+                            <h4 className="font-bold leading-tight">{item.description}</h4>
+                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-1">{item.category?.name || 'Sem Categoria'}</p>
+                            <Badge variant="secondary" className="mt-2 text-[10px] font-black h-5 px-2 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 border-none">
+                              {completed}/{total}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="text-right flex flex-col items-end">
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity mb-2">
+                            <Button variant="ghost" size="icon" onClick={() => handleTerminate(item.id)} className="h-8 w-8 rounded-full" title="Encerrar">
+                              <Square size={14} className="text-muted-foreground" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-8 w-8 rounded-full text-destructive hover:text-destructive" title="Excluir">
+                              <Trash2 size={14} />
+                            </Button>
+                          </div>
+                          <p className="font-black text-xl"><PrivateValue value={formatCurrency(item.amount)} /></p>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">até {endDateStr}</p>
+                        </div>
+                      </div>
+                      <div className="mt-6 space-y-2">
+                        <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          <span>Progresso</span>
+                          <span>{Math.round(progress)}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-emerald-500/10 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-500 transition-all"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+              {installments.length === 0 && (
+                <div className="col-span-full p-8 text-center border-2 border-dashed rounded-2xl bg-secondary/5">
+                  <p className="text-sm text-muted-foreground italic">Nenhuma receita parcelada registrada.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <h3 className="text-xl font-bold flex items-center gap-2 px-1">
+              <Repeat className="text-emerald-500" size={20} />
+              Assinaturas
+              <Badge variant="secondary" className="rounded-full">{subscriptions.length}</Badge>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {subscriptions.map(item => (
+                <Card key={item.id} className="group border-none shadow-sm hover:shadow-md transition-all rounded-2xl overflow-hidden bg-card/50 backdrop-blur-sm">
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start">
+                      <div className="flex gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 border border-emerald-500/20">
+                          <Repeat size={22} />
+                        </div>
+                        <div>
+                          <h4 className="font-bold leading-tight">{item.description}</h4>
+                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-1">{item.category?.name || 'Sem Categoria'}</p>
+                          <Badge variant="outline" className="text-[9px] uppercase font-black h-4 px-1.5 mt-2">
+                            {item.frequency === 'monthly' ? 'Mensal' : 'Anual'}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="text-right flex flex-col items-end">
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity mb-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleTerminate(item.id)} className="h-8 w-8 rounded-full" title="Encerrar">
+                            <Square size={14} className="text-muted-foreground" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-8 w-8 rounded-full text-destructive hover:text-destructive" title="Excluir">
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
+                        <p className="font-black text-xl"><PrivateValue value={formatCurrency(item.amount)} /></p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {subscriptions.length === 0 && (
+                <div className="col-span-full p-8 text-center border-2 border-dashed rounded-2xl bg-secondary/5">
+                  <p className="text-sm text-muted-foreground italic">Nenhuma receita recorrente registrada.</p>
+                </div>
+              )}
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
