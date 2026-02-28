@@ -19,19 +19,36 @@ class AnalyticsService:
             text("SELECT * FROM v_operational_monthly WHERE user_id = :user_id"),
             {"user_id": str(user_id)}
         ).all()
-        return [OperationalMonthly.model_validate(row) for row in result]
+        return [
+            OperationalMonthly.model_validate({
+                "month": row.month,
+                "total_income": row.total_income,
+                "total_expenses": row.total_expense,  # map total_expense -> total_expenses
+                "net_result": row.net_result,
+            })
+            for row in result
+        ]
 
     def get_savings_rate(self, db: Session, user_id: UUID) -> List[SavingsRate]:
         result = db.execute(
             text("SELECT * FROM v_savings_rate WHERE user_id = :user_id"),
             {"user_id": str(user_id)}
         ).all()
-        return [SavingsRate.model_validate(row) for row in result]
+        return [
+            SavingsRate.model_validate({
+                "month": row.month,
+                "total_income": row.total_income,
+                "total_expenses": row.total_expense,  # map total_expense -> total_expenses
+                "net_result": row.net_result,
+                "savings_rate": row.savings_rate,
+            })
+            for row in result
+        ]
 
     def get_burn_rate(self, db: Session, user_id: UUID) -> dict:
         # Get last 3 months (excluding current) - Versão PostgreSQL apenas
         last_3m = db.execute(text("""
-            SELECT COALESCE(AVG(total_expenses), 0)
+            SELECT COALESCE(AVG(total_expense), 0)
             FROM v_operational_monthly
             WHERE user_id = :user_id
               AND month >= date_trunc('month', now()) - interval '3 months'
@@ -40,7 +57,7 @@ class AnalyticsService:
 
         # Get previous 3 months (months -6 to -4)
         prev_3m = db.execute(text("""
-            SELECT COALESCE(AVG(total_expenses), 0)
+            SELECT COALESCE(AVG(total_expense), 0)
             FROM v_operational_monthly
             WHERE user_id = :user_id
               AND month >= date_trunc('month', now()) - interval '6 months'
