@@ -22,5 +22,6 @@ class Category(Base):
     monthly_budget = Column(Numeric(12, 2), nullable=True)
 
     user = relationship("User")
+    overrides = relationship("CategoryOverride", back_populates="category", cascade="all, delete-orphan")
 
     __table_args__ = (UniqueConstraint('name', 'user_id', name='uq_categories_name_user_id'),)

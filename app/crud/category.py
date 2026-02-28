@@ -69,11 +69,6 @@ class CRUDCategory(CRUDBase[Category, CategoryCreate, CategoryUpdate]):
     def update(
         self, db: Session, *, db_obj: Category, obj_in: Union[CategoryUpdate, Dict[str, Any]]
     ) -> Category:
-        if db_obj.is_system:
-            raise HTTPException(
-                status_code=400,
-                detail="Categorias de sistema não podem ser editadas."
-            )
 
         # Check if they are trying to rename another category to "Ajuste de Saldo" (case-insensitive)
         if isinstance(obj_in, dict):
