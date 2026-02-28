@@ -25,5 +25,6 @@ class CategoryUpdate(BaseModel):
 class Category(CategoryBase):
     id: UUID
     current_spending: Decimal = Decimal(0)
+    has_override: bool = False
 
     model_config = ConfigDict(from_attributes=True)
