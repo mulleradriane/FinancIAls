@@ -88,7 +88,7 @@ const EvolutionChart = ({ data, loading }) => {
                 wrapperStyle={{ paddingTop: '0', paddingBottom: '20px' }}
               />
               <Bar dataKey="total_income" name="Receitas" fill="#22C55E" radius={[4, 4, 0, 0]} barSize={24} />
-              <Bar dataKey="total_expense" name="Despesas" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={24} />
+              <Bar dataKey="total_expenses" name="Despesas" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={24} />
               <Line
                 type="monotone"
                 dataKey="net_result"

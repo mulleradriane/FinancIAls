@@ -7,14 +7,14 @@ class OperationalMonthly(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     month: date
     total_income: Decimal
-    total_expense: Decimal
+    total_expenses: Decimal
     net_result: Decimal
 
 class SavingsRate(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     month: date
     total_income: Decimal
-    total_expense: Decimal
+    total_expenses: Decimal
     net_result: Decimal
     savings_rate: float
 

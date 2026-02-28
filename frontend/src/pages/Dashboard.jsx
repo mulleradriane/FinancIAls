@@ -107,7 +107,7 @@ const Dashboard = () => {
     setGreeting(`${getGreeting()}, ${name}.`);
   }, []);
 
-  const currentMonthData = operationalMonthly[operationalMonthly.length - 1] || { total_income: 0, total_expense: 0, net_result: 0 };
+  const currentMonthData = operationalMonthly[operationalMonthly.length - 1] || { total_income: 0, total_expenses: 0, net_result: 0 };
   const currentSavingsRate = savingsRate[savingsRate.length - 1]?.savings_rate || 0;
 
   const totalAssets = assetsLiabilities.find(a => a.classification === 'asset')?.total || 0;
@@ -150,7 +150,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 gap-8">
         <MonthlySummaryCard
           income={currentMonthData.total_income}
-          expense={currentMonthData.total_expense}
+          expense={currentMonthData.total_expenses}
           result={currentMonthData.net_result}
           savingsRate={currentSavingsRate}
           loading={loading}

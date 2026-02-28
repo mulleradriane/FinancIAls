@@ -10,17 +10,19 @@ from app.schemas.summary import MonthlySummary, YearlySummary, DashboardData, Da
 from decimal import Decimal
 from datetime import date, timedelta
 from typing import List
+from uuid import UUID
 from dateutil.relativedelta import relativedelta
 
 class SummaryService:
-    def get_monthly_summary(self, db: Session, year: int, month: int) -> MonthlySummary:
-        totals = financial_engine.get_monthly_totals(db, year, month)
+    def get_monthly_summary(self, db: Session, year: int, month: int, user_id: UUID) -> MonthlySummary:
+        totals = financial_engine.get_monthly_totals(db, year, month, user_id=user_id)
         total_income = totals["income"]
         total_expenses = totals["expense"]
 
         total_invested = db.scalar(
             select(func.sum(Transaction.amount))
             .filter(
+                Transaction.user_id == user_id,
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
                 Transaction.nature == TransactionNature.INVESTMENT,
@@ -33,6 +35,7 @@ class SummaryService:
             select(Category.name, func.sum(Transaction.amount))
             .join(Category)
             .filter(
+                Transaction.user_id == user_id,
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
                 Transaction.amount < 0,
@@ -52,6 +55,7 @@ class SummaryService:
             select(Transaction, Category.name.label('cat_name'))
             .join(Category)
             .filter(
+                Transaction.user_id == user_id,
                 extract('year', Transaction.date) == year,
                 extract('month', Transaction.date) == month,
                 Transaction.amount < 0,
@@ -86,18 +90,18 @@ class SummaryService:
             top_transactions=top_transactions
         )
 
-    def get_dashboard_data(self, db: Session) -> DashboardData:
+    def get_dashboard_data(self, db: Session, user_id: UUID) -> DashboardData:
         today = date.today()
         prev_month_date = today - relativedelta(months=1)
 
-        accounts = crud_account.get_multi_with_balance(db)
-        available_balance = financial_engine.calculate_available_balance(db)
+        accounts = crud_account.get_multi_with_balance(db, user_id=user_id)
+        available_balance = financial_engine.calculate_available_balance(db, user_id=user_id)
 
-        net_worth_data = financial_engine.calculate_net_worth(db)
+        net_worth_data = financial_engine.calculate_net_worth(db, user_id=user_id)
         total_net_worth = net_worth_data["net_worth"]
 
-        monthly_summary = self.get_monthly_summary(db, today.year, today.month)
-        prev_monthly_summary = self.get_monthly_summary(db, prev_month_date.year, prev_month_date.month)
+        monthly_summary = self.get_monthly_summary(db, today.year, today.month, user_id=user_id)
+        prev_monthly_summary = self.get_monthly_summary(db, prev_month_date.year, prev_month_date.month, user_id=user_id)
 
         def calc_variation(current, previous):
             if previous == 0:
@@ -114,7 +118,7 @@ class SummaryService:
         for i in range(5, -1, -1):
             d = today - relativedelta(months=i)
             month_name = month_names_pt[d.month - 1]
-            m_totals = financial_engine.get_monthly_totals(db, d.year, d.month)
+            m_totals = financial_engine.get_monthly_totals(db, d.year, d.month, user_id=user_id)
             chart_data.append(DashboardChartData(
                 month=month_name,
                 income=abs(m_totals["income"]),
@@ -133,8 +137,8 @@ class SummaryService:
             chart_data=chart_data
         )
 
-    def get_net_worth(self, db: Session) -> NetWorthData:
-        accounts = crud_account.get_multi_with_balance(db)
+    def get_net_worth(self, db: Session, user_id: UUID) -> NetWorthData:
+        accounts = crud_account.get_multi_with_balance(db, user_id=user_id)
 
         total_accounts = Decimal(0)
         total_investments = Decimal(0)
@@ -164,7 +168,7 @@ class SummaryService:
         month_names_pt = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
         today = date.today()
 
-        all_accounts = db.scalars(select(Account)).all()
+        all_accounts = db.scalars(select(Account).filter(Account.user_id == user_id)).all()
 
         for i in range(5, -1, -1):
             d = today - relativedelta(months=i)
@@ -200,17 +204,21 @@ class SummaryService:
             history=history
         )
 
-    def get_cash_flow(self, db: Session) -> List[CashFlowDay]:
+    def get_cash_flow(self, db: Session, user_id: UUID) -> List[CashFlowDay]:
         today = date.today()
         end_of_month = (today + relativedelta(months=1)).replace(day=1) - timedelta(days=1)
 
-        accounts = crud_account.get_multi_with_balance(db)
+        accounts = crud_account.get_multi_with_balance(db, user_id=user_id)
         total_actual_balance = sum((acc.balance for acc in accounts), Decimal(0))
 
         # future_diff: sum of non-deleted transactions from today onwards
         future_diff = db.scalar(
             select(func.sum(Transaction.amount))
-            .filter(Transaction.deleted_at == None, Transaction.date >= today)
+            .filter(
+                Transaction.user_id == user_id,
+                Transaction.deleted_at == None,
+                Transaction.date >= today
+            )
         ) or Decimal(0)
 
         current_balance = total_actual_balance - future_diff
@@ -218,6 +226,7 @@ class SummaryService:
         expenses = db.execute(
             select(Transaction.date, func.sum(Transaction.amount).label('amount'))
             .filter(
+                Transaction.user_id == user_id,
                 Transaction.amount < 0,
                 Transaction.nature.notin_([TransactionNature.TRANSFER, TransactionNature.INVESTMENT, TransactionNature.SYSTEM_ADJUSTMENT]),
                 Transaction.deleted_at == None,
@@ -236,6 +245,7 @@ class SummaryService:
         trans_incomes = db.execute(
             select(Transaction.date, func.sum(Transaction.amount).label('amount'))
             .filter(
+                Transaction.user_id == user_id,
                 Transaction.amount > 0,
                 Transaction.nature.notin_([TransactionNature.TRANSFER, TransactionNature.INVESTMENT, TransactionNature.SYSTEM_ADJUSTMENT]),
                 Transaction.deleted_at == None,
@@ -268,10 +278,11 @@ class SummaryService:
 
         return cash_flow
 
-    def get_yearly_summary(self, db: Session, year: int) -> YearlySummary:
+    def get_yearly_summary(self, db: Session, year: int, user_id: UUID) -> YearlySummary:
         total_income = db.scalar(
             select(func.sum(Transaction.amount))
             .filter(
+                Transaction.user_id == user_id,
                 extract('year', Transaction.date) == year,
                 Transaction.amount > 0,
                 Transaction.nature.notin_([TransactionNature.TRANSFER, TransactionNature.INVESTMENT, TransactionNature.SYSTEM_ADJUSTMENT]),
@@ -282,6 +293,7 @@ class SummaryService:
         total_expenses_signed = db.scalar(
             select(func.sum(Transaction.amount))
             .filter(
+                Transaction.user_id == user_id,
                 extract('year', Transaction.date) == year,
                 Transaction.amount < 0,
                 Transaction.nature.notin_([TransactionNature.TRANSFER, TransactionNature.INVESTMENT, TransactionNature.SYSTEM_ADJUSTMENT]),
@@ -294,6 +306,7 @@ class SummaryService:
         total_invested = db.scalar(
             select(func.sum(Transaction.amount))
             .filter(
+                Transaction.user_id == user_id,
                 extract('year', Transaction.date) == year,
                 Transaction.nature == TransactionNature.INVESTMENT,
                 Transaction.amount > 0,
@@ -310,8 +323,8 @@ class SummaryService:
             balance=balance
         )
 
-    def get_cash_flow_summary(self, db: Session, months: int = 6) -> List[CashFlowSummary]:
-        results = financial_engine.get_cash_flow_evolution(db, months)
+    def get_cash_flow_summary(self, db: Session, user_id: UUID, months: int = 6) -> List[CashFlowSummary]:
+        results = financial_engine.get_cash_flow_evolution(db, user_id=user_id, months=months)
         return [
             CashFlowSummary(
                 month=r["month"],
