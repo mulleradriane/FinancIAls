@@ -59,43 +59,43 @@ const Dashboard = () => {
       const year = now.getFullYear();
       const month = now.getMonth() + 1;
 
-      const [
-        netWorthRes,
-        alRes,
-        omRes,
-        srRes,
-        brRes,
-        goalsRes,
-        forecastRes,
-        dailyExpensesRes,
-        categoriesRes,
-        accountsRes
-      ] = await Promise.all([
-        analyticsApi.getNetWorth(),
-        analyticsApi.getAssetsLiabilities(),
-        analyticsApi.getOperationalMonthly(),
-        analyticsApi.getSavingsRate(),
-        analyticsApi.getBurnRate(),
-        analyticsApi.getGoalsProgress(),
-        analyticsApi.getForecast(),
-        analyticsApi.getDailyExpenses(year, month),
-        api.get('/categories/'),
-        api.get('/accounts/')
+      const results = await Promise.allSettled([
+        analyticsApi.getNetWorth(),           // 0
+        analyticsApi.getAssetsLiabilities(),  // 1
+        analyticsApi.getOperationalMonthly(), // 2
+        analyticsApi.getSavingsRate(),        // 3
+        analyticsApi.getBurnRate(),           // 4
+        analyticsApi.getGoalsProgress(),      // 5
+        analyticsApi.getForecast(),           // 6
+        analyticsApi.getDailyExpenses(year, month), // 7
+        api.get('/categories/'),              // 8
+        api.get('/accounts/')                 // 9
       ]);
 
-      setNetWorth(netWorthRes.data.net_worth);
-      setAssetsLiabilities(alRes.data);
-      setOperationalMonthly(omRes.data);
-      setSavingsRate(srRes.data);
-      setBurnRate(brRes.data);
-      setGoals(goalsRes.data);
-      setForecast(forecastRes.data);
-      setDailyExpenses(dailyExpensesRes.data);
-      setCategories(categoriesRes.data);
-      setAccounts(accountsRes.data);
+      if (results[0].status === 'fulfilled') setNetWorth(results[0].value.data.net_worth);
+      if (results[1].status === 'fulfilled') setAssetsLiabilities(results[1].value.data);
+      if (results[2].status === 'fulfilled') setOperationalMonthly(results[2].value.data);
+      if (results[3].status === 'fulfilled') setSavingsRate(results[3].value.data);
+      if (results[4].status === 'fulfilled') setBurnRate(results[4].value.data);
+      if (results[5].status === 'fulfilled') setGoals(results[5].value.data);
+      if (results[6].status === 'fulfilled') setForecast(results[6].value.data);
+      if (results[7].status === 'fulfilled') setDailyExpenses(results[7].value.data);
+      if (results[8].status === 'fulfilled') setCategories(results[8].value.data);
+      if (results[9].status === 'fulfilled') setAccounts(results[9].value.data);
+
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.error(`fetchData: endpoint index ${index} failed`, result.reason);
+        }
+      });
+
+      const criticalFailed = [0, 2, 4].some(i => results[i].status === 'rejected');
+      if (criticalFailed) {
+        toast.error('Alguns dados não puderam ser carregados.');
+      }
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      toast.error('Erro ao carregar dados do dashboard');
+      console.error('Unexpected error in fetchData:', error);
+      toast.error('Erro inesperado ao carregar o dashboard.');
     } finally {
       setLoading(false);
     }
