@@ -23,28 +23,147 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from '@/components/ui/card';
 
 const TransactionForm = ({ categories = [], accounts = [], transaction, onTransactionCreated, onClose }) => {
+  // LOG 1: Montagem do componente
+  console.log('🔥 [MOUNT] TransactionForm montou', { 
+    transactionId: transaction?.id,
+    transactionExists: !!transaction,
+    categoriesLength: categories.length,
+    accountsLength: accounts.length,
+    transactionData: transaction,
+    timestamp: new Date().toISOString()
+  });
+
   const descriptionRef = useRef(null);
+  const [loading, setLoading] = useState(false);
+  const [fullTransaction, setFullTransaction] = useState(transaction);
+  
+  // Função auxiliar para extrair IDs considerando diferentes possíveis nomes de campos
+  const extractCategoryId = (trans) => {
+    if (!trans) return '';
+    // Tenta diferentes formas como o campo pode vir
+    return trans.category_id || trans.categoryId || trans.category?.id || '';
+  };
+
+  const extractAccountId = (trans) => {
+    if (!trans) return '';
+    return trans.account_id || trans.accountId || trans.account?.id || '';
+  };
+
   const [formData, setFormData] = useState({
-    description: transaction ? transaction.description : '',
-    amount: transaction ? transaction.amount : 0,
-    displayAmount: transaction ?
-      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(transaction.amount) : '',
-    date: transaction ? transaction.date : new Date().toISOString().split('T')[0],
-    categoryId: transaction ? transaction.category_id : '',
-    accountId: transaction ? transaction.account_id : '',
+    description: fullTransaction ? fullTransaction.description : '',
+    amount: fullTransaction ? fullTransaction.amount : 0,
+    displayAmount: fullTransaction ?
+      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fullTransaction.amount) : '',
+    date: fullTransaction ? fullTransaction.date : new Date().toISOString().split('T')[0],
+    categoryId: extractCategoryId(fullTransaction),
+    accountId: extractAccountId(fullTransaction),
     isRecurring: false,
     recurring: {
-      type: 'subscription', // 'subscription' or 'installment'
-      frequency: 'monthly', // for subscription
-      totalInstallments: '', // for installment
+      type: 'subscription',
+      frequency: 'monthly',
+      totalInstallments: '',
     }
   });
+
+  // LOG 2: Estado inicial do formData
+  console.log('📝 [INITIAL_STATE] formData inicial', {
+    description: formData.description,
+    categoryId: formData.categoryId,
+    accountId: formData.accountId,
+    amount: formData.amount,
+    rawTransaction: fullTransaction
+  });
+
+  // EFEITO PARA BUSCAR A TRANSAÇÃO COMPLETA QUANDO FOR EDIÇÃO
+  useEffect(() => {
+    const fetchFullTransaction = async () => {
+      if (transaction?.id && (!transaction.category_id || !transaction.account_id)) {
+        setLoading(true);
+        try {
+          console.log('🔍 Buscando transação completa:', transaction.id);
+          const response = await api.get(`/transactions/${transaction.id}`);
+          const fullTrans = response.data;
+          setFullTransaction(fullTrans);
+          
+          setFormData(prev => ({
+            ...prev,
+            description: fullTrans.description,
+            amount: fullTrans.amount,
+            displayAmount: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fullTrans.amount),
+            date: fullTrans.date,
+            categoryId: extractCategoryId(fullTrans),
+            accountId: extractAccountId(fullTrans)
+          }));
+          
+          console.log('✅ Transação completa carregada:', fullTrans);
+        } catch (error) {
+          console.error('Erro ao buscar transação completa:', error);
+          toast.error('Erro ao carregar dados da transação');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchFullTransaction();
+  }, [transaction]);
 
   const [suggestions, setSuggestions] = useState([]);
   const [openSuggestions, setOpenSuggestions] = useState(false);
 
+  // LOG 3: Efeito para quando fullTransaction/categories/accounts mudam
   useEffect(() => {
-    if (!transaction && accounts && accounts.length > 0 && !formData.accountId) {
+    console.log('🔄 [DEPENDENCY_CHANGE] fullTransaction, categories ou accounts mudaram', {
+      fullTransaction: fullTransaction ? {
+        id: fullTransaction.id,
+        category_id: fullTransaction.category_id,
+        categoryId: fullTransaction.categoryId,
+        account_id: fullTransaction.account_id,
+        accountId: fullTransaction.accountId,
+        description: fullTransaction.description
+      } : null,
+      categoriesCount: categories.length,
+      accountsCount: accounts.length,
+      categoriesList: categories.map(c => ({ id: c.id, name: c.name })),
+      accountsList: accounts.map(a => ({ id: a.id, name: a.name })),
+      currentFormData: {
+        categoryId: formData.categoryId,
+        accountId: formData.accountId
+      }
+    });
+
+    // TENTATIVA DE FIX: Força atualização do formData quando fullTransaction chega
+    if (fullTransaction && categories.length > 0 && accounts.length > 0) {
+      const categoryId = extractCategoryId(fullTransaction);
+      const accountId = extractAccountId(fullTransaction);
+      
+      const categoryExists = categories.some(c => c.id === categoryId);
+      const accountExists = accounts.some(a => a.id === accountId);
+      
+      console.log('🎯 [FIX_ATTEMPT] Verificando match', {
+        extractedCategoryId: categoryId,
+        extractedAccountId: accountId,
+        categoryExists,
+        accountExists,
+        matchingCategory: categories.find(c => c.id === categoryId),
+        matchingAccount: accounts.find(a => a.id === accountId),
+        allCategoryIds: categories.map(c => c.id),
+        allAccountIds: accounts.map(a => a.id)
+      });
+
+      // ATUALIZA O FORM COM OS IDs
+      if (categoryId || accountId) {
+        setFormData(prev => ({
+          ...prev,
+          categoryId: categoryId || prev.categoryId,
+          accountId: accountId || prev.accountId
+        }));
+      }
+    }
+  }, [fullTransaction, categories, accounts]);
+
+  useEffect(() => {
+    if (!fullTransaction && accounts && accounts.length > 0 && !formData.accountId) {
       setFormData(prev => ({ ...prev, accountId: accounts[0].id }));
     }
     fetchSuggestions();
@@ -54,8 +173,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
       if (descriptionRef.current) descriptionRef.current.focus();
     }, 100);
     return () => clearTimeout(timer);
-  }, [accounts, transaction]);
-
+  }, [accounts, fullTransaction]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -69,7 +187,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
 
   useEffect(() => {
     // Simple intelligence matching
-    if (!transaction && formData.description.length >= 3) {
+    if (!fullTransaction && formData.description.length >= 3) {
       const match = suggestions.find(s =>
         s.toLowerCase() === formData.description.toLowerCase() ||
         (formData.description.length >= 5 && s.toLowerCase().startsWith(formData.description.toLowerCase()))
@@ -91,7 +209,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
   };
 
   const applySuggestion = async (desc) => {
-    if (!desc || transaction) return;
+    if (!desc || fullTransaction) return;
     try {
       const response = await api.get(`/transactions/suggest/?description=${desc}`);
       if (response.data) {
@@ -125,6 +243,16 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
+    
+    // LOG 4: Validação antes de submit
+    console.log('✅ [SUBMIT] Validando formulário', {
+      description: formData.description,
+      amount: formData.amount,
+      categoryId: formData.categoryId,
+      accountId: formData.accountId,
+      isEditing: !!fullTransaction
+    });
+
     if (!formData.description || !formData.amount || !formData.categoryId || !formData.accountId) {
       toast.error("Por favor, preencha todos os campos obrigatórios.");
       return;
@@ -143,9 +271,11 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
         account_id: formData.accountId,
       };
 
+      console.log('📤 [SUBMIT] Enviando payload', payload);
+
       let response;
-      if (transaction) {
-        response = await api.put(`/transactions/${transaction.id}`, payload);
+      if (fullTransaction) {
+        response = await api.put(`/transactions/${fullTransaction.id}`, payload);
       } else {
         const createPayload = {
           ...payload,
@@ -159,17 +289,13 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
         response = await api.post('/transactions/', createPayload);
       }
 
-      toast.success(transaction ? 'Transação atualizada!' : 'Transação criada!');
+      toast.success(fullTransaction ? 'Transação atualizada!' : 'Transação criada!');
 
       if (onTransactionCreated) onTransactionCreated(response.data);
+      if (onClose) onClose();
 
-      if (transaction) {
-        if (onClose) onClose();
-      } else {
-        if (onClose) onClose();
-      }
     } catch (error) {
-      console.error('Error saving transaction:', error);
+      console.error('❌ [SUBMIT] Erro:', error);
       const detail = error.response?.data?.detail || 'Erro ao salvar transação.';
       toast.error(detail);
     }
@@ -187,15 +313,37 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
     }
   };
 
-  console.log('[TransactionForm] transaction:', transaction?.id,
-    'categoryId:', formData.categoryId,
-    'accountId:', formData.accountId);
-  console.log('[TransactionForm] categories sample:', categories?.[0]?.id,
-    'accounts sample:', accounts?.[0]?.id);
-  console.log('[TransactionForm] category match:',
-    categories.find(c => c.id === formData.categoryId));
-  console.log('[TransactionForm] account match:',
-    accounts.find(a => a.id === formData.accountId));
+  // LOG 5: Renderização
+  console.log('🖼️ [RENDER] TransactionForm renderizando', {
+    transactionId: fullTransaction?.id,
+    loading,
+    formData: {
+      description: formData.description,
+      categoryId: formData.categoryId,
+      accountId: formData.accountId
+    },
+    categoriesAvailable: categories.length,
+    accountsAvailable: accounts.length
+  });
+
+  if (loading) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="h-8 w-32 bg-muted animate-pulse rounded" />
+        <div className="space-y-4">
+          <div className="h-12 bg-muted animate-pulse rounded" />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="h-12 bg-muted animate-pulse rounded" />
+            <div className="h-12 bg-muted animate-pulse rounded" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="h-12 bg-muted animate-pulse rounded" />
+            <div className="h-12 bg-muted animate-pulse rounded" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form
@@ -285,7 +433,10 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
             {categories.length > 0 ? (
               <Select
                 value={formData.categoryId}
-                onValueChange={(val) => setFormData(prev => ({ ...prev, categoryId: val }))}
+                onValueChange={(val) => {
+                  console.log('📌 [CATEGORY_CHANGE]', val);
+                  setFormData(prev => ({ ...prev, categoryId: val }));
+                }}
                 required
               >
                 <SelectTrigger id="category" className="bg-secondary/50 border-none h-11 rounded-xl">
@@ -314,7 +465,10 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
             {accounts.length > 0 ? (
               <Select
                 value={formData.accountId}
-                onValueChange={(val) => setFormData(prev => ({ ...prev, accountId: val }))}
+                onValueChange={(val) => {
+                  console.log('📌 [ACCOUNT_CHANGE]', val);
+                  setFormData(prev => ({ ...prev, accountId: val }));
+                }}
                 required
               >
                 <SelectTrigger id="account" className="bg-secondary/50 border-none h-11 rounded-xl text-left">
@@ -334,7 +488,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
           </div>
         </div>
 
-        {!transaction && (
+        {!fullTransaction && (
           <div className="flex items-center space-x-2 pt-2">
             <Checkbox
               id="recurring"
@@ -350,7 +504,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
           </div>
         )}
 
-        {formData.isRecurring && !transaction && (
+        {formData.isRecurring && !fullTransaction && (
           <Card className="bg-secondary/20 border-dashed p-4 space-y-4 rounded-xl animate-in zoom-in-95 duration-200">
             <div className="grid gap-2">
               <Label htmlFor="recurringType">Tipo</Label>
@@ -416,7 +570,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
           type="submit"
           className="flex-1 rounded-xl h-12 text-base font-bold shadow-lg shadow-primary/20"
         >
-          {transaction ? 'Atualizar Transação' : 'Salvar Transação'}
+          {fullTransaction ? 'Atualizar Transação' : 'Salvar Transação'}
         </Button>
         <Button
           type="button"
