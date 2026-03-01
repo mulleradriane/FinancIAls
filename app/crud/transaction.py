@@ -74,7 +74,8 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
         account_id: Optional[UUID] = None,
         category_id: Optional[UUID] = None,
         start_date: Optional[dt.date] = None,
-        end_date: Optional[dt.date] = None
+        end_date: Optional[dt.date] = None,
+        search: Optional[str] = None
     ) -> List[UnifiedTransactionResponse]:
         # Get Transactions
         query = select(Transaction).filter(Transaction.user_id == user_id, Transaction.deleted_at == None)
@@ -87,6 +88,8 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
             query = query.filter(Transaction.date >= start_date)
         if end_date:
             query = query.filter(Transaction.date <= end_date)
+        if search:
+            query = query.filter(Transaction.description.ilike(f"%{search}%"))
 
         transactions = db.scalars(
             query.options(
