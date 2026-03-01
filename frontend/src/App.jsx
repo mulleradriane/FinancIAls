@@ -17,6 +17,7 @@ import Login from './pages/Login';
 import { ThemeProvider } from './context/ThemeContext';
 import { PrivacyProvider } from './context/PrivacyContext';
 import { BudgetProvider } from './context/BudgetContext';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from 'sonner';
 import './App.css';
 
@@ -66,10 +67,12 @@ function App() {
     <ThemeProvider>
       <PrivacyProvider>
         <BudgetProvider>
-          <Toaster position="top-right" richColors />
-          <Router>
-            <AppContent />
-          </Router>
+          <TooltipProvider>
+            <Toaster position="top-right" richColors />
+            <Router>
+              <AppContent />
+            </Router>
+          </TooltipProvider>
         </BudgetProvider>
       </PrivacyProvider>
     </ThemeProvider>

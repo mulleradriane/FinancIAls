@@ -18,7 +18,6 @@ import { cn } from '@/lib/utils';
 import {
   Tooltip as UiTooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
@@ -76,16 +75,14 @@ const SpendingPaceCard = ({ data, loading, year, month }) => {
         <div>
           <div className="flex items-center gap-2">
             <CardTitle className="text-xl">Ritmo de Gastos</CardTitle>
-            <TooltipProvider>
-              <UiTooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-[14px] w-[14px] text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-[250px] text-center">
-                  <p>Compara o ritmo atual dos seus gastos com o mês passado no mesmo período. Ajuda a identificar se você está gastando mais ou menos do que o esperado para este ponto do mês.</p>
-                </TooltipContent>
-              </UiTooltip>
-            </TooltipProvider>
+            <UiTooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-[14px] w-[14px] text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[250px] text-center">
+                <p>Compara o ritmo atual dos seus gastos com o mês passado no mesmo período. Ajuda a identificar se você está gastando mais ou menos do que o esperado para este ponto do mês.</p>
+              </TooltipContent>
+            </UiTooltip>
           </div>
           <CardDescription>Acompanhamento diário comparado ao mês anterior</CardDescription>
         </div>

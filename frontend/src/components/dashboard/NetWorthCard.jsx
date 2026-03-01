@@ -6,7 +6,6 @@ import PrivateValue from '@/components/ui/PrivateValue';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
@@ -49,16 +48,14 @@ const NetWorthCard = ({ netWorth, assets, liabilities, loading }) => {
 
           <div className="flex items-center gap-2">
             <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Patrimônio Líquido Total</p>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-[14px] w-[14px] text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-[250px] text-center">
-                  <p>Patrimônio Líquido = Total de Ativos (contas bancárias, investimentos) menos Total de Passivos (cartão de crédito, dívidas). Representa sua riqueza real.</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-[14px] w-[14px] text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[250px] text-center">
+                <p>Patrimônio Líquido = Total de Ativos (contas bancárias, investimentos) menos Total de Passivos (cartão de crédito, dívidas). Representa sua riqueza real.</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
           <h2 className="text-4xl font-bold mt-2 tracking-tight">
             <PrivateValue value={formatCurrency(netWorth)} />

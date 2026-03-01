@@ -8,7 +8,6 @@ import PrivateValue from '@/components/ui/PrivateValue';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
@@ -90,16 +89,14 @@ const GoalsCard = ({ goals, loading }) => {
               <Target className="h-4 w-4 text-white" />
             </div>
             <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Metas Financeiras</p>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-[14px] w-[14px] text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-[250px] text-center">
-                  <p>Progresso das suas metas financeiras ativas. O percentual é calculado com base no patrimônio atual em relação ao valor alvo definido.</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-[14px] w-[14px] text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[250px] text-center">
+                <p>Progresso das suas metas financeiras ativas. O percentual é calculado com base no patrimônio atual em relação ao valor alvo definido.</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
           <Badge variant="outline" className="text-[10px] font-bold text-muted-foreground uppercase">
             {goals?.length || 0} {goals?.length === 1 ? 'Ativa' : 'Ativas'}

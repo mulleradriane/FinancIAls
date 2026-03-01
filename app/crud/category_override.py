@@ -61,7 +61,6 @@ def apply_override(category: Any, override: Optional[CategoryOverride]) -> dict:
             "icon": category.icon,
             "color": category.color,
             "is_system": category.is_system,
-            "user_id": category.user_id,
             "monthly_budget": category.monthly_budget,
             "current_spending": getattr(category, "current_spending", 0)
         }

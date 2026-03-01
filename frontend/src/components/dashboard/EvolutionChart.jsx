@@ -16,7 +16,6 @@ import { Info } from 'lucide-react';
 import {
   Tooltip as UiTooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
@@ -49,16 +48,14 @@ const EvolutionChart = ({ data, loading }) => {
       <CardHeader className="p-8 pb-0">
         <div className="flex items-center gap-2">
           <CardTitle className="text-xl">Evolução Mensal</CardTitle>
-          <TooltipProvider>
-            <UiTooltip>
-              <TooltipTrigger asChild>
-                <Info className="h-[14px] w-[14px] text-muted-foreground cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-[250px] text-center">
-                <p>Histórico mensal de Receitas, Despesas e Resultado Líquido. Permite visualizar tendências e sazonalidades ao longo dos meses.</p>
-              </TooltipContent>
-            </UiTooltip>
-          </TooltipProvider>
+          <UiTooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-[14px] w-[14px] text-muted-foreground cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent className="max-w-[250px] text-center">
+              <p>Histórico mensal de Receitas, Despesas e Resultado Líquido. Permite visualizar tendências e sazonalidades ao longo dos meses.</p>
+            </TooltipContent>
+          </UiTooltip>
         </div>
         <CardDescription>Comparativo de receitas, despesas e resultado operacional</CardDescription>
       </CardHeader>
