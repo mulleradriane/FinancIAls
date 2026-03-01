@@ -1,10 +1,19 @@
+import uuid
 from typing import List, Optional
 from uuid import UUID
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.crud.transaction import transaction as crud_transaction
-from app.schemas.transaction import Transaction, TransactionCreate, TransactionUpdate, UnifiedTransactionResponse, UnifiedTransactionCreate
+from app.models.transaction import TransactionNature
+from app.schemas.transaction import (
+    Transaction,
+    TransactionCreate,
+    TransactionUpdate,
+    UnifiedTransactionResponse,
+    UnifiedTransactionCreate,
+    TransferCreate
+)
 from app.core.database import get_db
 from app.routers.auth import get_current_user
 from app.models.user import User
@@ -19,6 +28,47 @@ def create_transaction(
     current_user: User = Depends(get_current_user)
 ):
     return create_unified_transaction(db, obj_in=obj_in, user_id=current_user.id)
+
+@router.post("/transfer")
+def create_transfer_transaction(
+    obj_in: TransferCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    transfer_group_id = uuid.uuid4()
+
+    # 1. SAÍDA (Outflow)
+    outflow = crud_transaction.model(
+        description=obj_in.description,
+        amount=-abs(obj_in.amount),
+        date=obj_in.date,
+        account_id=obj_in.from_account_id,
+        nature=TransactionNature.TRANSFER,
+        transfer_group_id=transfer_group_id,
+        user_id=current_user.id,
+        category_id=None
+    )
+
+    # 2. ENTRADA (Inflow)
+    inflow = crud_transaction.model(
+        description=obj_in.description,
+        amount=abs(obj_in.amount),
+        date=obj_in.date,
+        account_id=obj_in.to_account_id,
+        nature=TransactionNature.TRANSFER,
+        transfer_group_id=transfer_group_id,
+        user_id=current_user.id,
+        category_id=None
+    )
+
+    db.add(outflow)
+    db.add(inflow)
+    db.commit()
+
+    return {
+        "message": "Transferência registrada com sucesso",
+        "transfer_group_id": str(transfer_group_id)
+    }
 
 @router.get("/", response_model=List[UnifiedTransactionResponse])
 def read_transactions(

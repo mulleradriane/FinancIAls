@@ -28,6 +28,14 @@ class TransactionCreate(TransactionBase):
     pass
 
 
+class TransferCreate(BaseModel):
+    description: str
+    amount: AmountDecimal
+    date: datetime.date
+    from_account_id: UUID
+    to_account_id: UUID
+
+
 class UnifiedTransactionCreate(BaseModel):
     description: str
     category_id: UUID | None = None
