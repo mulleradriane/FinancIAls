@@ -24,6 +24,7 @@ import { Card } from '@/components/ui/card';
 
 const TransactionForm = ({ categories = [], accounts = [], transaction, onTransactionCreated, onClose }) => {
   const descriptionRef = useRef(null);
+  const editSyncedRef = useRef(false);
   const [formData, setFormData] = useState({
     description: transaction ? transaction.description : '',
     amount: transaction ? transaction.amount : 0,
@@ -55,6 +56,17 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
     }, 100);
     return () => clearTimeout(timer);
   }, [accounts, transaction]);
+
+  useEffect(() => {
+    if (transaction && categories.length > 0 && accounts.length > 0 && !editSyncedRef.current) {
+      editSyncedRef.current = true;
+      setFormData(prev => ({
+        ...prev,
+        categoryId: transaction.category_id || '',
+        accountId: transaction.account_id || '',
+      }));
+    }
+  }, [transaction, categories, accounts]);
 
   useEffect(() => {
     // Simple intelligence matching
@@ -155,21 +167,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
       if (transaction) {
         if (onClose) onClose();
       } else {
-        // Clear form and keep open for next entry
-        setFormData(prev => ({
-          ...prev,
-          description: '',
-          amount: 0,
-          displayAmount: '',
-          isRecurring: false,
-          recurring: {
-            type: 'subscription',
-            frequency: 'monthly',
-            total_installments: '',
-          }
-        }));
-        if (descriptionRef.current) descriptionRef.current.focus();
-        fetchSuggestions(); // Refresh suggestions for next match
+        if (onClose) onClose();
       }
     } catch (error) {
       console.error('Error saving transaction:', error);

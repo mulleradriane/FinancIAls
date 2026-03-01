@@ -6,7 +6,6 @@ import PrivateValue from '@/components/ui/PrivateValue';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
@@ -91,16 +90,14 @@ const ForecastCard = ({ forecast, loading }) => {
             <Sparkles className="w-3 h-3 text-blue-500" />
             Projeção Financeira
           </CardTitle>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="h-[14px] w-[14px] text-muted-foreground cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-[250px] text-center">
-                <p>Projeção do patrimônio com base na média de resultado dos últimos 3 meses. É uma estimativa e pode variar conforme mudanças nos seus hábitos financeiros.</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-[14px] w-[14px] text-muted-foreground cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent className="max-w-[250px] text-center">
+              <p>Projeção do patrimônio com base na média de resultado dos últimos 3 meses. É uma estimativa e pode variar conforme mudanças nos seus hábitos financeiros.</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
         <Badge variant="outline" className={`${status.color} border flex items-center gap-1.5 py-0.5`}>
           {status.icon}
