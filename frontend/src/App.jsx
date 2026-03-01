@@ -12,6 +12,7 @@ import Projection from './pages/Projection';
 import Relatorios from './pages/Relatorios';
 import Goals from './pages/Goals';
 import Settings from './pages/Settings';
+import Importacao from './pages/Importacao';
 import Login from './pages/Login';
 import { ThemeProvider } from './context/ThemeContext';
 import { PrivacyProvider } from './context/PrivacyContext';
@@ -53,6 +54,7 @@ function AppContent() {
         <Route path="metas" element={<Goals />} />
         <Route path="relatorios" element={<Relatorios />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="importacao" element={<Importacao />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
