@@ -187,6 +187,16 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
     }
   };
 
+  console.log('[TransactionForm] transaction:', transaction?.id,
+    'categoryId:', formData.categoryId,
+    'accountId:', formData.accountId);
+  console.log('[TransactionForm] categories sample:', categories?.[0]?.id,
+    'accounts sample:', accounts?.[0]?.id);
+  console.log('[TransactionForm] category match:',
+    categories.find(c => c.id === formData.categoryId));
+  console.log('[TransactionForm] account match:',
+    accounts.find(a => a.id === formData.accountId));
+
   return (
     <form
       onSubmit={handleSubmit}
