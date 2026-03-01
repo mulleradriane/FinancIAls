@@ -280,6 +280,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
           <div className="grid gap-2">
             <Label htmlFor="category">Categoria</Label>
             <Select
+              key={`category-${formData.categoryId}`}
               value={formData.categoryId}
               onValueChange={(val) => setFormData(prev => ({ ...prev, categoryId: val }))}
               required
@@ -305,6 +306,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
           <div className="grid gap-2">
             <Label htmlFor="account">Conta</Label>
             <Select
+              key={`account-${formData.accountId}`}
               value={formData.accountId}
               onValueChange={(val) => setFormData(prev => ({ ...prev, accountId: val }))}
               required

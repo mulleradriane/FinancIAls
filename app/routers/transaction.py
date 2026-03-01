@@ -351,8 +351,8 @@ def read_transactions(
         search=search
     )
 
-@router.get("/unique-descriptions", response_model=List[str])
-def get_unique_descriptions(
+@router.get("/descriptions/", response_model=List[str])
+def get_descriptions(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
