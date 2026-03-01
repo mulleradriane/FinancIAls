@@ -24,7 +24,6 @@ import { Card } from '@/components/ui/card';
 
 const TransactionForm = ({ categories = [], accounts = [], transaction, onTransactionCreated, onClose }) => {
   const descriptionRef = useRef(null);
-  const editSyncedRef = useRef(false);
   const [formData, setFormData] = useState({
     description: transaction ? transaction.description : '',
     amount: transaction ? transaction.amount : 0,
@@ -57,20 +56,6 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
     return () => clearTimeout(timer);
   }, [accounts, transaction]);
 
-  useEffect(() => {
-    editSyncedRef.current = false;
-  }, [transaction]);
-
-  useEffect(() => {
-    if (transaction && categories.length > 0 && accounts.length > 0 && !editSyncedRef.current) {
-      editSyncedRef.current = true;
-      setFormData(prev => ({
-        ...prev,
-        categoryId: transaction.category_id || '',
-        accountId: transaction.account_id || '',
-      }));
-    }
-  }, [transaction, categories, accounts]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {

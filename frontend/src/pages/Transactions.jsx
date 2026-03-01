@@ -479,12 +479,16 @@ const Transactions = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={(open) => {
+        setIsModalOpen(open);
+        if (!open) setEditingTransaction(null);
+      }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle>{editingTransaction ? "Editar Transação" : "Nova Transação"}</DialogTitle>
           </DialogHeader>
           <TransactionForm
+            key={editingTransaction?.id ?? 'new'}
             categories={categories}
             accounts={accounts}
             transaction={editingTransaction}
