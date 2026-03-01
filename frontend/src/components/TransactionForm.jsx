@@ -58,6 +58,10 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
   }, [accounts, transaction]);
 
   useEffect(() => {
+    editSyncedRef.current = false;
+  }, [transaction]);
+
+  useEffect(() => {
     if (transaction && categories.length > 0 && accounts.length > 0 && !editSyncedRef.current) {
       editSyncedRef.current = true;
       setFormData(prev => ({
@@ -67,6 +71,16 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
       }));
     }
   }, [transaction, categories, accounts]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (descriptionRef.current && !descriptionRef.current.closest('.relative')?.contains(e.target)) {
+        setOpenSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     // Simple intelligence matching
@@ -219,34 +233,28 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
           </div>
 
           {openSuggestions && formData.description && filteredSuggestions.length > 0 && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setOpenSuggestions(false)}
-              />
-              <div className="absolute top-[calc(100%+4px)] left-0 w-full z-50 bg-popover text-popover-foreground rounded-xl border shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
-                <Command className="bg-transparent">
-                  <CommandList>
-                    <CommandGroup heading="Sugestões">
-                      {filteredSuggestions.map((s) => (
-                        <CommandItem
-                          key={s}
-                          value={s}
-                          onSelect={() => {
-                            setFormData(prev => ({ ...prev, description: s }));
-                            applySuggestion(s);
-                            setOpenSuggestions(false);
-                          }}
-                          className="cursor-pointer py-3"
-                        >
-                          {s}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </div>
-            </>
+            <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover text-popover-foreground rounded-xl border shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
+              <Command className="bg-transparent">
+                <CommandList>
+                  <CommandGroup heading="Sugestões">
+                    {filteredSuggestions.map((s) => (
+                      <CommandItem
+                        key={s}
+                        value={s}
+                        onSelect={() => {
+                          setFormData(prev => ({ ...prev, description: s }));
+                          applySuggestion(s);
+                          setOpenSuggestions(false);
+                        }}
+                        className="cursor-pointer py-3"
+                      >
+                        {s}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </div>
           )}
         </div>
 
@@ -279,49 +287,55 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
         <div className="grid grid-cols-2 gap-4">
           <div className="grid gap-2">
             <Label htmlFor="category">Categoria</Label>
-            <Select
-              key={`category-${formData.categoryId}`}
-              value={formData.categoryId}
-              onValueChange={(val) => setFormData(prev => ({ ...prev, categoryId: val }))}
-              required
-            >
-              <SelectTrigger id="category" className="bg-secondary/50 border-none h-11 rounded-xl">
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories
-                  .filter(cat => cat.is_system === false && !['investimento', 'investimentos'].includes(cat.name.toLowerCase()))
-                  .map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{cat.icon || '💰'}</span>
-                      <span>{cat.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {categories.length > 0 ? (
+              <Select
+                value={formData.categoryId}
+                onValueChange={(val) => setFormData(prev => ({ ...prev, categoryId: val }))}
+                required
+              >
+                <SelectTrigger id="category" className="bg-secondary/50 border-none h-11 rounded-xl">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories
+                    .filter(cat => cat.is_system === false && !['investimento', 'investimentos'].includes(cat.name.toLowerCase()))
+                    .map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{cat.icon || '💰'}</span>
+                        <span>{cat.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="h-11 rounded-xl bg-secondary/50 animate-pulse" />
+            )}
           </div>
 
           <div className="grid gap-2">
             <Label htmlFor="account">Conta</Label>
-            <Select
-              key={`account-${formData.accountId}`}
-              value={formData.accountId}
-              onValueChange={(val) => setFormData(prev => ({ ...prev, accountId: val }))}
-              required
-            >
-              <SelectTrigger id="account" className="bg-secondary/50 border-none h-11 rounded-xl text-left">
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {(accounts || []).map((acc) => (
-                  <SelectItem key={acc.id} value={acc.id}>
-                    {acc.name} ({formatCurrencySimple(acc.balance)})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {accounts.length > 0 ? (
+              <Select
+                value={formData.accountId}
+                onValueChange={(val) => setFormData(prev => ({ ...prev, accountId: val }))}
+                required
+              >
+                <SelectTrigger id="account" className="bg-secondary/50 border-none h-11 rounded-xl text-left">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(accounts || []).map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>
+                      {acc.name} ({formatCurrencySimple(acc.balance)})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="h-11 rounded-xl bg-secondary/50 animate-pulse" />
+            )}
           </div>
         </div>
 
