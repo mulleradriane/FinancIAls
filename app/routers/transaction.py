@@ -335,6 +335,7 @@ def read_transactions(
     category_id: Optional[UUID] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
+    search: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -346,7 +347,8 @@ def read_transactions(
         account_id=account_id,
         category_id=category_id,
         start_date=start_date,
-        end_date=end_date
+        end_date=end_date,
+        search=search
     )
 
 @router.get("/unique-descriptions", response_model=List[str])

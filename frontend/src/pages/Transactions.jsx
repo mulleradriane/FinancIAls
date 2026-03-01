@@ -3,9 +3,10 @@ import api from '@/api/api';
 import { toast } from 'sonner';
 import TransactionForm from '@/components/TransactionForm';
 import TransactionList from '@/components/TransactionList';
-import { Plus, Filter, X, ArrowUpCircle, ArrowDownCircle, Wallet, SearchX, Download, Calendar } from 'lucide-react';
+import { Plus, Filter, X, ArrowUpCircle, ArrowDownCircle, Wallet, SearchX, Download, Calendar, Search, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -43,9 +44,11 @@ const Transactions = () => {
   const [highlightId, setHighlightId] = useState(null);
 
   // Filters
-  const [period, setPeriod] = useState('month');
-  const [accountId, setAccountId] = useState('all');
-  const [categoryId, setCategoryId] = useState('all');
+  const [period, setPeriod] = useState('30days');
+  const [accountIds, setAccountIds] = useState([]);
+  const [categoryIds, setCategoryIds] = useState([]);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -71,8 +74,9 @@ const Transactions = () => {
     try {
       setLoading(true);
       const params = {};
-      if (accountId !== 'all') params.account_id = accountId;
-      if (categoryId !== 'all') params.category_id = categoryId;
+      if (accountIds.length === 1) params.account_id = accountIds[0];
+      if (categoryIds.length === 1) params.category_id = categoryIds[0];
+      if (debouncedSearch) params.search = debouncedSearch;
 
       let start = '';
       let end = '';
@@ -130,7 +134,17 @@ const Transactions = () => {
       if (end) params.end_date = end;
 
       const response = await api.get('/transactions/', { params });
-      setTransactions(response.data);
+      let data = response.data;
+
+      // Client-side filtering if multiple accounts/categories are selected
+      if (accountIds.length > 1) {
+        data = data.filter(t => accountIds.includes(t.account_id));
+      }
+      if (categoryIds.length > 1) {
+        data = data.filter(t => categoryIds.includes(t.category_id));
+      }
+
+      setTransactions(data);
     } catch (error) {
       console.error('Error fetching transactions:', error);
     } finally {
@@ -144,8 +158,15 @@ const Transactions = () => {
   }, []);
 
   useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  useEffect(() => {
     fetchTransactions();
-  }, [period, accountId, categoryId, startDate, endDate]);
+  }, [period, accountIds, categoryIds, debouncedSearch, startDate, endDate]);
 
   const handleEdit = (transaction) => {
     setEditingTransaction(transaction);
@@ -161,9 +182,10 @@ const Transactions = () => {
   };
 
   const clearFilters = () => {
-    setPeriod('all');
-    setAccountId('all');
-    setCategoryId('all');
+    setPeriod('30days');
+    setAccountIds([]);
+    setCategoryIds([]);
+    setSearch('');
     setStartDate('');
     setEndDate('');
   };
@@ -305,7 +327,28 @@ const Transactions = () => {
       {/* Barra de Filtros */}
       <Card className="border-none shadow-sm bg-secondary/30">
         <CardContent className="p-6">
-          <div className="flex flex-col lg:flex-row items-end gap-4">
+          <div className="flex flex-col lg:flex-row items-end gap-4 flex-wrap">
+            <div className="w-full lg:w-[260px] space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Busca</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por descrição..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="bg-background rounded-xl border-none shadow-sm pl-9 pr-9 h-10"
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="w-full lg:w-auto space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Período</label>
               <Popover>
@@ -350,30 +393,83 @@ const Transactions = () => {
 
             <div className="w-full lg:w-auto space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Conta</label>
-              <Select value={accountId} onValueChange={setAccountId}>
-                <SelectTrigger className="w-full lg:w-[200px] bg-background rounded-xl border-none shadow-sm">
-                  <SelectValue placeholder="Todas as Contas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as Contas</SelectItem>
-                  {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full lg:w-[200px] bg-background rounded-xl border-none shadow-sm justify-between font-normal h-10"
+                  >
+                    <span className="truncate">
+                      {accountIds.length === 0
+                        ? 'Todas as Contas'
+                        : `${accountIds.length} conta${accountIds.length > 1 ? 's' : ''} selecionada${accountIds.length > 1 ? 's' : ''}`}
+                    </span>
+                    <ChevronDown className="ml-2 h-4 w-4 opacity-50 shrink-0" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-2" align="start">
+                  <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                    {accounts.map(acc => (
+                      <div
+                        key={acc.id}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted cursor-pointer"
+                        onClick={() => {
+                          setAccountIds(prev =>
+                            prev.includes(acc.id)
+                              ? prev.filter(id => id !== acc.id)
+                              : [...prev, acc.id]
+                          );
+                        }}
+                      >
+                        <Checkbox checked={accountIds.includes(acc.id)} />
+                        <span className="text-sm truncate">{acc.name}</span>
+                      </div>
+                    ))}
+                    {accounts.length === 0 && <p className="text-xs text-muted-foreground p-2">Nenhuma conta encontrada</p>}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="w-full lg:w-auto space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Categoria</label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger className="w-full lg:w-[200px] bg-background rounded-xl border-none shadow-sm">
-                  <SelectValue placeholder="Todas as Categorias" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as Categorias</SelectItem>
-                  {categories
-                    .filter(cat => !cat.is_system)
-                    .map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full lg:w-[200px] bg-background rounded-xl border-none shadow-sm justify-between font-normal h-10"
+                  >
+                    <span className="truncate">
+                      {categoryIds.length === 0
+                        ? 'Todas as Categorias'
+                        : `${categoryIds.length} categoria${categoryIds.length > 1 ? 's' : ''} selecionada${categoryIds.length > 1 ? 's' : ''}`}
+                    </span>
+                    <ChevronDown className="ml-2 h-4 w-4 opacity-50 shrink-0" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-2" align="start">
+                  <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                    {categories
+                      .filter(cat => !cat.is_system)
+                      .map(cat => (
+                        <div
+                          key={cat.id}
+                          className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted cursor-pointer"
+                          onClick={() => {
+                            setCategoryIds(prev =>
+                              prev.includes(cat.id)
+                                ? prev.filter(id => id !== cat.id)
+                                : [...prev, cat.id]
+                            );
+                          }}
+                        >
+                          <Checkbox checked={categoryIds.includes(cat.id)} />
+                          <span className="text-sm truncate">{cat.name}</span>
+                        </div>
+                      ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <Button variant="ghost" onClick={clearFilters} className="rounded-xl h-10 px-4 hover:bg-background">
