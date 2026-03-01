@@ -10,6 +10,7 @@ import {
   Target,
   Tags,
   FileText,
+  Upload,
   Sun,
   Moon,
   Eye,
@@ -37,6 +38,7 @@ const menuItems = [
   { path: '/metas', label: 'Metas', icon: Target },
   { path: '/categories', label: 'Categorias', icon: Tags },
   { path: '/relatorios', label: 'Relatórios', icon: FileText },
+  { path: '/importacao', label: 'Importar', icon: Upload },
 ];
 
 export function Sidebar() {
