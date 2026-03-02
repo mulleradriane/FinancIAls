@@ -14,11 +14,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   TrendingUp, TrendingDown, PieChartIcon, BarChart3,
-  ArrowUpRight, ArrowDownRight, ChevronRight, Calculator, AlertCircle
+  ArrowUpRight, ArrowDownRight, ChevronRight, Calculator, AlertCircle,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import PrivateValue from '@/components/ui/PrivateValue';
+import InfoTooltip from '@/components/ui/InfoTooltip';
 import { usePrivacy } from '@/context/PrivacyContext';
 import SankeyDiagram from '@/components/reports/SankeyDiagram';
 
@@ -41,6 +43,7 @@ const Relatorios = () => {
   const [projectionMonths, setProjectionMonths] = useState(6);
   const [projectionData, setProjectionData] = useState(null);
   const [projectionLoading, setProjectionLoading] = useState(false);
+  const [isInfoExpanded, setIsInfoExpanded] = useState(false);
 
   // Constants
   const monthNames = [
@@ -625,6 +628,31 @@ const Relatorios = () => {
                   </Alert>
                 )}
 
+                <div className="border border-blue-500/20 bg-blue-500/5 rounded-2xl p-4">
+                  <button
+                    onClick={() => setIsInfoExpanded(!isInfoExpanded)}
+                    className="flex items-center justify-between w-full text-blue-800 font-bold"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span>ℹ️</span> Como funciona esta projeção?
+                    </span>
+                    {isInfoExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+
+                  {isInfoExpanded && (
+                    <div className="mt-4 text-sm text-blue-700/80 space-y-2 animate-in fade-in slide-in-from-top-2">
+                      <p>Esta projeção estima sua evolução financeira com base em:</p>
+                      <ul className="space-y-1 ml-1">
+                        <li>• <strong>Receita:</strong> suas recorrências de receita cadastradas ou, se não houver, a média dos últimos 3 meses de receitas reais.</li>
+                        <li>• <strong>Despesas fixas:</strong> assinaturas e parcelamentos ativos cadastrados em Recorrentes.</li>
+                        <li>• <strong>Despesas variáveis:</strong> média dos seus gastos variáveis dos últimos 3 meses.</li>
+                        <li>• <strong>Saldo inicial:</strong> saldo atual consolidado de todas as suas contas.</li>
+                      </ul>
+                      <p className="pt-2 font-medium">Os valores são estimativas. Quanto mais recorrências você cadastrar, mais precisa será a projeção.</p>
+                    </div>
+                  )}
+                </div>
+
                 <Card className="border-none shadow-md rounded-3xl overflow-hidden">
                   <CardHeader>
                     <CardTitle className="text-lg font-black">Evolução Projetada</CardTitle>
@@ -714,10 +742,30 @@ const Relatorios = () => {
                         <thead className="text-xs uppercase bg-secondary/30 font-black">
                           <tr>
                             <th className="px-6 py-4">Mês</th>
-                            <th className="px-6 py-4">Receita</th>
-                            <th className="px-6 py-4">Despesas</th>
-                            <th className="px-6 py-4">Sobra Mensal</th>
-                            <th className="px-6 py-4">Saldo Projetado</th>
+                            <th className="px-6 py-4">
+                              <div className="flex items-center gap-1.5">
+                                Receita
+                                <InfoTooltip content="Receita esperada para o mês. Se você tem receitas recorrentes cadastradas (ex: salário), usa esse valor. Caso contrário, usa a média das receitas dos últimos 3 meses." />
+                              </div>
+                            </th>
+                            <th className="px-6 py-4">
+                              <div className="flex items-center gap-1.5">
+                                Despesas
+                                <InfoTooltip content="Soma das despesas fixas recorrentes + parcelamentos ativos + estimativa de gastos variáveis (média dos últimos 3 meses)." />
+                              </div>
+                            </th>
+                            <th className="px-6 py-4">
+                              <div className="flex items-center gap-1.5">
+                                Sobra Mensal
+                                <InfoTooltip content="Quanto deve sobrar no mês: Receita − Despesas. Valor positivo indica que você vai gastar menos do que recebe naquele mês." />
+                              </div>
+                            </th>
+                            <th className="px-6 py-4">
+                              <div className="flex items-center gap-1.5">
+                                Saldo Projetado
+                                <InfoTooltip content="Saldo acumulado estimado ao final do mês, considerando seu saldo atual mais todas as sobras mensais anteriores." />
+                              </div>
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-secondary/20">
