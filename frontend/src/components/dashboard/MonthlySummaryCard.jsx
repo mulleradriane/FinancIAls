@@ -4,7 +4,7 @@ import { CircleArrowUp, CircleArrowDown, Scale, PiggyBank } from 'lucide-react';
 import InfoTooltip from '@/components/ui/InfoTooltip';
 import PrivateValue from '@/components/ui/PrivateValue';
 
-const MonthlySummaryCard = ({ data }) => {
+const MonthlySummaryCard = ({ data, loading }) => {
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -23,17 +23,28 @@ const MonthlySummaryCard = ({ data }) => {
   const savingsRate = calculateSavingsRate();
   const netResult = (data?.totalIncome || 0) - (data?.totalExpense || 0);
 
+  const currentMonthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date());
+  const capitalizedMonth = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
+
+  if (loading) {
+    return (
+      <Card className="border-none shadow-md animate-pulse">
+        <div className="h-[200px] w-full bg-secondary/10 p-8 rounded-2xl" />
+      </Card>
+    );
+  }
+
   return (
-    <Card className="border-none shadow-sm">
+    <Card className="border-none shadow-md rounded-2xl">
       <CardContent className="p-8">
         <div className="flex items-center gap-2 mb-6">
           <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-            Resultado Parcial
+            Resumo de {capitalizedMonth}
           </p>
           <InfoTooltip content="O resultado pode ser negativo no início do mês porque as despesas chegam antes do salário. Este valor fica mais preciso no final do mês." />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-x-8 gap-y-6">
           <div className="space-y-4">
             <div className="p-2 w-fit bg-success/10 rounded-lg">
               <CircleArrowUp className="h-5 w-5 text-success" />
