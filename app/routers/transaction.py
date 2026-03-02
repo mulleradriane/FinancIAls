@@ -24,6 +24,7 @@ from app.core.database import get_db
 from app.routers.auth import get_current_user
 from app.models.user import User
 from app.services.transaction_service import create_unified_transaction
+from app.services.similarity_service import detect_recurring_matches
 
 router = APIRouter()
 
@@ -272,7 +273,14 @@ def confirm_import_csv(
 
         db.add_all(transactions_to_add)
         db.commit()
-        return {"imported": len(transactions_to_add)}
+
+        # Detect matches with recurring expenses
+        recurring_matches = detect_recurring_matches(db, current_user.id, transactions_to_add)
+
+        return {
+            "imported": len(transactions_to_add),
+            "recurring_matches": recurring_matches
+        }
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=f"Erro ao importar transações: {str(e)}")
