@@ -30,15 +30,10 @@ import logoDark from '@/assets/images/logo-dark.png';
 const menuItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { path: '/transactions', label: 'Transações', icon: ArrowRightLeft },
-  { path: '/fluxo-caixa', label: 'Fluxo de Caixa', icon: BarChart3 },
   { path: '/contas', label: 'Contas', icon: Landmark },
-  { path: '/patrimonio', label: 'Patrimônio', icon: TrendingUp },
   { path: '/recorrentes', label: 'Recorrentes', icon: RefreshCw },
-  { path: '/projecao', label: 'Projeção', icon: TrendingUp },
   { path: '/metas', label: 'Metas', icon: Target },
-  { path: '/categories', label: 'Categorias', icon: Tags },
   { path: '/relatorios', label: 'Relatórios', icon: FileText },
-  { path: '/importacao', label: 'Importar', icon: Upload },
 ];
 
 export function Sidebar() {
