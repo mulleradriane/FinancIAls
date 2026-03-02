@@ -3,7 +3,7 @@ import api from '@/api/api';
 import analyticsApi from '@/api/analyticsApi';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Line, ComposedChart
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,9 +11,10 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   TrendingUp, TrendingDown, PieChartIcon, BarChart3,
-  ArrowUpRight, ArrowDownRight, ChevronRight, Calculator
+  ArrowUpRight, ArrowDownRight, ChevronRight, Calculator, AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -35,6 +36,11 @@ const Relatorios = () => {
   const [categories, setCategories] = useState([]);
   const [summary, setSummary] = useState(null);
   const [periodSummary, setPeriodSummary] = useState(null);
+
+  // Projection States
+  const [projectionMonths, setProjectionMonths] = useState(6);
+  const [projectionData, setProjectionData] = useState(null);
+  const [projectionLoading, setProjectionLoading] = useState(false);
 
   // Constants
   const monthNames = [
@@ -84,6 +90,25 @@ const Relatorios = () => {
     fetchData();
   }, [activeTab, month, year, quarter]);
 
+  useEffect(() => {
+    const fetchProjection = async () => {
+      if (activeTab !== 'projecao') return;
+
+      setProjectionLoading(true);
+      try {
+        const res = await analyticsApi.getProjection(projectionMonths);
+        setProjectionData(res.data);
+      } catch (error) {
+        console.error('Error fetching projection:', error);
+        toast.error('Erro ao carregar projeção financeira');
+      } finally {
+        setProjectionLoading(false);
+      }
+    };
+
+    fetchProjection();
+  }, [activeTab, projectionMonths]);
+
   // Dados para o gráfico de pizza - com tratamento seguro
   const chartData = useMemo(() => {
     // Verifica se existe expenses_by_category e se é um objeto
@@ -104,6 +129,11 @@ const Relatorios = () => {
       style: 'currency',
       currency: 'BRL',
     }).format(value);
+  };
+
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return new Intl.DateTimeFormat('pt-BR', { month: 'short', year: '2-digit' }).format(date);
   };
 
   const SummaryCard = ({ title, value, variant = 'neutral', isPercentage = false }) => {
@@ -195,14 +225,16 @@ const Relatorios = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
-          <TabsList className="grid grid-cols-3 w-full md:w-[350px] bg-secondary/30 rounded-xl p-1">
+          <TabsList className="grid grid-cols-4 w-full md:w-[450px] bg-secondary/30 rounded-xl p-1">
             <TabsTrigger value="mensal" className="rounded-lg font-bold data-[state=active]:bg-background shadow-sm">Mensal</TabsTrigger>
             <TabsTrigger value="trimestral" className="rounded-lg font-bold data-[state=active]:bg-background shadow-sm">Trimestral</TabsTrigger>
             <TabsTrigger value="anual" className="rounded-lg font-bold data-[state=active]:bg-background shadow-sm">Anual</TabsTrigger>
+            <TabsTrigger value="projecao" className="rounded-lg font-bold data-[state=active]:bg-background shadow-sm">Projeção</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
+      {activeTab !== 'projecao' && (
       <Card className="border-none shadow-md rounded-2xl bg-secondary/10 overflow-hidden">
         <CardContent className="p-4 flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
@@ -247,6 +279,7 @@ const Relatorios = () => {
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* SankeyDiagram is hidden for now */}
       {/*
@@ -552,6 +585,163 @@ const Relatorios = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="projecao" className="space-y-8 animate-in fade-in slide-in-from-bottom-2">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <h2 className="text-xl font-black">Projeção de Saldo</h2>
+              <div className="flex bg-secondary/30 p-1 rounded-xl h-11">
+                {[3, 6, 12].map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setProjectionMonths(m)}
+                    className={`px-6 rounded-lg font-bold text-sm transition-all ${
+                      projectionMonths === m
+                        ? 'bg-background shadow-sm text-primary'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {m}M
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {projectionLoading && !projectionData ? (
+              <div className="space-y-6">
+                <Skeleton className="h-20 w-full rounded-2xl" />
+                <Skeleton className="h-[320px] w-full rounded-2xl" />
+                <Skeleton className="h-64 w-full rounded-2xl" />
+              </div>
+            ) : (
+              <>
+                {!projectionData?.has_recurring_income && (
+                  <Alert className="border-amber-500/50 bg-amber-500/5 rounded-2xl">
+                    <AlertCircle className="h-5 w-5 text-amber-600" />
+                    <AlertTitle className="text-amber-800 font-bold">Aviso</AlertTitle>
+                    <AlertDescription className="text-amber-700/80">
+                      ⚠️ Adicione receitas recorrentes para melhorar a precisão
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <Card className="border-none shadow-md rounded-3xl overflow-hidden">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-black">Evolução Projetada</CardTitle>
+                    <CardDescription>Receitas e Despesas estimadas ({projectionMonths} meses)</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[320px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart
+                          data={projectionData?.projections?.map(p => ({
+                            name: formatDate(p.month),
+                            receita: p.income,
+                            despesas: p.recurring_expenses + p.installments + p.variable_expenses,
+                            saldo: p.projected_balance
+                          }))}
+                          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888820" />
+                          <XAxis
+                            dataKey="name"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 12, fontWeight: 700 }}
+                          />
+                          <YAxis
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 12, fontWeight: 700 }}
+                            tickFormatter={(value) => isPrivate ? '•••' : `R$${value >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
+                          />
+                          <RechartsTooltip
+                            cursor={{ fill: '#88888810' }}
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <Card className="p-4 shadow-2xl border-none bg-background/95 backdrop-blur-md rounded-2xl min-w-[180px]">
+                                    <p className="font-black text-xs uppercase text-muted-foreground mb-3">{payload[0].payload.name}</p>
+                                    <div className="space-y-2">
+                                      <div className="flex justify-between items-center gap-4">
+                                        <span className="text-xs font-bold text-emerald-500">Receita</span>
+                                        <span className="font-black text-sm">
+                                          <PrivateValue value={formatCurrency(payload[0].value)} />
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between items-center gap-4">
+                                        <span className="text-xs font-bold text-red-500">Despesas</span>
+                                        <span className="font-black text-sm">
+                                          <PrivateValue value={formatCurrency(payload[1].value)} />
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between items-center gap-4 pt-2 border-t">
+                                        <span className="text-xs font-bold text-blue-500">Saldo</span>
+                                        <span className="font-black text-sm">
+                                          <PrivateValue value={formatCurrency(payload[2].value)} />
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </Card>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Legend verticalAlign="top" align="right" />
+                          <Bar dataKey="receita" name="Receita" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} />
+                          <Bar dataKey="despesas" name="Despesas" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={30} />
+                          <Line
+                            type="monotone"
+                            dataKey="saldo"
+                            name="Saldo Projetado"
+                            stroke="#3b82f6"
+                            strokeWidth={3}
+                            dot={{ r: 4, fill: "#3b82f6", strokeWidth: 2, stroke: "#fff" }}
+                          />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-none shadow-md rounded-3xl overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead className="text-xs uppercase bg-secondary/30 font-black">
+                          <tr>
+                            <th className="px-6 py-4">Mês</th>
+                            <th className="px-6 py-4">Receita</th>
+                            <th className="px-6 py-4">Despesas</th>
+                            <th className="px-6 py-4">Saldo Projetado</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-secondary/20">
+                          {projectionData?.projections?.map((p, idx) => (
+                            <tr key={idx} className="hover:bg-secondary/10 transition-colors">
+                              <td className="px-6 py-4 font-bold uppercase">{formatDate(p.month)}</td>
+                              <td className="px-6 py-4 font-black text-emerald-500">
+                                <PrivateValue value={formatCurrency(p.income)} />
+                              </td>
+                              <td className="px-6 py-4 font-black text-red-500">
+                                <PrivateValue value={formatCurrency(p.recurring_expenses + p.installments + p.variable_expenses)} />
+                              </td>
+                              <td className={cn(
+                                "px-6 py-4 font-black",
+                                p.projected_balance >= 0 ? "text-emerald-500" : "text-red-500"
+                              )}>
+                                <PrivateValue value={formatCurrency(p.projected_balance)} />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </TabsContent>
         </Tabs>
       )}
