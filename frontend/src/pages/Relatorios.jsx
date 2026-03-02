@@ -716,31 +716,42 @@ const Relatorios = () => {
                             <th className="px-6 py-4">Mês</th>
                             <th className="px-6 py-4">Receita</th>
                             <th className="px-6 py-4">Despesas</th>
+                            <th className="px-6 py-4">Sobra Mensal</th>
                             <th className="px-6 py-4">Saldo Projetado</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-secondary/20">
-                          {projectionData?.projections?.map((p, idx) => (
-                            <tr key={idx} className="hover:bg-secondary/10 transition-colors">
-                              <td className="px-6 py-4 font-bold uppercase">{formatDate(p.month)}</td>
-                              <td className="px-6 py-4 font-black text-emerald-500">
-                                <PrivateValue value={formatCurrency(parseFloat(p.income) || 0)} />
-                              </td>
-                              <td className="px-6 py-4 font-black text-red-500">
-                                <PrivateValue value={formatCurrency(
-                                  (parseFloat(p.recurring_expenses) || 0) +
-                                  (parseFloat(p.installments) || 0) +
-                                  (parseFloat(p.variable_expenses) || 0)
-                                )} />
-                              </td>
-                              <td className={cn(
-                                "px-6 py-4 font-black",
-                                (parseFloat(p.projected_balance) || 0) >= 0 ? "text-emerald-500" : "text-red-500"
-                              )}>
-                                <PrivateValue value={formatCurrency(parseFloat(p.projected_balance) || 0)} />
-                              </td>
-                            </tr>
-                          ))}
+                          {projectionData?.projections?.map((p, idx) => {
+                            const income = parseFloat(p.income) || 0;
+                            const expenses = (parseFloat(p.recurring_expenses) || 0) +
+                                            (parseFloat(p.installments) || 0) +
+                                            (parseFloat(p.variable_expenses) || 0);
+                            const leftover = income - expenses;
+
+                            return (
+                              <tr key={idx} className="hover:bg-secondary/10 transition-colors">
+                                <td className="px-6 py-4 font-bold uppercase">{formatDate(p.month)}</td>
+                                <td className="px-6 py-4 font-black text-emerald-500">
+                                  <PrivateValue value={formatCurrency(income)} />
+                                </td>
+                                <td className="px-6 py-4 font-black text-red-500">
+                                  <PrivateValue value={formatCurrency(expenses)} />
+                                </td>
+                                <td className={cn(
+                                  "px-6 py-4 font-black",
+                                  leftover >= 0 ? "text-emerald-500" : "text-red-500"
+                                )}>
+                                  <PrivateValue value={formatCurrency(leftover)} />
+                                </td>
+                                <td className={cn(
+                                  "px-6 py-4 font-black",
+                                  (parseFloat(p.projected_balance) || 0) >= 0 ? "text-emerald-500" : "text-red-500"
+                                )}>
+                                  <PrivateValue value={formatCurrency(parseFloat(p.projected_balance) || 0)} />
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
