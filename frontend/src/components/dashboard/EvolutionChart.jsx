@@ -38,6 +38,18 @@ const EvolutionChart = ({ data, loading }) => {
     );
   }
 
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const filteredData = (data || []).filter(item => {
+    const itemDate = new Date(item.month);
+    // Include if year is less than current year OR
+    // if year is same and month is less than or equal to current month
+    return itemDate.getFullYear() < currentYear ||
+           (itemDate.getFullYear() === currentYear && itemDate.getMonth() <= currentMonth);
+  });
+
   return (
     <Card className="border-none shadow-md rounded-2xl">
       <CardHeader className="p-8 pb-0">
@@ -50,7 +62,7 @@ const EvolutionChart = ({ data, loading }) => {
       <CardContent className="p-8">
         <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <ComposedChart data={filteredData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted-foreground) / 0.1)" />
               <XAxis
                 dataKey="month"
