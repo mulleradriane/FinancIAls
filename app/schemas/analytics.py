@@ -86,3 +86,11 @@ class MonthlyProjection(BaseModel):
 class ProjectionResponse(BaseModel):
     projections: List[MonthlyProjection]
     has_recurring_income: bool
+
+class MonthlyCommitment(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    gasto_ate_hoje: Decimal
+    recorrentes_futuras: Decimal
+    receita_esperada: Decimal
+    percentual_comprometido: Optional[float]
+    saldo_projetado: Decimal
