@@ -9,9 +9,22 @@ from app.schemas.transaction import UnifiedTransactionCreate, TransactionCreate
 from app.schemas.recurring_expense import RecurringExpenseCreate
 from app.models.recurring_expense import RecurringType
 from app.models.transaction import TransactionNature
+from app.models.category import Category, CategoryType
 from uuid import UUID
+import logging
+
+logger = logging.getLogger(__name__)
 
 def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate, user_id: UUID):
+    # Resolve nature based on category type if available
+    if obj_in.category_id:
+        category = db.get(Category, obj_in.category_id)
+        if category:
+            target_nature = TransactionNature.INCOME if category.type == CategoryType.income else TransactionNature.EXPENSE
+            if obj_in.nature != target_nature:
+                logger.warning(f"Inconsistência: transação {obj_in.description} com nature {obj_in.nature} mas categoria de {category.type}. Corrigindo...")
+                obj_in.nature = target_nature
+
     if not obj_in.is_recurring:
         # Handle Transfer and Investment (Dual Entry)
         if obj_in.nature in [TransactionNature.TRANSFER, TransactionNature.INVESTMENT] and obj_in.to_account_id:
@@ -67,10 +80,15 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate, us
         end_date = obj_in.date + relativedelta(months=obj_in.total_installments - 1)
 
     # Create RecurringExpense master record
+    # Ensure amount in master record is positive for income
+    recurring_amount = obj_in.amount
+    if obj_in.nature == TransactionNature.INCOME:
+        recurring_amount = abs(obj_in.amount)
+
     recurring_in = RecurringExpenseCreate(
         description=obj_in.description,
         category_id=obj_in.category_id,
-        amount=obj_in.amount,
+        amount=recurring_amount,
         type=obj_in.recurring_type,
         frequency=obj_in.frequency,
         total_installments=obj_in.total_installments,
@@ -81,6 +99,9 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate, us
         account_id=obj_in.account_id
     )
     db_recurring = crud_recurring_expense.create_with_user(db, obj_in=recurring_in, user_id=user_id)
+
+    # Determine amount multiplier for associated transactions
+    multiplier = 1 if obj_in.nature == TransactionNature.INCOME else -1
 
     # Create associated transactions
     if obj_in.recurring_type == RecurringType.installment:
@@ -107,7 +128,7 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate, us
             transaction_in = TransactionCreate(
                 description=f"{obj_in.description} ({i}/{num_installments})",
                 category_id=obj_in.category_id,
-                amount=-abs(current_installment_amount), # Recurring usually expense
+                amount=multiplier * abs(current_installment_amount),
                 nature=obj_in.nature,
                 date=installment_date,
                 recurring_expense_id=db_recurring.id,
@@ -123,7 +144,7 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate, us
         transaction_in = TransactionCreate(
             description=obj_in.description,
             category_id=obj_in.category_id,
-            amount=-abs(obj_in.amount),
+            amount=multiplier * abs(obj_in.amount),
             nature=obj_in.nature,
             date=obj_in.date,
             recurring_expense_id=db_recurring.id,
