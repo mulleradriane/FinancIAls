@@ -636,9 +636,11 @@ const Relatorios = () => {
                         <ComposedChart
                           data={projectionData?.projections?.map(p => ({
                             name: formatDate(p.month),
-                            receita: p.income,
-                            despesas: p.recurring_expenses + p.installments + p.variable_expenses,
-                            saldo: p.projected_balance
+                            receita: parseFloat(p.income) || 0,
+                            despesas: (parseFloat(p.recurring_expenses) || 0) +
+                                     (parseFloat(p.installments) || 0) +
+                                     (parseFloat(p.variable_expenses) || 0),
+                            saldo: parseFloat(p.projected_balance) || 0
                           }))}
                           margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                         >
@@ -722,16 +724,20 @@ const Relatorios = () => {
                             <tr key={idx} className="hover:bg-secondary/10 transition-colors">
                               <td className="px-6 py-4 font-bold uppercase">{formatDate(p.month)}</td>
                               <td className="px-6 py-4 font-black text-emerald-500">
-                                <PrivateValue value={formatCurrency(p.income)} />
+                                <PrivateValue value={formatCurrency(parseFloat(p.income) || 0)} />
                               </td>
                               <td className="px-6 py-4 font-black text-red-500">
-                                <PrivateValue value={formatCurrency(p.recurring_expenses + p.installments + p.variable_expenses)} />
+                                <PrivateValue value={formatCurrency(
+                                  (parseFloat(p.recurring_expenses) || 0) +
+                                  (parseFloat(p.installments) || 0) +
+                                  (parseFloat(p.variable_expenses) || 0)
+                                )} />
                               </td>
                               <td className={cn(
                                 "px-6 py-4 font-black",
-                                p.projected_balance >= 0 ? "text-emerald-500" : "text-red-500"
+                                (parseFloat(p.projected_balance) || 0) >= 0 ? "text-emerald-500" : "text-red-500"
                               )}>
-                                <PrivateValue value={formatCurrency(p.projected_balance)} />
+                                <PrivateValue value={formatCurrency(parseFloat(p.projected_balance) || 0)} />
                               </td>
                             </tr>
                           ))}
