@@ -373,32 +373,32 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40">
               <Search size={18} />
             </div>
-          </div>
 
-          {openSuggestions && formData.description && filteredSuggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover text-popover-foreground rounded-xl border shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
-              <Command className="bg-transparent">
-                <CommandList>
-                  <CommandGroup heading="Sugestões">
-                    {filteredSuggestions.map((s) => (
-                      <CommandItem
-                        key={s}
-                        value={s}
-                        onSelect={() => {
-                          setFormData(prev => ({ ...prev, description: s }));
-                          applySuggestion(s);
-                          setOpenSuggestions(false);
-                        }}
-                        className="cursor-pointer py-3"
-                      >
-                        {s}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </div>
-          )}
+            {openSuggestions && formData.description && filteredSuggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover text-popover-foreground rounded-xl border shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
+                <Command className="bg-transparent">
+                  <CommandList>
+                    <CommandGroup heading="Sugestões">
+                      {filteredSuggestions.map((s) => (
+                        <CommandItem
+                          key={s}
+                          value={s}
+                          onSelect={() => {
+                            setFormData(prev => ({ ...prev, description: s }));
+                            applySuggestion(s);
+                            setOpenSuggestions(false);
+                          }}
+                          className="cursor-pointer py-3"
+                        >
+                          {s}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -422,7 +422,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
               value={formData.date}
               onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
               required
-              className="bg-secondary/50 border-none h-11 rounded-xl"
+              className="bg-secondary/50 border-none h-11 rounded-xl w-full pr-10"
             />
           </div>
         </div>
