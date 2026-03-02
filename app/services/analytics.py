@@ -395,6 +395,7 @@ class AnalyticsService:
         )
 
     def get_period_summary(self, db: Session, user_id: UUID, start_year: int, start_month: int, end_year: int, end_month: int) -> PeriodSummaryResponse:
+        tz = pytz.timezone("America/Sao_Paulo")
         start_date = date(start_year, start_month, 1)
         end_date = (date(end_year, end_month, 1) + relativedelta(months=1)) - timedelta(days=1)
 
@@ -406,15 +407,15 @@ class AnalyticsService:
         # 1. Monthly data for the period
         monthly_query = text("""
             SELECT
-                EXTRACT(YEAR FROM date)::int as year,
-                EXTRACT(MONTH FROM date)::int as month,
+                EXTRACT(YEAR FROM date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo')::int as year,
+                EXTRACT(MONTH FROM date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo')::int as month,
                 SUM(CASE WHEN nature = 'INCOME' THEN amount ELSE 0 END) as income,
                 SUM(CASE WHEN nature = 'EXPENSE' THEN ABS(amount) ELSE 0 END) as expense
             FROM transactions
             WHERE user_id = :user_id
               AND deleted_at IS NULL
-              AND date >= :start_date
-              AND date <= :end_date
+              AND date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo' >= :start_date
+              AND date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo' <= :end_date
             GROUP BY 1, 2
             ORDER BY 1, 2
         """)
@@ -478,8 +479,8 @@ class AnalyticsService:
             WHERE t.user_id = :user_id
               AND t.deleted_at IS NULL
               AND t.nature = 'EXPENSE'
-              AND t.date >= :start_date
-              AND t.date <= :end_date
+              AND t.date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo' >= :start_date
+              AND t.date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo' <= :end_date
             GROUP BY 1, 2, 3, 4
             ORDER BY total DESC
         """)
@@ -498,8 +499,8 @@ class AnalyticsService:
             WHERE user_id = :user_id
               AND deleted_at IS NULL
               AND nature = 'EXPENSE'
-              AND date >= :start_date
-              AND date <= :end_date
+              AND date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo' >= :start_date
+              AND date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo' <= :end_date
             GROUP BY 1
         """)
 
