@@ -40,11 +40,11 @@ const MonthlyCommitmentCard = ({ data, loading }) => {
     gasto_ate_hoje = 0,
     recorrentes_futuras = 0,
     receita_esperada = 0,
-    saldo_projetado = 0
+    saldo_projetado = 0,
+    percentual_comprometido
   } = data;
 
-  const totalCommitted = gasto_ate_hoje + recorrentes_futuras;
-  const percentage = receita_esperada > 0 ? (totalCommitted / receita_esperada) * 100 : 0;
+  const percentage = parseFloat(percentual_comprometido) || 0;
 
   const getProgressColor = () => {
     if (percentage > 100) return "bg-destructive";
@@ -53,6 +53,7 @@ const MonthlyCommitmentCard = ({ data, loading }) => {
   };
 
   const isOverBudget = percentage > 100;
+  const hasRevenue = receita_esperada > 0;
 
   return (
     <Card className="border-none shadow-md rounded-2xl overflow-hidden group">
@@ -88,7 +89,9 @@ const MonthlyCommitmentCard = ({ data, loading }) => {
         <div className="space-y-2 mb-8">
           <div className="flex justify-between items-end h-5">
             <span className="text-xs font-medium text-muted-foreground">
-              {percentage.toFixed(1)}% do orçamento comprometido
+              {hasRevenue || percentage > 0
+                ? `${percentage.toFixed(1)}% do orçamento comprometido`
+                : "Cadastre receitas recorrentes para ver o comprometimento"}
             </span>
             {isOverBudget && (
               <span className="text-xs font-bold text-destructive flex items-center gap-1 animate-pulse">
