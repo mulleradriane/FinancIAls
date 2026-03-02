@@ -19,6 +19,13 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import api from '@/api/api';
 import PrivateValue from '@/components/ui/PrivateValue';
@@ -39,6 +46,8 @@ export default function Importacao() {
   const [previewData, setPreviewData] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
   const [importedCount, setImportedCount] = useState(0);
+  const [recurringMatches, setRecurringMatches] = useState([]);
+  const [isMatchesModalOpen, setIsMatchesModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchAccounts = async () => {
@@ -125,6 +134,13 @@ export default function Importacao() {
         rows: rowsToConfirm
       });
       setImportedCount(response.data.imported);
+
+      const matches = response.data.recurring_matches || [];
+      if (matches.length > 0) {
+        setRecurringMatches(matches);
+        setIsMatchesModalOpen(true);
+      }
+
       setStep(STEP_SUCCESS);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Erro ao confirmar importação');
@@ -169,10 +185,47 @@ export default function Importacao() {
             setFile(null);
             setPreviewData(null);
             setSelectedRows([]);
+            setRecurringMatches([]);
           }}>
             Importar Outro Arquivo
           </Button>
         </div>
+
+        <Dialog open={isMatchesModalOpen} onOpenChange={setIsMatchesModalOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                ⚠️ Possíveis duplicatas com recorrências
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-4">
+              {recurringMatches.map((match, idx) => {
+                const fmtAmount = (val) => Math.abs(val).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                return (
+                  <div key={idx} className="p-3 border rounded-lg text-sm bg-muted/30">
+                    <p className="mb-1 leading-relaxed">
+                      <strong>{match.transaction_description}</strong> (<PrivateValue value={fmtAmount(match.transaction_amount)} />) parece ser a mesma que a recorrência <strong>{match.recurring_description}</strong> (<PrivateValue value={fmtAmount(match.recurring_amount)} />)
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Similaridade: {Math.round(match.similarity * 100)}%
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setIsMatchesModalOpen(false)}>
+                Entendido
+              </Button>
+              <Button onClick={() => {
+                setIsMatchesModalOpen(false);
+                navigate('/recorrentes');
+              }}>
+                Ver Recorrentes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
