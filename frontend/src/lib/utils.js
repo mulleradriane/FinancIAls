@@ -15,3 +15,9 @@ export function formatCurrency(value) {
 export function formatDate(date) {
   return new Intl.DateTimeFormat('pt-BR').format(new Date(date));
 }
+
+export const parseLocalDate = (dateString) => {
+  if (!dateString) return null;
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}

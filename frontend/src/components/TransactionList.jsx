@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn, parseLocalDate } from '@/lib/utils';
 import PrivateValue from '@/components/ui/PrivateValue';
 
 const TransactionList = ({ transactions, onEdit, onDelete, highlightId }) => {
@@ -112,7 +112,7 @@ const TransactionList = ({ transactions, onEdit, onDelete, highlightId }) => {
 
                 <span className="text-muted-foreground/30">•</span>
                 <span className="text-[11px] font-medium text-muted-foreground/70">
-                  {new Date(t.date).toLocaleDateString('pt-BR')}
+                  {parseLocalDate(t.date).toLocaleDateString('pt-BR')}
                 </span>
 
                 <span className="text-muted-foreground/30">•</span>

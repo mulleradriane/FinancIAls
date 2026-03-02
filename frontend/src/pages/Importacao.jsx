@@ -29,6 +29,7 @@ import {
 import { toast } from 'sonner';
 import api from '@/api/api';
 import PrivateValue from '@/components/ui/PrivateValue';
+import { parseLocalDate } from '@/lib/utils';
 
 const STEP_CONFIG = 1;
 const STEP_PREVIEW = 2;
@@ -429,7 +430,7 @@ export default function Importacao() {
                           />
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          {new Date(row.date).toLocaleDateString('pt-BR')}
+                          {parseLocalDate(row.date).toLocaleDateString('pt-BR')}
                         </td>
                         <td className="px-4 py-3 max-w-[250px] truncate" title={row.description}>
                           {row.description}
@@ -497,7 +498,7 @@ export default function Importacao() {
                           />
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          {new Date(row.date).toLocaleDateString('pt-BR')}
+                          {parseLocalDate(row.date).toLocaleDateString('pt-BR')}
                         </td>
                         <td className="px-4 py-3 max-w-[250px] truncate">
                           {row.description}
