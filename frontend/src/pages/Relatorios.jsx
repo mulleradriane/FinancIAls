@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '@/api/api';
 import analyticsApi from '@/api/analyticsApi';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Wallet, PieChartIcon, ArrowRight, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, PieChartIcon, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import PrivateValue from '@/components/ui/PrivateValue';
@@ -196,7 +196,7 @@ const Relatorios = () => {
                             return <Cell key={`cell-${index}`} fill={category?.color || COLORS[index % COLORS.length]} stroke="none" />;
                           })}
                         </Pie>
-                        <Tooltip
+                        <RechartsTooltip
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
                               return (

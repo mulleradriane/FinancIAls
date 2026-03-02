@@ -31,7 +31,7 @@ import {
   Pie,
   Cell,
   ResponsiveContainer,
-  Tooltip
+  Tooltip as RechartsTooltip
 } from 'recharts';
 import { cn } from '@/lib/utils';
 import PrivateValue from '@/components/ui/PrivateValue';

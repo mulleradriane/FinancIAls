@@ -3,11 +3,9 @@ import api from '@/api/api';
 import {
   TrendingUp,
   TrendingDown,
-  Calendar,
   BarChart3,
   ArrowUpCircle,
-  ArrowDownCircle,
-  Equal
+  ArrowDownCircle
 } from 'lucide-react';
 import {
   ComposedChart,
@@ -16,7 +14,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer
 } from 'recharts';
@@ -135,7 +133,7 @@ const FluxoCaixa = () => {
                     tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                     tickFormatter={(value) => isPrivate ? '•••' : `R$${Math.abs(value) >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
                   />
-                  <Tooltip
+                  <RechartsTooltip
                     cursor={{ fill: 'hsl(var(--muted) / 0.4)' }}
                     content={({ active, payload, label }) => {
                       if (active && payload && payload.length) {
