@@ -96,7 +96,9 @@ const MonthlySummaryCard = ({ data, loading }) => {
                 Taxa de Poupança
               </p>
               <p className="text-2xl font-bold text-indigo-500 mt-1">
-                {savingsRate.toFixed(1)}%
+                {isFinite(savingsRate) && (data?.totalIncome || 0) > 0
+                  ? `${savingsRate.toFixed(1)}%`
+                  : "—"}
               </p>
             </div>
           </div>
