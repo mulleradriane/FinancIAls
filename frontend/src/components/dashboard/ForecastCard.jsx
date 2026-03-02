@@ -1,13 +1,9 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Sparkles, TrendingUp, AlertTriangle, Minus, Info } from "lucide-react";
+import { Sparkles, TrendingUp, AlertTriangle, Minus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import PrivateValue from '@/components/ui/PrivateValue';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import InfoTooltip from '@/components/ui/InfoTooltip';
 
 // Função de formatação local
 const formatCurrency = (value) => {
@@ -90,14 +86,7 @@ const ForecastCard = ({ forecast, loading }) => {
             <Sparkles className="w-3 h-3 text-blue-500" />
             Projeção Financeira
           </CardTitle>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="h-[14px] w-[14px] text-muted-foreground cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent className="max-w-[250px] text-center">
-              <p>Projeção do patrimônio com base na média de resultado dos últimos 3 meses. É uma estimativa e pode variar conforme mudanças nos seus hábitos financeiros.</p>
-            </TooltipContent>
-          </Tooltip>
+          <InfoTooltip content="Projeção do patrimônio com base na média de resultado dos últimos 3 meses. É uma estimativa e pode variar conforme mudanças nos seus hábitos financeiros." />
         </div>
         <Badge variant="outline" className={`${status.color} border flex items-center gap-1.5 py-0.5`}>
           {status.icon}

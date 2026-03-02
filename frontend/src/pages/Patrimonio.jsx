@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/api/api';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell
 } from 'recharts';
 import {
-  TrendingUp, TrendingDown, Wallet, Briefcase, CreditCard,
-  AlertCircle, RefreshCw, Landmark, PiggyBank
+  TrendingUp, TrendingDown, RefreshCw, AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -20,7 +19,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import PrivateValue from '@/components/ui/PrivateValue';
 import { usePrivacy } from '@/context/PrivacyContext';
 
@@ -196,7 +194,7 @@ const Patrimonio = () => {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
                     ))}
                   </Pie>
-                  <Tooltip
+                  <RechartsTooltip
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         return (
@@ -243,7 +241,7 @@ const Patrimonio = () => {
                   tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                   tickFormatter={(value) => isPrivate ? '•••' : `R$${value >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
                 />
-                <Tooltip
+                <RechartsTooltip
                   content={({ active, payload, label }) => {
                     if (active && payload && payload.length) {
                       return (

@@ -5,7 +5,6 @@ import {
   AlertCircle,
   Calendar,
   ChevronRight,
-  Info,
   ArrowUpCircle,
   ArrowDownCircle,
   Package,
@@ -26,18 +25,16 @@ import {
   TabsContent
 } from '@/components/ui/tabs';
 import {
-  AreaChart,
   Area,
   Line,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
   ComposedChart
 } from 'recharts';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import PrivateValue from '@/components/ui/PrivateValue';
@@ -94,10 +91,6 @@ const Projection = () => {
   const chartData = data?.projections.map(p => ({
     ...p,
     name: formatDate(p.month),
-    // For stacked area, we might want to separate types.
-    // In our case we have Income, Recurring, Installments, Variable.
-    // We'll show them as positive values for visualization in the area chart if they are stacked.
-    // But usually projection shows balance.
   })) || [];
 
   return (
@@ -167,7 +160,7 @@ const Projection = () => {
                   tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                   tickFormatter={(value) => isPrivate ? '•••' : `R$${value >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
                 />
-                <Tooltip
+                <RechartsTooltip
                   cursor={{ stroke: 'hsl(var(--muted-foreground) / 0.2)', strokeWidth: 2 }}
                   content={({ active, payload, label }) => {
                     if (active && payload && payload.length) {

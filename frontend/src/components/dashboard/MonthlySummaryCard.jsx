@@ -1,12 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { CircleArrowUp, CircleArrowDown, Scale, PiggyBank, Info } from 'lucide-react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { CircleArrowUp, CircleArrowDown, Scale, PiggyBank } from 'lucide-react';
+import InfoTooltip from '@/components/ui/InfoTooltip';
 import PrivateValue from '@/components/ui/PrivateValue';
 
 const MonthlySummaryCard = ({ data }) => {
@@ -31,39 +26,14 @@ const MonthlySummaryCard = ({ data }) => {
   return (
     <Card className="border-none shadow-sm">
       <CardContent className="p-8">
-        {/* Header com Tooltip */}
         <div className="flex items-center gap-2 mb-6">
           <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
             Resultado Parcial
           </p>
-          <TooltipProvider>
-            <Tooltip delayDuration={300}>
-              <TooltipTrigger asChild>
-                <button 
-                  type="button"
-                  className="inline-flex items-center justify-center rounded-full hover:bg-muted/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  aria-label="Informações sobre resultado parcial"
-                >
-                  <Info className="h-[14px] w-[14px] text-muted-foreground" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent 
-                side="top" 
-                align="center"
-                className="max-w-[250px] text-center bg-popover text-popover-foreground shadow-lg"
-              >
-                <p className="text-sm">
-                  O resultado pode ser negativo no início do mês porque as despesas chegam antes do salário. 
-                  Este valor fica mais preciso no final do mês.
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <InfoTooltip content="O resultado pode ser negativo no início do mês porque as despesas chegam antes do salário. Este valor fica mais preciso no final do mês." />
         </div>
 
-        {/* Grid de Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Receitas */}
           <div className="space-y-4">
             <div className="p-2 w-fit bg-success/10 rounded-lg">
               <CircleArrowUp className="h-5 w-5 text-success" />
@@ -78,7 +48,6 @@ const MonthlySummaryCard = ({ data }) => {
             </div>
           </div>
 
-          {/* Despesas */}
           <div className="space-y-4">
             <div className="p-2 w-fit bg-destructive/10 rounded-lg">
               <CircleArrowDown className="h-5 w-5 text-destructive" />
@@ -93,7 +62,6 @@ const MonthlySummaryCard = ({ data }) => {
             </div>
           </div>
 
-          {/* Resultado Líquido */}
           <div className="space-y-4">
             <div className="p-2 w-fit bg-primary/10 rounded-lg">
               <Scale className="h-5 w-5 text-primary" />
@@ -108,7 +76,6 @@ const MonthlySummaryCard = ({ data }) => {
             </div>
           </div>
 
-          {/* Taxa de Poupança */}
           <div className="space-y-4">
             <div className="p-2 w-fit bg-indigo-500/10 rounded-lg">
               <PiggyBank className="h-5 w-5 text-indigo-500" />

@@ -15,12 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import InfoTooltip from '@/components/ui/InfoTooltip';
 import { cn } from '@/lib/utils';
 
 const PRESET_COLORS = [
@@ -211,21 +206,17 @@ export function CategoryForm({ category, onSaved, onClose }) {
 
         <div className="grid gap-2">
           <div className="flex items-center justify-between">
-             <Label htmlFor="cat-budget" className="flex items-center gap-1.5">
-               {type === 'expense' ? 'Orçamento Mensal' : 'Meta Mensal'}
-               <TooltipProvider>
-                 <Tooltip>
-                   <TooltipTrigger asChild>
-                     <HelpCircle size={14} className="text-muted-foreground cursor-help" />
-                   </TooltipTrigger>
-                   <TooltipContent className="max-w-[200px] text-xs">
-                     {type === 'expense'
-                       ? "Define o limite para a barra de progresso nas listagens e relatórios."
-                       : "Define um objetivo de recebimento para esta categoria."}
-                   </TooltipContent>
-                 </Tooltip>
-               </TooltipProvider>
-             </Label>
+             <div className="flex items-center gap-1.5">
+               <Label htmlFor="cat-budget">
+                 {type === 'expense' ? 'Orçamento Mensal' : 'Meta Mensal'}
+               </Label>
+               <InfoTooltip
+                 icon={HelpCircle}
+                 content={type === 'expense'
+                   ? "Define o limite para a barra de progresso nas listagens e relatórios."
+                   : "Define um objetivo de recebimento para esta categoria."}
+               />
+             </div>
           </div>
           <Input
             id="cat-budget"
