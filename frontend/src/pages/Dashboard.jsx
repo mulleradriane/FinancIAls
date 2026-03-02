@@ -23,6 +23,7 @@ import GoalsCard from '@/components/dashboard/GoalsCard';
 import ForecastCard from '@/components/dashboard/ForecastCard';
 import RecentTransactionsCard from '@/components/dashboard/RecentTransactionsCard';
 import UpcomingExpensesCard from '@/components/dashboard/UpcomingExpensesCard';
+import MonthlyCommitmentCard from '@/components/dashboard/MonthlyCommitmentCard';
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -38,6 +39,7 @@ const Dashboard = () => {
   const [goals, setGoals] = useState([]);
   const [forecast, setForecast] = useState(null);
   const [dailyExpenses, setDailyExpenses] = useState(null);
+  const [monthlyCommitment, setMonthlyCommitment] = useState(null);
 
   // Form requirements
   const [categories, setCategories] = useState([]);
@@ -69,7 +71,8 @@ const Dashboard = () => {
         analyticsApi.getForecast(),           // 6
         analyticsApi.getDailyExpenses(year, month), // 7
         api.get('/categories/'),              // 8
-        api.get('/accounts/')                 // 9
+        api.get('/accounts/'),                // 9
+        analyticsApi.getMonthlyCommitment()   // 10
       ]);
 
       if (results[0].status === 'fulfilled') setNetWorth(results[0].value.data.net_worth);
@@ -82,6 +85,7 @@ const Dashboard = () => {
       if (results[7].status === 'fulfilled') setDailyExpenses(results[7].value.data);
       if (results[8].status === 'fulfilled') setCategories(results[8].value.data);
       if (results[9].status === 'fulfilled') setAccounts(results[9].value.data);
+      if (results[10].status === 'fulfilled') setMonthlyCommitment(results[10].value.data);
 
       results.forEach((result, index) => {
         if (result.status === 'rejected') {
@@ -132,11 +136,13 @@ const Dashboard = () => {
       </div>
 
       {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <NetWorthCard
-          netWorth={netWorth}
-          assets={totalAssets}
-          liabilities={totalLiabilities}
+      {/* LINHA 1 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <MonthlySummaryCard
+          data={{
+            totalIncome: currentMonthData.total_income,
+            totalExpense: currentMonthData.total_expenses,
+          }}
           loading={loading}
         />
         <BurnRateCard
@@ -145,18 +151,20 @@ const Dashboard = () => {
           previousAvg={burnRate.previous_3m_avg}
           loading={loading}
         />
-      </div>
-
-      <div className="grid grid-cols-1 gap-8">
-        <MonthlySummaryCard
-          income={currentMonthData.total_income}
-          expense={currentMonthData.total_expenses}
-          result={currentMonthData.net_result}
-          savingsRate={currentSavingsRate}
+        <NetWorthCard
+          netWorth={netWorth}
+          assets={totalAssets}
+          liabilities={totalLiabilities}
           loading={loading}
         />
       </div>
 
+      {/* LINHA 2 */}
+      <div className="grid grid-cols-1 gap-8">
+        <MonthlyCommitmentCard data={monthlyCommitment} loading={loading} />
+      </div>
+
+      {/* LINHA 3 */}
       <div className="grid grid-cols-1 gap-8">
         <SpendingPaceCard
           data={dailyExpenses}
@@ -166,6 +174,7 @@ const Dashboard = () => {
         />
       </div>
 
+      {/* LINHA 4 */}
       <div className="grid grid-cols-1 gap-8">
         <EvolutionChart
           data={operationalMonthly}
@@ -173,17 +182,10 @@ const Dashboard = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-8">
-        <GoalsCard goals={goals} loading={loading} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-8">
-        <ForecastCard forecast={forecast} loading={loading} />
-      </div>
-
+      {/* LINHA 5 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <GoalsCard goals={goals} loading={loading} />
         <RecentTransactionsCard />
-        <UpcomingExpensesCard />
       </div>
 
       {/* Transaction Modal */}
