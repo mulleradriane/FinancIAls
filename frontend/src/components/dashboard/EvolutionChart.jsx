@@ -6,7 +6,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
 } from 'recharts';
@@ -16,6 +16,7 @@ import { Info } from 'lucide-react';
 import {
   Tooltip as UiTooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
@@ -44,81 +45,96 @@ const EvolutionChart = ({ data, loading }) => {
   }
 
   return (
-    <Card className="border-none shadow-md rounded-2xl">
-      <CardHeader className="p-8 pb-0">
-        <div className="flex items-center gap-2">
-          <CardTitle className="text-xl">Evolução Mensal</CardTitle>
-          <UiTooltip>
-            <TooltipTrigger asChild>
-              <Info className="h-[14px] w-[14px] text-muted-foreground cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent className="max-w-[250px] text-center">
-              <p>Histórico mensal de Receitas, Despesas e Resultado Líquido. Permite visualizar tendências e sazonalidades ao longo dos meses.</p>
-            </TooltipContent>
-          </UiTooltip>
-        </div>
-        <CardDescription>Comparativo de receitas, despesas e resultado operacional</CardDescription>
-      </CardHeader>
-      <CardContent className="p-8">
-        <div className="h-[350px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted-foreground) / 0.1)" />
-              <XAxis
-                dataKey="month"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                tickFormatter={formatDate}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                tickFormatter={(value) => isPrivate ? '•••' : `R$${value >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
-              />
-              <Tooltip
-                cursor={{ fill: 'hsl(var(--muted) / 0.4)' }}
-                content={({ active, payload, label }) => {
-                  if (active && payload && payload.length) {
-                    return (
-                      <Card className="p-3 shadow-xl border-none bg-background/90 backdrop-blur-sm">
-                        <p className="font-bold text-sm mb-2 uppercase tracking-wider">{formatDate(label)}</p>
-                        {payload.map((entry, index) => (
-                          <div key={index} className="flex items-center gap-2 text-xs mb-1">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                            <span className="text-muted-foreground">{entry.name}:</span>
-                            <span className="font-bold">{isPrivate ? '•••••' : formatCurrency(entry.value)}</span>
-                          </div>
-                        ))}
-                      </Card>
-                    );
-                  }
-                  return null;
-                }}
-              />
-              <Legend
-                verticalAlign="top"
-                align="right"
-                iconType="circle"
-                wrapperStyle={{ paddingTop: '0', paddingBottom: '20px' }}
-              />
-              <Bar dataKey="total_income" name="Receitas" fill="#22C55E" radius={[4, 4, 0, 0]} barSize={24} />
-              <Bar dataKey="total_expenses" name="Despesas" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={24} />
-              <Line
-                type="monotone"
-                dataKey="net_result"
-                name="Resultado"
-                stroke="#2563EB"
-                strokeWidth={3}
-                dot={{ r: 4, fill: '#2563EB', strokeWidth: 2, stroke: '#fff' }}
-                activeDot={{ r: 6, strokeWidth: 0 }}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+    <TooltipProvider>
+      <Card className="border-none shadow-md rounded-2xl">
+        <CardHeader className="p-8 pb-0">
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-xl">Evolução Mensal</CardTitle>
+            <UiTooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <button 
+                  type="button"
+                  className="inline-flex items-center justify-center rounded-full hover:bg-muted/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  aria-label="Informações sobre evolução mensal"
+                >
+                  <Info className="h-[14px] w-[14px] text-muted-foreground" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent 
+                side="top" 
+                align="center"
+                className="max-w-[250px] text-center bg-popover text-popover-foreground shadow-lg"
+              >
+                <p className="text-sm">
+                  Histórico mensal de Receitas, Despesas e Resultado Líquido. 
+                  Permite visualizar tendências e sazonalidades ao longo dos meses.
+                </p>
+              </TooltipContent>
+            </UiTooltip>
+          </div>
+          <CardDescription>Comparativo de receitas, despesas e resultado operacional</CardDescription>
+        </CardHeader>
+        <CardContent className="p-8">
+          <div className="h-[350px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted-foreground) / 0.1)" />
+                <XAxis
+                  dataKey="month"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  tickFormatter={formatDate}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  tickFormatter={(value) => isPrivate ? '•••' : `R$${value >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
+                />
+                <RechartsTooltip
+                  cursor={{ fill: 'hsl(var(--muted) / 0.4)' }}
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <Card className="p-3 shadow-xl border-none bg-background/90 backdrop-blur-sm">
+                          <p className="font-bold text-sm mb-2 uppercase tracking-wider">{formatDate(label)}</p>
+                          {payload.map((entry, index) => (
+                            <div key={index} className="flex items-center gap-2 text-xs mb-1">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                              <span className="text-muted-foreground">{entry.name}:</span>
+                              <span className="font-bold">{isPrivate ? '•••••' : formatCurrency(entry.value)}</span>
+                            </div>
+                          ))}
+                        </Card>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend
+                  verticalAlign="top"
+                  align="right"
+                  iconType="circle"
+                  wrapperStyle={{ paddingTop: '0', paddingBottom: '20px' }}
+                />
+                <Bar dataKey="total_income" name="Receitas" fill="#22C55E" radius={[4, 4, 0, 0]} barSize={24} />
+                <Bar dataKey="total_expenses" name="Despesas" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={24} />
+                <Line
+                  type="monotone"
+                  dataKey="net_result"
+                  name="Resultado"
+                  stroke="#2563EB"
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: '#2563EB', strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 };
 
