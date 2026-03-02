@@ -1,17 +1,20 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import text, func, select
 from app.schemas.analytics import (
     OperationalMonthly, SavingsRate, BurnRate,
     NetWorth, AssetsLiabilities, AccountBalance,
     DailyExpensesResponse, SankeyResponse, SankeyNode, SankeyLink,
-    ProjectionResponse, MonthlyProjection, ProjectionItem
+    ProjectionResponse, MonthlyProjection, ProjectionItem,
+    MonthlyCommitment
 )
 from app.schemas.goals import GoalProgress
 from app.schemas.forecast import ForecastRead
 from typing import List
 from decimal import Decimal
 from uuid import UUID
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
+import calendar
+import pytz
 
 class AnalyticsService:
     def get_operational_monthly(self, db: Session, user_id: UUID) -> List[OperationalMonthly]:
@@ -314,6 +317,74 @@ class AnalyticsService:
         return ProjectionResponse(
             projections=projections,
             has_recurring_income=has_recurring_income
+        )
+
+    def get_monthly_commitment(self, db: Session, user_id: UUID) -> MonthlyCommitment:
+        from app.models.transaction import Transaction, TransactionNature
+
+        tz = pytz.timezone("America/Sao_Paulo")
+        now = datetime.now(tz)
+        today = now.date()
+        first_day = today.replace(day=1)
+        _, last_day_num = calendar.monthrange(today.year, today.month)
+        last_day = today.replace(day=last_day_num)
+
+        # 1. gasto_ate_hoje: soma dos expenses (nature='EXPENSE') do mês atual até hoje
+        gasto_ate_hoje = db.scalar(
+            select(func.sum(Transaction.amount))
+            .filter(
+                Transaction.user_id == user_id,
+                Transaction.nature == TransactionNature.EXPENSE,
+                Transaction.date >= first_day,
+                Transaction.date <= today,
+                Transaction.deleted_at == None
+            )
+        ) or Decimal(0)
+        gasto_ate_hoje = abs(gasto_ate_hoje)
+
+        # 2. recorrentes_futuras: soma dos recurring-expenses ativos que ainda vão vencer no mês atual (date > hoje e date <= fim do mês)
+        # Na verdade, a instrução diz: transações com recurring_expense_id preenchido, nature='EXPENSE', data > hoje e data <= fim do mês atual
+        recorrentes_futuras = db.scalar(
+            select(func.sum(Transaction.amount))
+            .filter(
+                Transaction.user_id == user_id,
+                Transaction.nature == TransactionNature.EXPENSE,
+                Transaction.recurring_expense_id != None,
+                Transaction.date > today,
+                Transaction.date <= last_day,
+                Transaction.deleted_at == None
+            )
+        ) or Decimal(0)
+        recorrentes_futuras = abs(recorrentes_futuras)
+
+        # 3. receita_esperada: soma das recorrências de receita (nature='INCOME') do mês todo
+        receita_esperada = db.scalar(
+            select(func.sum(Transaction.amount))
+            .filter(
+                Transaction.user_id == user_id,
+                Transaction.nature == TransactionNature.INCOME,
+                Transaction.recurring_expense_id != None,
+                Transaction.date >= first_day,
+                Transaction.date <= last_day,
+                Transaction.deleted_at == None
+            )
+        ) or Decimal(0)
+        receita_esperada = abs(receita_esperada)
+
+        # 4. percentual_comprometido: (gasto_ate_hoje + recorrentes_futuras) / receita_esperada * 100
+        percentual_comprometido = None
+        if receita_esperada > 0:
+            percentual_comprometido = float(((gasto_ate_hoje + recorrentes_futuras) / receita_esperada) * 100)
+
+        # 5. saldo_projetado: receita_esperada - gasto_ate_hoje - recorrentes_futuras
+        saldo_projetado = receita_esperada - gasto_ate_hoje - recorrentes_futuras
+
+        return MonthlyCommitment(
+            gasto_ate_hoje=gasto_ate_hoje,
+            recorrentes_futuras=recorrentes_futuras,
+            receita_esperada=receita_esperada,
+            percentual_comprometido=percentual_comprometido,
+            saldo_projetado=saldo_projetado
         )
 
     def get_daily_expenses(self, db: Session, user_id: UUID, year: int, month: int) -> dict:
