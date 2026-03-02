@@ -5,7 +5,8 @@ from app.schemas.analytics import (
     NetWorth, AssetsLiabilities, AccountBalance,
     DailyExpensesResponse, SankeyResponse, SankeyNode, SankeyLink,
     ProjectionResponse, MonthlyProjection, ProjectionItem,
-    MonthlyCommitment
+    MonthlyCommitment, PeriodSummaryResponse, PeriodMonthSummary,
+    PeriodTotals, PeriodCategorySummary
 )
 from app.schemas.goals import GoalProgress
 from app.schemas.forecast import ForecastRead
@@ -13,10 +14,16 @@ from typing import List
 from decimal import Decimal
 from uuid import UUID
 from datetime import date, timedelta, datetime
+from dateutil.relativedelta import relativedelta
 import calendar
 import pytz
 
 class AnalyticsService:
+    PORTUGUESE_MONTHS = {
+        1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+        5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+        9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+    }
     def get_operational_monthly(self, db: Session, user_id: UUID) -> List[OperationalMonthly]:
         result = db.execute(
             text("SELECT * FROM v_operational_monthly WHERE user_id = :user_id"),
@@ -385,6 +392,142 @@ class AnalyticsService:
             receita_esperada=receita_esperada,
             percentual_comprometido=percentual_comprometido,
             saldo_projetado=saldo_projetado
+        )
+
+    def get_period_summary(self, db: Session, user_id: UUID, start_year: int, start_month: int, end_year: int, end_month: int) -> PeriodSummaryResponse:
+        start_date = date(start_year, start_month, 1)
+        end_date = (date(end_year, end_month, 1) + relativedelta(months=1)) - timedelta(days=1)
+
+        # Calculate previous period
+        period_months = (end_year - start_year) * 12 + (end_month - start_month) + 1
+        prev_start_date = start_date - relativedelta(months=period_months)
+        prev_end_date = start_date - timedelta(days=1)
+
+        # 1. Monthly data for the period
+        monthly_query = text("""
+            SELECT
+                EXTRACT(YEAR FROM date)::int as year,
+                EXTRACT(MONTH FROM date)::int as month,
+                SUM(CASE WHEN nature = 'INCOME' THEN amount ELSE 0 END) as income,
+                SUM(CASE WHEN nature = 'EXPENSE' THEN ABS(amount) ELSE 0 END) as expense
+            FROM transactions
+            WHERE user_id = :user_id
+              AND deleted_at IS NULL
+              AND date >= :start_date
+              AND date <= :end_date
+            GROUP BY 1, 2
+            ORDER BY 1, 2
+        """)
+
+        monthly_results = db.execute(monthly_query, {
+            "user_id": str(user_id),
+            "start_date": start_date,
+            "end_date": end_date
+        }).all()
+
+        months_list = []
+        total_income = Decimal(0)
+        total_expense = Decimal(0)
+
+        # Build results for each month in period (even if no transactions)
+        curr = start_date
+        results_map = {(r.year, r.month): r for r in monthly_results}
+
+        while curr <= end_date:
+            y, m = curr.year, curr.month
+            row = results_map.get((y, m))
+            inc = Decimal(row.income if row else 0)
+            exp = Decimal(row.expense if row else 0)
+            net = inc - exp
+            sr = float((net / inc) * 100) if inc > 0 else None
+
+            months_list.append(PeriodMonthSummary(
+                year=y,
+                month=m,
+                month_name=self.PORTUGUESE_MONTHS[m],
+                total_income=inc,
+                total_expense=exp,
+                net_result=net,
+                savings_rate=sr
+            ))
+
+            total_income += inc
+            total_expense += exp
+            curr += relativedelta(months=1)
+
+        overall_net = total_income - total_expense
+        overall_sr = float((overall_net / total_income) * 100) if total_income > 0 else None
+
+        totals = PeriodTotals(
+            total_income=total_income,
+            total_expense=total_expense,
+            net_result=overall_net,
+            avg_savings_rate=overall_sr
+        )
+
+        # 2. Top Categories
+        cat_query = text("""
+            SELECT
+                c.id as category_id,
+                c.name as category_name,
+                c.icon as category_icon,
+                c.color as category_color,
+                SUM(ABS(t.amount)) as total
+            FROM transactions t
+            LEFT JOIN categories c ON t.category_id = c.id
+            WHERE t.user_id = :user_id
+              AND t.deleted_at IS NULL
+              AND t.nature = 'EXPENSE'
+              AND t.date >= :start_date
+              AND t.date <= :end_date
+            GROUP BY 1, 2, 3, 4
+            ORDER BY total DESC
+        """)
+
+        current_cats = db.execute(cat_query, {
+            "user_id": str(user_id),
+            "start_date": start_date,
+            "end_date": end_date
+        }).all()
+
+        prev_cat_query = text("""
+            SELECT
+                category_id,
+                SUM(ABS(amount)) as total
+            FROM transactions
+            WHERE user_id = :user_id
+              AND deleted_at IS NULL
+              AND nature = 'EXPENSE'
+              AND date >= :start_date
+              AND date <= :end_date
+            GROUP BY 1
+        """)
+
+        prev_cats = db.execute(prev_cat_query, {
+            "user_id": str(user_id),
+            "start_date": prev_start_date,
+            "end_date": prev_end_date
+        }).all()
+
+        prev_map = {r.category_id: Decimal(r.total) for r in prev_cats}
+
+        top_categories = []
+        for cat in current_cats:
+            percentage = float((cat.total / total_expense) * 100) if total_expense > 0 else 0
+            top_categories.append(PeriodCategorySummary(
+                category_id=str(cat.category_id) if cat.category_id else None,
+                category_name=cat.category_name or "Sem Categoria",
+                category_icon=cat.category_icon,
+                category_color=cat.category_color,
+                total=Decimal(cat.total),
+                previous_total=prev_map.get(cat.category_id, Decimal(0)),
+                percentage=percentage
+            ))
+
+        return PeriodSummaryResponse(
+            months=months_list,
+            totals=totals,
+            top_categories=top_categories
         )
 
     def get_daily_expenses(self, db: Session, user_id: UUID, year: int, month: int) -> dict:

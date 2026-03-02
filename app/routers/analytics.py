@@ -5,7 +5,7 @@ from app.services.analytics import analytics_service
 from app.schemas.analytics import (
     OperationalMonthly, SavingsRate, AssetsLiabilities, AccountBalance,
     BurnRate, NetWorth, DailyExpensesResponse, SankeyResponse,
-    ProjectionResponse, MonthlyCommitment
+    ProjectionResponse, MonthlyCommitment, PeriodSummaryResponse
 )
 from app.schemas.goals import GoalProgress
 from app.schemas.forecast import ForecastRead
@@ -106,3 +106,21 @@ def get_monthly_commitment(
     current_user: User = Depends(get_current_user)
 ):
     return analytics_service.get_monthly_commitment(db, user_id=current_user.id)
+
+@router.get("/period-summary", response_model=PeriodSummaryResponse)
+def get_period_summary(
+    start_year: int,
+    start_month: int,
+    end_year: int,
+    end_month: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return analytics_service.get_period_summary(
+        db,
+        user_id=current_user.id,
+        start_year=start_year,
+        start_month=start_month,
+        end_year=end_year,
+        end_month=end_month
+    )

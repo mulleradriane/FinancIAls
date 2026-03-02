@@ -94,3 +94,32 @@ class MonthlyCommitment(BaseModel):
     receita_esperada: Decimal
     percentual_comprometido: Optional[float]
     saldo_projetado: Decimal
+
+class PeriodMonthSummary(BaseModel):
+    year: int
+    month: int
+    month_name: str
+    total_income: Decimal
+    total_expense: Decimal
+    net_result: Decimal
+    savings_rate: Optional[float]
+
+class PeriodTotals(BaseModel):
+    total_income: Decimal
+    total_expense: Decimal
+    net_result: Decimal
+    avg_savings_rate: Optional[float]
+
+class PeriodCategorySummary(BaseModel):
+    category_id: Optional[str]
+    category_name: str
+    category_icon: Optional[str]
+    category_color: Optional[str]
+    total: Decimal
+    previous_total: Decimal
+    percentage: float
+
+class PeriodSummaryResponse(BaseModel):
+    months: List[PeriodMonthSummary]
+    totals: PeriodTotals
+    top_categories: List[PeriodCategorySummary]
