@@ -33,7 +33,7 @@ import {
   ResponsiveContainer,
   Tooltip as RechartsTooltip
 } from 'recharts';
-import { cn } from '@/lib/utils';
+import { cn, parseLocalDate } from '@/lib/utils';
 import PrivateValue from '@/components/ui/PrivateValue';
 
 import RecurringExpenseForm from '@/components/RecurringExpenseForm';
@@ -281,7 +281,7 @@ const Recorrentes = () => {
                 const completed = item.current_installment || 0;
                 const progress = (completed / total) * 100;
 
-                const endDateStr = item.end_date ? new Date(item.end_date).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : '-';
+                const endDateStr = item.end_date ? parseLocalDate(item.end_date).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : '-';
 
                 return (
                   <Card key={item.id} className="group border-none shadow-sm hover:shadow-md transition-all rounded-2xl overflow-hidden bg-card/50 backdrop-blur-sm">
@@ -419,7 +419,7 @@ const Recorrentes = () => {
                 const completed = item.current_installment || 0;
                 const progress = (completed / total) * 100;
 
-                const endDateStr = item.end_date ? new Date(item.end_date).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : '-';
+                const endDateStr = item.end_date ? parseLocalDate(item.end_date).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : '-';
 
                 return (
                   <Card key={item.id} className="group border-none shadow-sm hover:shadow-md transition-all rounded-2xl overflow-hidden bg-card/50 backdrop-blur-sm">

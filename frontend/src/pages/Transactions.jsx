@@ -31,7 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import PrivateValue from '@/components/ui/PrivateValue';
-import { cn } from '@/lib/utils';
+import { cn, parseLocalDate } from '@/lib/utils';
 
 
 const Transactions = () => {
@@ -245,7 +245,7 @@ const Transactions = () => {
 
     const headers = ['Data', 'Descrição', 'Categoria', 'Conta', 'Valor', 'Natureza'];
     const rows = transactions.map(t => [
-      new Date(t.date).toLocaleDateString('pt-BR'),
+      parseLocalDate(t.date).toLocaleDateString('pt-BR'),
       t.description,
       t.category_name || (t.category_is_system ? 'Sistema' : 'Sem Categoria'),
       t.account_name,
