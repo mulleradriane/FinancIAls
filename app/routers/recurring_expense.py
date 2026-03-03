@@ -31,7 +31,7 @@ def read_recurring_expenses(
         db, user_id=current_user.id, skip=skip, limit=limit, category_type=category_type
     )
 
-@router.delete("/{id}", response_model=RecurringExpense)
+@router.delete("/{id}")
 def delete_recurring_expense(
     id: UUID,
     db: Session = Depends(get_db),
@@ -40,7 +40,8 @@ def delete_recurring_expense(
     db_obj = crud_recurring_expense.get_by_user(db, id=id, user_id=current_user.id)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Recurring expense not found")
-    return crud_recurring_expense.remove_by_user(db, id=id, user_id=current_user.id)
+    crud_recurring_expense.remove_by_user(db, id=id, user_id=current_user.id)
+    return {"message": "Recorrência excluída com sucesso"}
 
 @router.post("/{id}/terminate", response_model=RecurringExpense)
 def terminate_recurring_expense(
