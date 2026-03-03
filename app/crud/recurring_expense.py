@@ -10,6 +10,18 @@ from app.models.transaction import Transaction
 from app.schemas.recurring_expense import RecurringExpenseCreate, RecurringExpenseUpdate
 
 class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, RecurringExpenseUpdate]):
+    def create_with_user(self, db: Session, *, obj_in: RecurringExpenseCreate, user_id: UUID) -> RecurringExpense:
+        db_obj = self.model(**obj_in.model_dump(), user_id=user_id)
+        db.add(db_obj)
+        db.commit()
+
+        # Re-fetch with joinedload to ensure category is loaded
+        return db.scalar(
+            select(self.model)
+            .options(joinedload(RecurringExpense.category))
+            .filter(self.model.id == db_obj.id, self.model.user_id == user_id)
+        )
+
     def get_multi_by_user(
         self, db: Session, *, user_id: UUID, skip: int = 0, limit: int = 100, category_type: Optional[CategoryType] = None
     ) -> List[RecurringExpense]:
@@ -62,7 +74,13 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
             obj.active = False
             db.add(obj)
             db.commit()
-            db.refresh(obj)
+
+            # Re-fetch with joinedload after commit to ensure category is loaded and object is not expired
+            obj = db.scalar(
+                select(self.model)
+                .options(joinedload(RecurringExpense.category))
+                .filter(self.model.id == id, self.model.user_id == user_id)
+            )
         return obj
 
     def get_summary(self, db: Session, *, user_id: UUID) -> dict:
