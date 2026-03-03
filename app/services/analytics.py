@@ -26,7 +26,7 @@ class AnalyticsService:
     }
     def get_operational_monthly(self, db: Session, user_id: UUID) -> List[OperationalMonthly]:
         result = db.execute(
-            text("SELECT * FROM v_operational_monthly WHERE user_id = :user_id"),
+            text("SELECT * FROM v_operational_monthly WHERE user_id = :user_id ORDER BY month ASC"),
             {"user_id": str(user_id)}
         ).all()
         return [
