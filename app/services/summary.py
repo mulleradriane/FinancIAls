@@ -8,10 +8,11 @@ from app.crud.account import account as crud_account
 from app.services.financial_engine import financial_engine
 from app.schemas.summary import MonthlySummary, YearlySummary, DashboardData, DashboardChartData, CashFlowDay, TopTransaction, NetWorthData, NetWorthHistory, CashFlowSummary
 from decimal import Decimal
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from typing import List
 from uuid import UUID
 from dateutil.relativedelta import relativedelta
+import pytz
 
 class SummaryService:
     def get_monthly_summary(self, db: Session, year: int, month: int, user_id: UUID) -> MonthlySummary:
@@ -91,7 +92,8 @@ class SummaryService:
         )
 
     def get_dashboard_data(self, db: Session, user_id: UUID) -> DashboardData:
-        today = date.today()
+        tz = pytz.timezone("America/Sao_Paulo")
+        today = datetime.now(tz).date()
         prev_month_date = today - relativedelta(months=1)
 
         accounts = crud_account.get_multi_with_balance(db, user_id=user_id)
@@ -166,7 +168,8 @@ class SummaryService:
 
         history = []
         month_names_pt = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-        today = date.today()
+        tz = pytz.timezone("America/Sao_Paulo")
+        today = datetime.now(tz).date()
 
         all_accounts = db.scalars(select(Account).filter(Account.user_id == user_id)).all()
 
@@ -205,23 +208,26 @@ class SummaryService:
         )
 
     def get_cash_flow(self, db: Session, user_id: UUID) -> List[CashFlowDay]:
-        today = date.today()
+        tz = pytz.timezone("America/Sao_Paulo")
+        today = datetime.now(tz).date()
         end_of_month = (today + relativedelta(months=1)).replace(day=1) - timedelta(days=1)
 
         accounts = crud_account.get_multi_with_balance(db, user_id=user_id)
+        # Saldo atual já considera apenas transações até hoje (conforme alteração no FinancialEngine)
         total_actual_balance = sum((acc.balance for acc in accounts), Decimal(0))
 
-        # future_diff: sum of non-deleted transactions from today onwards
-        future_diff = db.scalar(
+        # Para o fluxo de caixa, precisamos do saldo ao FINAL DE ONTEM como ponto de partida,
+        # pois o loop abaixo adicionará as transações de hoje.
+        today_diff = db.scalar(
             select(func.sum(Transaction.amount))
             .filter(
                 Transaction.user_id == user_id,
                 Transaction.deleted_at == None,
-                Transaction.date >= today
+                Transaction.date == today
             )
         ) or Decimal(0)
 
-        current_balance = total_actual_balance - future_diff
+        current_balance = total_actual_balance - today_diff
 
         expenses = db.execute(
             select(Transaction.date, func.sum(Transaction.amount).label('amount'))

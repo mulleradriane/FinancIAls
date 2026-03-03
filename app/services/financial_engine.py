@@ -3,19 +3,24 @@ from sqlalchemy import extract, func, select
 from app.models.transaction import Transaction, TransactionNature
 from app.models.account import Account, AccountType
 from decimal import Decimal
-from datetime import date
+from datetime import date, datetime
 from typing import Dict, Any, List
 from uuid import UUID
+import pytz
 
 class FinancialEngine:
     def get_account_balance(self, db: Session, account_id: Any) -> Decimal:
         """
         Calcula o saldo atual de uma conta:
         initial_balance + SUM(Transaction.amount)
+        Considera apenas transações até HOJE (America/Sao_Paulo).
         """
         account = db.get(Account, account_id)
         if not account:
             return Decimal(0)
+
+        tz = pytz.timezone("America/Sao_Paulo")
+        today = datetime.now(tz).date()
 
         initial_balance = account.initial_balance
         start_date = account.initial_balance_date
@@ -25,7 +30,8 @@ class FinancialEngine:
             .filter(
                 Transaction.account_id == account_id,
                 Transaction.deleted_at == None,
-                Transaction.date >= start_date
+                Transaction.date >= start_date,
+                Transaction.date <= today
             )
         ) or Decimal(0)
 
