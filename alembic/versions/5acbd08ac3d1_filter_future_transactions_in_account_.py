@@ -19,36 +19,32 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # 1. v_account_balances - Now filtering by date <= today (Sao Paulo)
+    # 1. Drop dependent views in order
+    op.execute("DROP VIEW IF EXISTS v_net_worth;")
+    op.execute("DROP VIEW IF EXISTS v_assets_liabilities;")
+    op.execute("DROP VIEW IF EXISTS v_account_balances;")
+
+    # 2. Recreate v_account_balances with date filter (localized to America/Sao_Paulo)
     op.execute("""
-    CREATE OR REPLACE VIEW v_account_balances AS
-    SELECT
-        a.id,
-        a.type,
-        a.user_id,
-        a.initial_balance + COALESCE(
-            SUM(
-                CASE
-                    WHEN t.date >= a.initial_balance_date
-                     AND t.date <= (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date
-                     AND t.deleted_at IS NULL
-                    THEN t.amount
-                    ELSE 0
-                END
-            ), 0
-        ) AS current_balance
+    CREATE VIEW v_account_balances AS
+    SELECT a.id, a.type, a.user_id,
+        (a.initial_balance + COALESCE(sum(
+            CASE
+                WHEN (t.date >= a.initial_balance_date)
+                AND (t.date <= (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date)
+                AND (t.deleted_at IS NULL)
+                THEN t.amount
+                ELSE 0
+            END), 0)) AS current_balance
     FROM accounts a
     LEFT JOIN transactions t ON a.id = t.account_id
-    GROUP BY a.id, a.type, a.user_id, a.initial_balance, a.initial_balance_date;
+    GROUP BY a.id, a.type, a.user_id,
+             a.initial_balance, a.initial_balance_date;
     """)
 
-    # We don't strictly need to recreate the other views because they depend on v_account_balances
-    # but some databases might require it if the columns/types changed (they haven't).
-    # Recreating them ensures everything is consistent.
-
-    # 2. v_net_worth
+    # 3. Recreate v_net_worth
     op.execute("""
-    CREATE OR REPLACE VIEW v_net_worth AS
+    CREATE VIEW v_net_worth AS
     SELECT
         user_id,
         COALESCE(SUM(current_balance), 0) AS net_worth
@@ -56,9 +52,9 @@ def upgrade() -> None:
     GROUP BY user_id;
     """)
 
-    # 6. v_assets_liabilities
+    # 4. Recreate v_assets_liabilities
     op.execute("""
-    CREATE OR REPLACE VIEW v_assets_liabilities AS
+    CREATE VIEW v_assets_liabilities AS
     SELECT
         user_id,
         CASE
@@ -83,31 +79,31 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Restore v_account_balances to previous state (without date <= today filter)
+    # 1. Drop views in order
+    op.execute("DROP VIEW IF EXISTS v_net_worth;")
+    op.execute("DROP VIEW IF EXISTS v_assets_liabilities;")
+    op.execute("DROP VIEW IF EXISTS v_account_balances;")
+
+    # 2. Restore v_account_balances to previous state (no future date filter)
     op.execute("""
-    CREATE OR REPLACE VIEW v_account_balances AS
-    SELECT
-        a.id,
-        a.type,
-        a.user_id,
-        a.initial_balance + COALESCE(
-            SUM(
-                CASE
-                    WHEN t.date >= a.initial_balance_date
-                     AND t.deleted_at IS NULL
-                    THEN t.amount
-                    ELSE 0
-                END
-            ), 0
-        ) AS current_balance
+    CREATE VIEW v_account_balances AS
+    SELECT a.id, a.type, a.user_id,
+        (a.initial_balance + COALESCE(sum(
+            CASE
+                WHEN (t.date >= a.initial_balance_date)
+                AND (t.deleted_at IS NULL)
+                THEN t.amount
+                ELSE 0
+            END), 0)) AS current_balance
     FROM accounts a
     LEFT JOIN transactions t ON a.id = t.account_id
-    GROUP BY a.id, a.type, a.user_id, a.initial_balance, a.initial_balance_date;
+    GROUP BY a.id, a.type, a.user_id,
+             a.initial_balance, a.initial_balance_date;
     """)
 
-    # Restore v_net_worth
+    # 3. Restore v_net_worth
     op.execute("""
-    CREATE OR REPLACE VIEW v_net_worth AS
+    CREATE VIEW v_net_worth AS
     SELECT
         user_id,
         COALESCE(SUM(current_balance), 0) AS net_worth
@@ -115,9 +111,9 @@ def downgrade() -> None:
     GROUP BY user_id;
     """)
 
-    # Restore v_assets_liabilities
+    # 4. Restore v_assets_liabilities
     op.execute("""
-    CREATE OR REPLACE VIEW v_assets_liabilities AS
+    CREATE VIEW v_assets_liabilities AS
     SELECT
         user_id,
         CASE
