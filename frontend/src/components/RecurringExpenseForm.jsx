@@ -13,17 +13,17 @@ import {
 } from "@/components/ui/select";
 import { Card } from '@/components/ui/card';
 
-const RecurringExpenseForm = ({ categories = [], accounts = [], onSuccess, onCancel }) => {
+const RecurringExpenseForm = ({ categories = [], accounts = [], initialData, onSuccess, onCancel }) => {
   const [formData, setFormData] = useState({
-    description: '',
-    amount: 0,
-    displayAmount: '',
-    date: new Date().toISOString().split('T')[0],
-    categoryId: '',
-    accountId: accounts.length > 0 ? accounts[0].id : '',
-    type: 'subscription', // 'subscription' or 'installment'
-    frequency: 'monthly', // for subscription
-    totalInstallments: '', // for installment
+    description: initialData?.description || '',
+    amount: initialData?.amount || 0,
+    displayAmount: initialData ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(initialData.amount) : '',
+    date: initialData?.start_date || new Date().toISOString().split('T')[0],
+    categoryId: initialData?.category_id || '',
+    accountId: initialData?.account_id || (accounts.length > 0 ? accounts[0].id : ''),
+    type: initialData?.type || 'subscription', // 'subscription' or 'installment'
+    frequency: initialData?.frequency || 'monthly', // for subscription
+    totalInstallments: initialData?.total_installments || '', // for installment
   });
 
   const handleAmountChange = (e) => {
@@ -56,24 +56,41 @@ const RecurringExpenseForm = ({ categories = [], accounts = [], onSuccess, onCan
     }
 
     try {
-      const selectedCategory = categories.find(c => c.id === formData.categoryId);
-      const nature = selectedCategory?.type === 'income' ? 'INCOME' : 'EXPENSE';
+      if (initialData) {
+        // Update mode
+        const payload = {
+            description: formData.description,
+            amount: formData.amount,
+            category_id: formData.categoryId,
+            account_id: formData.accountId,
+            type: formData.type,
+            frequency: formData.type === 'subscription' ? formData.frequency : null,
+            total_installments: formData.type === 'installment' ? parseInt(formData.totalInstallments) : null,
+            start_date: formData.date
+        };
+        await api.put(`/recurring-expenses/${initialData.id}`, payload);
+        toast.success('Recorrência atualizada com sucesso!');
+      } else {
+        // Create mode
+        const selectedCategory = categories.find(c => c.id === formData.categoryId);
+        const nature = selectedCategory?.type === 'income' ? 'INCOME' : 'EXPENSE';
 
-      const payload = {
-        description: formData.description,
-        amount: formData.amount,
-        nature: nature,
-        date: formData.date,
-        category_id: formData.categoryId,
-        account_id: formData.accountId,
-        is_recurring: true,
-        recurring_type: formData.type,
-        total_installments: formData.type === 'installment' ? parseInt(formData.totalInstallments) : null,
-        frequency: formData.type === 'subscription' ? formData.frequency : null,
-      };
+        const payload = {
+          description: formData.description,
+          amount: formData.amount,
+          nature: nature,
+          date: formData.date,
+          category_id: formData.categoryId,
+          account_id: formData.accountId,
+          is_recurring: true,
+          recurring_type: formData.type,
+          total_installments: formData.type === 'installment' ? parseInt(formData.totalInstallments) : null,
+          frequency: formData.type === 'subscription' ? formData.frequency : null,
+        };
 
-      await api.post('/transactions/', payload);
-      toast.success('Recorrência criada com sucesso!');
+        await api.post('/transactions/', payload);
+        toast.success('Recorrência criada com sucesso!');
+      }
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Error saving recurring expense:', error);
@@ -225,7 +242,7 @@ const RecurringExpenseForm = ({ categories = [], accounts = [], onSuccess, onCan
 
       <div className="flex gap-3 pt-2">
         <Button type="submit" className="flex-1 rounded-xl h-12 text-base font-bold">
-          Salvar Recorrência
+          {initialData ? 'Atualizar Recorrência' : 'Salvar Recorrência'}
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel} className="flex-1 rounded-xl h-12 text-base">
           Cancelar
