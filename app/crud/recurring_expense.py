@@ -83,6 +83,21 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
             )
         return obj
 
+    def update_by_user(self, db: Session, *, db_obj: RecurringExpense, obj_in: RecurringExpenseUpdate, user_id: UUID) -> RecurringExpense:
+        update_data = obj_in.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(db_obj, field, value)
+
+        db.add(db_obj)
+        db.commit()
+
+        # Re-fetch with joinedload to ensure category is loaded and avoid DetachedInstanceError
+        return db.scalar(
+            select(self.model)
+            .options(joinedload(RecurringExpense.category))
+            .filter(self.model.id == db_obj.id, self.model.user_id == user_id)
+        )
+
     def get_summary(self, db: Session, *, user_id: UUID) -> dict:
         from app.services.financial_engine import financial_engine
         from decimal import Decimal

@@ -255,7 +255,8 @@ const Recorrentes = () => {
   };
 
   const handleEdit = (item) => {
-    toast.info('Em breve: Edição de recorrências');
+    setEditingItem(item);
+    setIsFormOpen(true);
   };
 
   const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -266,6 +267,7 @@ const Recorrentes = () => {
   ].filter(d => d.value > 0);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const [categories, setCategories] = useState([]);
   const [accounts, setAccounts] = useState([]);
 
@@ -294,7 +296,10 @@ const Recorrentes = () => {
           <p className="text-muted-foreground mt-1">Gerencie seus compromissos financeiros fixos e parcelados.</p>
         </div>
 
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <Dialog open={isFormOpen} onOpenChange={(open) => {
+          setIsFormOpen(open);
+          if (!open) setEditingItem(null);
+        }}>
           <DialogTrigger asChild>
             <Button className="rounded-xl font-bold gap-2 shadow-lg shadow-primary/20 h-11 px-6">
               <Plus size={18} />
@@ -306,21 +311,27 @@ const Recorrentes = () => {
               <CardHeader className="bg-primary pb-8 pt-6">
                 <CardTitle className="text-white flex items-center gap-2">
                   <Calendar className="text-white/80" />
-                  Nova Recorrência
+                  {editingItem ? 'Editar Recorrência' : 'Nova Recorrência'}
                 </CardTitle>
                 <CardDescription className="text-primary-foreground/70">
-                  Configure uma nova despesa ou receita recorrente.
+                  {editingItem ? 'Atualize os dados da sua recorrência.' : 'Configure uma nova despesa ou receita recorrente.'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6">
                 <RecurringExpenseForm
+                  key={editingItem?.id || 'new'}
+                  initialData={editingItem}
                   categories={categories}
                   accounts={accounts}
                   onSuccess={() => {
                     setIsFormOpen(false);
+                    setEditingItem(null);
                     fetchData();
                   }}
-                  onCancel={() => setIsFormOpen(false)}
+                  onCancel={() => {
+                    setIsFormOpen(false);
+                    setEditingItem(null);
+                  }}
                 />
               </CardContent>
             </Card>
