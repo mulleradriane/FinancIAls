@@ -41,6 +41,10 @@ const Transactions = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [skip, setSkip] = useState(0);
+  const limit = 100;
   const [highlightId, setHighlightId] = useState(null);
 
   // Filters
@@ -70,85 +74,111 @@ const Transactions = () => {
     }
   };
 
-  const fetchTransactions = async () => {
+  const getFilterParams = (customLimit, customSkip) => {
+    const params = {
+      limit: customLimit ?? limit,
+      skip: customSkip ?? 0
+    };
+
+    if (accountIds.length === 1) params.account_id = accountIds[0];
+    if (categoryIds.length === 1) params.category_id = categoryIds[0];
+    if (debouncedSearch) params.search = debouncedSearch;
+
+    let start = '';
+    let end = '';
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+
+    switch (period) {
+      case '30days':
+        end = today;
+        const d30 = new Date();
+        d30.setDate(d30.getDate() - 30);
+        start = d30.toISOString().split('T')[0];
+        break;
+      case '90days':
+        end = today;
+        const d90 = new Date();
+        d90.setDate(d90.getDate() - 90);
+        start = d90.toISOString().split('T')[0];
+        break;
+      case 'month':
+        start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+        break;
+      case 'last_month':
+        start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+        end = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+        break;
+      case '6months':
+        end = today;
+        const d6m = new Date();
+        d6m.setDate(d6m.getDate() - 180);
+        start = d6m.toISOString().split('T')[0];
+        break;
+      case 'year':
+        start = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+        end = new Date(now.getFullYear(), 11, 31).toISOString().split('T')[0];
+        break;
+      case 'last_year':
+        start = new Date(now.getFullYear() - 1, 0, 1).toISOString().split('T')[0];
+        end = new Date(now.getFullYear() - 1, 11, 31).toISOString().split('T')[0];
+        break;
+      case 'custom':
+        start = startDate;
+        end = endDate;
+        break;
+      default:
+        start = '';
+        end = '';
+        break;
+    }
+
+    if (start) params.start_date = start;
+    if (end) params.end_date = end;
+
+    return params;
+  };
+
+  const applyClientFilters = (data) => {
+    let filteredData = [...data];
+    if (accountIds.length > 1) {
+      filteredData = filteredData.filter(t => accountIds.includes(t.account_id));
+    }
+    if (categoryIds.length > 1) {
+      filteredData = filteredData.filter(t => categoryIds.includes(t.category_id));
+    }
+    return filteredData;
+  };
+
+  const fetchTransactions = async (isLoadMore = false) => {
     try {
-      setLoading(true);
-      const params = {};
-      if (accountIds.length === 1) params.account_id = accountIds[0];
-      if (categoryIds.length === 1) params.category_id = categoryIds[0];
-      if (debouncedSearch) params.search = debouncedSearch;
-
-      let start = '';
-      let end = '';
-
-      const now = new Date();
-      const today = now.toISOString().split('T')[0];
-
-      switch (period) {
-        case '30days':
-          end = today;
-          const d30 = new Date();
-          d30.setDate(d30.getDate() - 30);
-          start = d30.toISOString().split('T')[0];
-          break;
-        case '90days':
-          end = today;
-          const d90 = new Date();
-          d90.setDate(d90.getDate() - 90);
-          start = d90.toISOString().split('T')[0];
-          break;
-        case 'month':
-          start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-          end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-          break;
-        case 'last_month':
-          start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
-          end = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
-          break;
-        case '6months':
-          end = today;
-          const d6m = new Date();
-          d6m.setDate(d6m.getDate() - 180); // Corridos
-          start = d6m.toISOString().split('T')[0];
-          break;
-        case 'year':
-          start = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
-          end = new Date(now.getFullYear(), 11, 31).toISOString().split('T')[0];
-          break;
-        case 'last_year':
-          start = new Date(now.getFullYear() - 1, 0, 1).toISOString().split('T')[0];
-          end = new Date(now.getFullYear() - 1, 11, 31).toISOString().split('T')[0];
-          break;
-        case 'custom':
-          start = startDate;
-          end = endDate;
-          break;
-        case 'all':
-        default:
-          start = '';
-          end = '';
-          break;
+      if (isLoadMore) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+        setSkip(0);
       }
 
-      if (start) params.start_date = start;
-      if (end) params.end_date = end;
+      const currentSkip = isLoadMore ? skip + limit : 0;
+      const params = getFilterParams(limit, currentSkip);
 
       const response = await api.get('/transactions/', { params });
-      let data = response.data;
+      const data = applyClientFilters(response.data);
 
-      // Client-side filtering if multiple accounts/categories are selected
-      if (accountIds.length > 1) {
-        data = data.filter(t => accountIds.includes(t.account_id));
-      }
-      if (categoryIds.length > 1) {
-        data = data.filter(t => categoryIds.includes(t.category_id));
+      if (isLoadMore) {
+        setTransactions(prev => [...prev, ...data]);
+        setSkip(currentSkip);
+      } else {
+        setTransactions(data);
       }
 
-      setTransactions(data);
+      setHasMore(response.data.length === limit);
     } catch (error) {
       console.error('Error fetching transactions:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -229,45 +259,56 @@ const Transactions = () => {
     }
   };
 
-  const exportToCSV = () => {
-    if (transactions.length === 0) {
-      toast.error('Nenhuma transação para exportar');
-      return;
+  const exportToCSV = async () => {
+    try {
+      toast.info('Preparando exportação...');
+      const params = getFilterParams(-1, 0);
+      const response = await api.get('/transactions/', { params });
+      const data = applyClientFilters(response.data);
+
+      if (data.length === 0) {
+        toast.error('Nenhuma transação para exportar');
+        return;
+      }
+
+      const natureMap = {
+        'INCOME': 'Receita',
+        'EXPENSE': 'Despesa',
+        'INVESTMENT': 'Investimento',
+        'TRANSFER': 'Transferência',
+        'SYSTEM_ADJUSTMENT': 'Ajuste'
+      };
+
+      const headers = ['Data', 'Descrição', 'Categoria', 'Conta', 'Valor', 'Natureza'];
+      const rows = data.map(t => [
+        parseLocalDate(t.date).toLocaleDateString('pt-BR'),
+        t.description,
+        t.category_name || (t.category_is_system ? 'Sistema' : 'Sem Categoria'),
+        t.account_name,
+        t.amount.toString().replace('.', ','),
+        natureMap[t.nature] || t.nature
+      ]);
+
+      const csvContent = [
+        headers.join(';'),
+        ...rows.map(row => row.join(';'))
+      ].join('\n');
+
+      const BOM = '\uFEFF';
+      const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `transacoes_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success('Exportação concluída!');
+    } catch (error) {
+      console.error('Error exporting transactions:', error);
+      toast.error('Erro ao exportar transações');
     }
-
-    const natureMap = {
-      'INCOME': 'Receita',
-      'EXPENSE': 'Despesa',
-      'INVESTMENT': 'Investimento',
-      'TRANSFER': 'Transferência',
-      'SYSTEM_ADJUSTMENT': 'Ajuste'
-    };
-
-    const headers = ['Data', 'Descrição', 'Categoria', 'Conta', 'Valor', 'Natureza'];
-    const rows = transactions.map(t => [
-      parseLocalDate(t.date).toLocaleDateString('pt-BR'),
-      t.description,
-      t.category_name || (t.category_is_system ? 'Sistema' : 'Sem Categoria'),
-      t.account_name,
-      t.amount.toString().replace('.', ','),
-      natureMap[t.nature] || t.nature
-    ]);
-
-    const csvContent = [
-      headers.join(';'),
-      ...rows.map(row => row.join(';'))
-    ].join('\n');
-
-    const BOM = '\uFEFF';
-    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `transacoes_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   return (
@@ -516,12 +557,34 @@ const Transactions = () => {
             ))}
           </div>
         ) : transactions.length > 0 ? (
-          <TransactionList
-            transactions={transactions}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            highlightId={highlightId}
-          />
+          <>
+            <TransactionList
+              transactions={transactions}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              highlightId={highlightId}
+            />
+            {hasMore && (
+              <div className="mt-8 flex justify-center">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => fetchTransactions(true)}
+                  disabled={loadingMore}
+                  className="rounded-xl px-12"
+                >
+                  {loadingMore ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      Carregando...
+                    </div>
+                  ) : (
+                    'Carregar Mais'
+                  )}
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
           <EmptyState
             icon={SearchX}

@@ -28,14 +28,15 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
         ).first()
 
     def get_multi_by_user(self, db: Session, *, user_id: UUID, skip: int = 0, limit: int = 100) -> List[Transaction]:
-        return db.scalars(
-            select(Transaction)
-            .filter(Transaction.user_id == user_id, Transaction.deleted_at == None)
-            .options(joinedload(Transaction.category))
-            .order_by(Transaction.date.desc())
-            .offset(skip)
-            .limit(limit)
-        ).all()
+        query = select(Transaction).filter(
+            Transaction.user_id == user_id,
+            Transaction.deleted_at == None
+        ).options(joinedload(Transaction.category)).order_by(Transaction.date.desc()).offset(skip)
+
+        if limit != -1:
+            query = query.limit(limit)
+
+        return db.scalars(query).all()
 
     def remove_by_user(self, db: Session, *, id: UUID, user_id: UUID) -> Optional[Transaction]:
         obj = self.get_by_user(db, id, user_id)
@@ -91,16 +92,16 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
         if search:
             query = query.filter(Transaction.description.ilike(f"%{search}%"))
 
-        transactions = db.scalars(
-            query.options(
-                joinedload(Transaction.category),
-                joinedload(Transaction.account),
-                joinedload(Transaction.recurring_expense)
-            )
-            .order_by(Transaction.date.desc())
-            .offset(skip)
-            .limit(limit)
-        ).all()
+        query = query.options(
+            joinedload(Transaction.category),
+            joinedload(Transaction.account),
+            joinedload(Transaction.recurring_expense)
+        ).order_by(Transaction.date.desc()).offset(skip)
+
+        if limit != -1:
+            query = query.limit(limit)
+
+        transactions = db.scalars(query).all()
 
         unified_list = []
         for t in transactions:
