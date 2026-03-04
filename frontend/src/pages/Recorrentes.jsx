@@ -5,20 +5,38 @@ import {
   Package,
   Tv,
   Trash2,
-  Square,
   TrendingDown,
   TrendingUp,
   CreditCard,
   Calendar,
   Info,
   Plus,
-  Repeat
+  Repeat,
+  StopCircle,
+  Pencil
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +55,143 @@ import { cn, parseLocalDate } from '@/lib/utils';
 import PrivateValue from '@/components/ui/PrivateValue';
 
 import RecurringExpenseForm from '@/components/RecurringExpenseForm';
+
+const RecurringCard = ({ item, type, onEdit, onTerminate, onDelete }) => {
+  const isInstallment = item.type === 'installment';
+  const isIncome = type === 'income';
+  const total = item.total_installments || 1;
+  const completed = item.current_installment || 0;
+  const progress = (completed / total) * 100;
+  const endDateStr = item.end_date ? parseLocalDate(item.end_date).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : '-';
+
+  const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+
+  return (
+    <Card className="group border-none shadow-sm hover:shadow-md transition-all rounded-2xl overflow-hidden bg-card/50 backdrop-blur-sm flex flex-col">
+      <CardContent className="p-6 flex-1">
+        <div className="flex justify-between items-start">
+          <div className="flex gap-4">
+            <div className={cn(
+              "w-12 h-12 rounded-xl flex items-center justify-center border",
+              isIncome ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                (isInstallment ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : "bg-blue-500/10 text-blue-600 border-blue-500/20")
+            )}>
+              {isInstallment ? <Package size={22} /> : (isIncome ? <Repeat size={22} /> : <Tv size={22} />)}
+            </div>
+            <div>
+              <h4 className="font-bold leading-tight">{item.description}</h4>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-1">{item.category?.name || 'Sem Categoria'}</p>
+              {isInstallment ? (
+                <Badge variant="secondary" className={cn(
+                  "mt-2 text-[10px] font-black h-5 px-2 border-none",
+                  isIncome ? "bg-emerald-500/10 text-emerald-700" : "bg-amber-500/10 text-amber-700"
+                )}>
+                  {completed}/{total}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[9px] uppercase font-black h-4 px-1.5 mt-2">
+                  {item.frequency === 'monthly' ? 'Mensal' : 'Anual'}
+                </Badge>
+              )}
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="font-black text-xl"><PrivateValue value={formatCurrency(item.amount)} /></p>
+            {isInstallment && <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">até {endDateStr}</p>}
+          </div>
+        </div>
+
+        {isInstallment && (
+          <div className="mt-6 space-y-2">
+            <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <span>Progresso</span>
+              <span>{Math.round(progress)}%</span>
+            </div>
+            {isIncome ? (
+              <div className="h-1.5 w-full bg-emerald-500/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 transition-all"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            ) : (
+              <Progress value={progress} className="h-1.5 bg-amber-500/10" />
+            )}
+          </div>
+        )}
+      </CardContent>
+
+      <div className="px-6">
+        <Separator className="bg-border/50" />
+      </div>
+
+      <CardFooter className="p-3 justify-center gap-2">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={() => onEdit(item)} className="h-9 w-9 rounded-xl text-muted-foreground hover:bg-secondary">
+              <Pencil size={18} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Editar</TooltipContent>
+        </Tooltip>
+
+        <AlertDialog>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-amber-500 hover:text-amber-600 hover:bg-amber-500/10">
+                  <StopCircle size={18} />
+                </Button>
+              </AlertDialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent>Encerrar recorrência</TooltipContent>
+          </Tooltip>
+          <AlertDialogContent className="rounded-2xl border-none">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Encerrar recorrência?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Deseja encerrar esta recorrência? O histórico de transações será mantido.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={() => onTerminate(item.id)} className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white">
+                Encerrar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                  <Trash2 size={18} />
+                </Button>
+              </AlertDialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent>Excluir permanentemente</TooltipContent>
+          </Tooltip>
+          <AlertDialogContent className="rounded-2xl border-none">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Isso irá excluir a recorrência e todas as transações vinculadas permanentemente.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={() => onDelete(item.id)} className="rounded-xl bg-destructive hover:bg-destructive/90 text-white">
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </CardFooter>
+    </Card>
+  );
+};
 
 const Recorrentes = () => {
   const [activeTab, setActiveTab] = useState('despesas');
@@ -78,29 +233,29 @@ const Recorrentes = () => {
   const subscriptions = recurringExpenses.filter(e => e.type === 'subscription');
 
   const handleDelete = async (id) => {
-    if (window.confirm('Deseja realmente excluir esta recorrência? Todas as transações (passadas e futuras) vinculadas a ela serão apagadas.')) {
-      try {
-        await api.delete(`/recurring-expenses/${id}`);
-        toast.success('Recorrência excluída!');
-        fetchData();
-      } catch (error) {
-        console.error('Error deleting recurrence:', error);
-        toast.error('Erro ao excluir recorrência.');
-      }
+    try {
+      await api.delete(`/recurring-expenses/${id}`);
+      toast.success('Recorrência excluída!');
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting recurrence:', error);
+      toast.error('Erro ao excluir recorrência.');
     }
   };
 
   const handleTerminate = async (id) => {
-    if (window.confirm('Deseja realmente encerrar esta recorrência? As transações passadas serão mantidas, mas as futuras serão apagadas.')) {
-      try {
-        await api.post(`/recurring-expenses/${id}/terminate`);
-        toast.success('Recorrência encerrada!');
-        fetchData();
-      } catch (error) {
-        console.error('Error terminating recurrence:', error);
-        toast.error('Erro ao encerrar recorrência.');
-      }
+    try {
+      await api.post(`/recurring-expenses/${id}/terminate`);
+      toast.success('Recorrência encerrada!');
+      fetchData();
+    } catch (error) {
+      console.error('Error terminating recurrence:', error);
+      toast.error('Erro ao encerrar recorrência.');
     }
+  };
+
+  const handleEdit = (item) => {
+    toast.info('Em breve: Edição de recorrências');
   };
 
   const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -276,53 +431,16 @@ const Recorrentes = () => {
               <Badge variant="secondary" className="rounded-full">{installments.length}</Badge>
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {installments.map(item => {
-                const total = item.total_installments || 1;
-                const completed = item.current_installment || 0;
-                const progress = (completed / total) * 100;
-
-                const endDateStr = item.end_date ? parseLocalDate(item.end_date).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : '-';
-
-                return (
-                  <Card key={item.id} className="group border-none shadow-sm hover:shadow-md transition-all rounded-2xl overflow-hidden bg-card/50 backdrop-blur-sm">
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-start">
-                        <div className="flex gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 border border-amber-500/20">
-                            <Package size={22} />
-                          </div>
-                          <div>
-                            <h4 className="font-bold leading-tight">{item.description}</h4>
-                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-1">{item.category?.name || 'Sem Categoria'}</p>
-                            <Badge variant="secondary" className="mt-2 text-[10px] font-black h-5 px-2 bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 border-none">
-                              {completed}/{total}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="text-right flex flex-col items-end">
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity mb-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleTerminate(item.id)} className="h-8 w-8 rounded-full" title="Encerrar">
-                              <Square size={14} className="text-muted-foreground" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-8 w-8 rounded-full text-destructive hover:text-destructive" title="Excluir">
-                              <Trash2 size={14} />
-                            </Button>
-                          </div>
-                          <p className="font-black text-xl"><PrivateValue value={formatCurrency(item.amount)} /></p>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">até {endDateStr}</p>
-                        </div>
-                      </div>
-                      <div className="mt-6 space-y-2">
-                        <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          <span>Progresso</span>
-                          <span>{Math.round(progress)}%</span>
-                        </div>
-                        <Progress value={progress} className="h-1.5 bg-amber-500/10" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+              {installments.map(item => (
+                <RecurringCard
+                  key={item.id}
+                  item={item}
+                  type="expense"
+                  onEdit={handleEdit}
+                  onTerminate={handleTerminate}
+                  onDelete={handleDelete}
+                />
+              ))}
               {installments.length === 0 && (
                 <div className="col-span-full p-8 text-center border-2 border-dashed rounded-2xl bg-secondary/5">
                   <p className="text-sm text-muted-foreground italic">Nenhum parcelamento registrado.</p>
@@ -339,35 +457,14 @@ const Recorrentes = () => {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {subscriptions.map(item => (
-                <Card key={item.id} className="group border-none shadow-sm hover:shadow-md transition-all rounded-2xl overflow-hidden bg-card/50 backdrop-blur-sm">
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 border border-blue-500/20">
-                          <Tv size={22} />
-                        </div>
-                        <div>
-                          <h4 className="font-bold leading-tight">{item.description}</h4>
-                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-1">{item.category?.name || 'Sem Categoria'}</p>
-                          <Badge variant="outline" className="text-[9px] uppercase font-black h-4 px-1.5 mt-2">
-                            {item.frequency === 'monthly' ? 'Mensal' : 'Anual'}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="text-right flex flex-col items-end">
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity mb-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleTerminate(item.id)} className="h-8 w-8 rounded-full" title="Encerrar">
-                            <Square size={14} className="text-muted-foreground" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-8 w-8 rounded-full text-destructive hover:text-destructive" title="Excluir">
-                            <Trash2 size={14} />
-                          </Button>
-                        </div>
-                        <p className="font-black text-xl"><PrivateValue value={formatCurrency(item.amount)} /></p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <RecurringCard
+                  key={item.id}
+                  item={item}
+                  type="expense"
+                  onEdit={handleEdit}
+                  onTerminate={handleTerminate}
+                  onDelete={handleDelete}
+                />
               ))}
               {subscriptions.length === 0 && (
                 <div className="col-span-full p-8 text-center border-2 border-dashed rounded-2xl bg-secondary/5">
@@ -414,58 +511,16 @@ const Recorrentes = () => {
               <Badge variant="secondary" className="rounded-full">{installments.length}</Badge>
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {installments.map(item => {
-                const total = item.total_installments || 1;
-                const completed = item.current_installment || 0;
-                const progress = (completed / total) * 100;
-
-                const endDateStr = item.end_date ? parseLocalDate(item.end_date).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : '-';
-
-                return (
-                  <Card key={item.id} className="group border-none shadow-sm hover:shadow-md transition-all rounded-2xl overflow-hidden bg-card/50 backdrop-blur-sm">
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-start">
-                        <div className="flex gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 border border-emerald-500/20">
-                            <Package size={22} />
-                          </div>
-                          <div>
-                            <h4 className="font-bold leading-tight">{item.description}</h4>
-                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-1">{item.category?.name || 'Sem Categoria'}</p>
-                            <Badge variant="secondary" className="mt-2 text-[10px] font-black h-5 px-2 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 border-none">
-                              {completed}/{total}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="text-right flex flex-col items-end">
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity mb-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleTerminate(item.id)} className="h-8 w-8 rounded-full" title="Encerrar">
-                              <Square size={14} className="text-muted-foreground" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-8 w-8 rounded-full text-destructive hover:text-destructive" title="Excluir">
-                              <Trash2 size={14} />
-                            </Button>
-                          </div>
-                          <p className="font-black text-xl"><PrivateValue value={formatCurrency(item.amount)} /></p>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">até {endDateStr}</p>
-                        </div>
-                      </div>
-                      <div className="mt-6 space-y-2">
-                        <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          <span>Progresso</span>
-                          <span>{Math.round(progress)}%</span>
-                        </div>
-                        <div className="h-1.5 w-full bg-emerald-500/10 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-emerald-500 transition-all"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+              {installments.map(item => (
+                <RecurringCard
+                  key={item.id}
+                  item={item}
+                  type="income"
+                  onEdit={handleEdit}
+                  onTerminate={handleTerminate}
+                  onDelete={handleDelete}
+                />
+              ))}
               {installments.length === 0 && (
                 <div className="col-span-full p-8 text-center border-2 border-dashed rounded-2xl bg-secondary/5">
                   <p className="text-sm text-muted-foreground italic">Nenhuma receita parcelada registrada.</p>
@@ -482,35 +537,14 @@ const Recorrentes = () => {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {subscriptions.map(item => (
-                <Card key={item.id} className="group border-none shadow-sm hover:shadow-md transition-all rounded-2xl overflow-hidden bg-card/50 backdrop-blur-sm">
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 border border-emerald-500/20">
-                          <Repeat size={22} />
-                        </div>
-                        <div>
-                          <h4 className="font-bold leading-tight">{item.description}</h4>
-                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-1">{item.category?.name || 'Sem Categoria'}</p>
-                          <Badge variant="outline" className="text-[9px] uppercase font-black h-4 px-1.5 mt-2">
-                            {item.frequency === 'monthly' ? 'Mensal' : 'Anual'}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="text-right flex flex-col items-end">
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity mb-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleTerminate(item.id)} className="h-8 w-8 rounded-full" title="Encerrar">
-                            <Square size={14} className="text-muted-foreground" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-8 w-8 rounded-full text-destructive hover:text-destructive" title="Excluir">
-                            <Trash2 size={14} />
-                          </Button>
-                        </div>
-                        <p className="font-black text-xl"><PrivateValue value={formatCurrency(item.amount)} /></p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <RecurringCard
+                  key={item.id}
+                  item={item}
+                  type="income"
+                  onEdit={handleEdit}
+                  onTerminate={handleTerminate}
+                  onDelete={handleDelete}
+                />
               ))}
               {subscriptions.length === 0 && (
                 <div className="col-span-full p-8 text-center border-2 border-dashed rounded-2xl bg-secondary/5">
