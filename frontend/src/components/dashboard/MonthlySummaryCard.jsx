@@ -23,8 +23,10 @@ const MonthlySummaryCard = ({ data, loading }) => {
   const savingsRate = calculateSavingsRate();
   const netResult = (data?.totalIncome || 0) - (data?.totalExpense || 0);
 
-  const currentMonthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date());
+  const now = new Date();
+  const currentMonthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(now);
   const capitalizedMonth = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
+  const currentYear = now.getFullYear();
 
   if (loading) {
     return (
@@ -39,7 +41,7 @@ const MonthlySummaryCard = ({ data, loading }) => {
       <CardContent className="p-8">
         <div className="flex items-center gap-2 mb-6">
           <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-            Resumo de {capitalizedMonth}
+            Resumo de {capitalizedMonth} de {currentYear}
           </p>
           <InfoTooltip content="O resultado pode ser negativo no início do mês porque as despesas chegam antes do salário. Este valor fica mais preciso no final do mês." />
         </div>

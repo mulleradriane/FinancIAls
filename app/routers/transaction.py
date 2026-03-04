@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, 
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, or_
 from app.crud.transaction import transaction as crud_transaction
+from app.crud.account import account as crud_account
 from app.models.transaction import TransactionNature, Transaction as TransactionModel
 from app.models.category import Category, CategoryType
 from app.schemas.transaction import (
@@ -274,6 +275,10 @@ def confirm_import_csv(
         db.add_all(transactions_to_add)
         db.commit()
 
+        # Update balance history for affected account
+        balance = crud_account.get_balance(db, request.account_id)
+        crud_account._record_history(db, request.account_id, balance)
+
         # Detect matches with recurring expenses
         recurring_matches = detect_recurring_matches(db, current_user.id, transactions_to_add)
 
@@ -329,6 +334,11 @@ def create_transfer_transaction(
     db.add(outflow)
     db.add(inflow)
     db.commit()
+
+    # Update balance history for affected accounts
+    for acc_id in [obj_in.from_account_id, obj_in.to_account_id]:
+        balance = crud_account.get_balance(db, acc_id)
+        crud_account._record_history(db, acc_id, balance)
 
     return {
         "message": "Transferência registrada com sucesso",

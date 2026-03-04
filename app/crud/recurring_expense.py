@@ -4,6 +4,7 @@ import datetime
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import select, delete
 from app.crud.base import CRUDBase
+from app.crud.account import account as crud_account
 from app.models.recurring_expense import RecurringExpense
 from app.models.category import Category, CategoryType
 from app.models.transaction import Transaction
@@ -49,6 +50,15 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
     def remove_by_user(self, db: Session, *, id: UUID, user_id: UUID) -> Optional[RecurringExpense]:
         obj = self.get_by_user(db, id, user_id)
         if obj:
+            # Get affected account_ids before deletion
+            affected_account_ids = db.scalars(
+                select(Transaction.account_id)
+                .where(Transaction.recurring_expense_id == id, Transaction.user_id == user_id, Transaction.deleted_at == None)
+            ).all()
+            affected_account_ids = set(affected_account_ids)
+            if obj.account_id:
+                affected_account_ids.add(obj.account_id)
+
             # Delete ALL transactions associated with this recurring expense
             db.execute(
                 delete(Transaction).where(Transaction.recurring_expense_id == id, Transaction.user_id == user_id)
@@ -56,11 +66,31 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
             # Delete the recurring expense itself
             db.delete(obj)
             db.commit()
+
+            # Update balance history for all affected accounts
+            for acc_id in affected_account_ids:
+                balance = crud_account.get_balance(db, acc_id)
+                crud_account._record_history(db, acc_id, balance)
+
         return obj
 
     def terminate_by_user(self, db: Session, *, id: UUID, user_id: UUID) -> Optional[RecurringExpense]:
         obj = self.get_by_user(db, id, user_id)
         if obj:
+            # Get affected account_ids before deletion
+            affected_account_ids = db.scalars(
+                select(Transaction.account_id)
+                .where(
+                    Transaction.recurring_expense_id == id,
+                    Transaction.user_id == user_id,
+                    Transaction.date > datetime.date.today(),
+                    Transaction.deleted_at == None
+                )
+            ).all()
+            affected_account_ids = set(affected_account_ids)
+            if obj.account_id:
+                affected_account_ids.add(obj.account_id)
+
             # Delete only FUTURE transactions
             today = datetime.date.today()
             db.execute(
@@ -74,6 +104,11 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
             obj.active = False
             db.add(obj)
             db.commit()
+
+            # Update balance history for all affected accounts
+            for acc_id in affected_account_ids:
+                balance = crud_account.get_balance(db, acc_id)
+                crud_account._record_history(db, acc_id, balance)
 
             # Re-fetch with joinedload after commit to ensure category is loaded and object is not expired
             obj = db.scalar(
