@@ -111,8 +111,17 @@ const Dashboard = () => {
     setGreeting(`${getGreeting()}, ${name}.`);
   }, []);
 
-  const currentMonthData = operationalMonthly[operationalMonthly.length - 1] || { total_income: 0, total_expenses: 0, net_result: 0 };
-  const currentSavingsRate = savingsRate[savingsRate.length - 1]?.savings_rate || 0;
+  const currentMonthData = operationalMonthly.find(d => {
+    const dDate = new Date(d.month);
+    const now = new Date();
+    return dDate.getUTCFullYear() === now.getFullYear() && dDate.getUTCMonth() === now.getMonth();
+  }) || { total_income: 0, total_expenses: 0, net_result: 0 };
+
+  const currentSavingsRate = savingsRate.find(d => {
+    const dDate = new Date(d.month);
+    const now = new Date();
+    return dDate.getUTCFullYear() === now.getFullYear() && dDate.getUTCMonth() === now.getMonth();
+  })?.savings_rate || 0;
 
   const totalAssets = assetsLiabilities.find(a => a.classification === 'asset')?.total || 0;
   const totalLiabilities = assetsLiabilities.find(a => a.classification === 'liability')?.total || 0;

@@ -10,6 +10,7 @@ from app.models.recurring_expense import RecurringExpense
 from app.models.account import Account
 from app.models.category import Category, CategoryType
 from app.schemas.transaction import TransactionCreate, TransactionUpdate, UnifiedTransactionResponse
+from app.crud.account import account as crud_account
 
 class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate]):
     def create_with_user(self, db: Session, *, obj_in: TransactionCreate, user_id: UUID) -> Transaction:
@@ -18,7 +19,33 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
+
+        # Update balance history for the affected account
+        balance = crud_account.get_balance(db, db_obj.account_id)
+        crud_account._record_history(db, db_obj.account_id, balance)
+
         return db_obj
+
+    def update(
+        self,
+        db: Session,
+        *,
+        db_obj: Transaction,
+        obj_in: TransactionUpdate | dict
+    ) -> Transaction:
+        old_account_id = db_obj.account_id
+        updated_obj = super().update(db, db_obj=db_obj, obj_in=obj_in)
+
+        # Update balance history for the current account
+        balance = crud_account.get_balance(db, updated_obj.account_id)
+        crud_account._record_history(db, updated_obj.account_id, balance)
+
+        # If account changed, update the old account too
+        if old_account_id != updated_obj.account_id:
+            old_balance = crud_account.get_balance(db, old_account_id)
+            crud_account._record_history(db, old_account_id, old_balance)
+
+        return updated_obj
 
     def get_by_user(self, db: Session, id: UUID, user_id: UUID) -> Optional[Transaction]:
         return db.scalars(
@@ -42,9 +69,19 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
         obj = self.get_by_user(db, id, user_id)
         if obj:
             now = datetime.now()
+            affected_account_ids = {obj.account_id}
 
             # If it belongs to a transfer group, delete all related transactions
             if obj.transfer_group_id:
+                # Find all account_ids in the group before deleting
+                group_accounts = db.scalars(
+                    select(Transaction.account_id)
+                    .where(Transaction.transfer_group_id == obj.transfer_group_id)
+                    .where(Transaction.user_id == user_id)
+                    .where(Transaction.deleted_at == None)
+                ).all()
+                affected_account_ids.update(group_accounts)
+
                 db.execute(
                     update(Transaction)
                     .where(Transaction.transfer_group_id == obj.transfer_group_id)
@@ -63,6 +100,12 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
 
             db.commit()
             db.refresh(obj)
+
+            # Update balance history for all affected accounts
+            for acc_id in affected_account_ids:
+                balance = crud_account.get_balance(db, acc_id)
+                crud_account._record_history(db, acc_id, balance)
+
         return obj
 
     def get_unified(

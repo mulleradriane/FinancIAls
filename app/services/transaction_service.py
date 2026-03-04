@@ -5,6 +5,7 @@ from decimal import Decimal
 import uuid
 from app.crud.transaction import transaction as crud_transaction
 from app.crud.recurring_expense import recurring_expense as crud_recurring_expense
+from app.crud.account import account as crud_account
 from app.schemas.transaction import UnifiedTransactionCreate, TransactionCreate
 from app.schemas.recurring_expense import RecurringExpenseCreate
 from app.models.recurring_expense import RecurringType
@@ -72,6 +73,7 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate, us
             date=obj_in.date,
             account_id=obj_in.account_id
         )
+        # This already updates history via crud_transaction.create_with_user
         return crud_transaction.create_with_user(db, obj_in=transaction_in, user_id=user_id)
 
     # Calculate end_date for installments
@@ -138,6 +140,8 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate, us
             db_transaction = crud_transaction.create_with_user(db, obj_in=transaction_in, user_id=user_id)
             if i == 1:
                 first_transaction = db_transaction
+
+        # After all installments are created, history is already updated by the last one
         return first_transaction
     else:
         # Subscription: Create only the first transaction
