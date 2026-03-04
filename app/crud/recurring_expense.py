@@ -109,8 +109,14 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
 
         recurrings = db.scalars(
             select(RecurringExpense).options(
-                selectinload(RecurringExpense.transactions)
-            ).filter(RecurringExpense.user_id == user_id, RecurringExpense.active == True)
+                selectinload(RecurringExpense.transactions),
+                joinedload(RecurringExpense.category)
+            ).join(Category)
+            .filter(
+                RecurringExpense.user_id == user_id,
+                RecurringExpense.active == True,
+                Category.type == CategoryType.expense
+            )
         ).unique().all()
 
         total_subscriptions = Decimal(0)
@@ -123,8 +129,9 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
 
         for r in recurrings:
             # Monthly impact calculation
+            amount = abs(r.amount)
             if r.type == "subscription":
-                total_subscriptions += r.amount
+                total_subscriptions += amount
 
                 # Current month performance
                 # A subscription is "predicted" if it has a frequency that lands it in this month
@@ -135,14 +142,14 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
                     is_this_month = False
 
                 if is_this_month:
-                    subscriptions_total += r.amount
+                    subscriptions_total += amount
                     # Paid if there is a transaction this month with date <= today
                     has_paid = any(first_day_of_month <= t.date <= today and t.deleted_at is None for t in r.transactions)
                     if has_paid:
-                        subscriptions_paid += r.amount
+                        subscriptions_paid += amount
 
             elif r.type == "installment":
-                total_installments += r.amount
+                total_installments += amount
 
                 # For installments, check which one falls into this month
                 this_month_trans = [t for t in r.transactions if first_day_of_month <= t.date <= last_day_of_month and t.deleted_at is None]

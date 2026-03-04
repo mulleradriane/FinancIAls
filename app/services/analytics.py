@@ -328,6 +328,8 @@ class AnalyticsService:
 
     def get_monthly_commitment(self, db: Session, user_id: UUID) -> MonthlyCommitment:
         from app.models.transaction import Transaction, TransactionNature
+        from app.models.recurring_expense import RecurringExpense, FrequencyType
+        from app.models.category import Category, CategoryType
 
         tz = pytz.timezone("America/Sao_Paulo")
         now = datetime.now(tz)
@@ -349,34 +351,41 @@ class AnalyticsService:
         ) or Decimal(0)
         gasto_ate_hoje = abs(gasto_ate_hoje)
 
-        # 2. recorrentes_futuras: soma dos recurring-expenses ativos que ainda vão vencer no mês atual (date > hoje e date <= fim do mês)
-        # Na verdade, a instrução diz: transações com recurring_expense_id preenchido, nature='EXPENSE', data > hoje e data <= fim do mês atual
-        recorrentes_futuras = db.scalar(
-            select(func.sum(Transaction.amount))
+        # Fetch active recurring expenses that could apply to this month
+        active_recurrings = db.execute(
+            select(RecurringExpense, Category.type)
+            .join(Category)
             .filter(
-                Transaction.user_id == user_id,
-                Transaction.nature == TransactionNature.EXPENSE,
-                Transaction.recurring_expense_id != None,
-                Transaction.date > today,
-                Transaction.date <= last_day,
-                Transaction.deleted_at == None
+                RecurringExpense.user_id == user_id,
+                RecurringExpense.active == True,
+                RecurringExpense.start_date <= last_day
             )
-        ) or Decimal(0)
-        recorrentes_futuras = abs(recorrentes_futuras)
+        ).all()
 
-        # 3. receita_esperada: soma das recorrências de receita (nature='INCOME') do mês todo
-        receita_esperada = db.scalar(
-            select(func.sum(Transaction.amount))
-            .filter(
-                Transaction.user_id == user_id,
-                Transaction.nature == TransactionNature.INCOME,
-                Transaction.recurring_expense_id != None,
-                Transaction.date >= first_day,
-                Transaction.date <= last_day,
-                Transaction.deleted_at == None
-            )
-        ) or Decimal(0)
-        receita_esperada = abs(receita_esperada)
+        receita_esperada = Decimal(0)
+        recorrentes_futuras = Decimal(0)
+
+        for rec, cat_type in active_recurrings:
+            # Check if it ended before this month
+            if rec.end_date and rec.end_date < first_day:
+                continue
+
+            # Check if it's a yearly recurrence and if it falls in this month
+            if rec.frequency == FrequencyType.yearly:
+                if rec.start_date.month != today.month:
+                    continue
+
+            # Ensure amount is treated as positive for calculations
+            amount = abs(rec.amount)
+
+            if cat_type == CategoryType.income:
+                receita_esperada += amount
+            elif cat_type == CategoryType.expense:
+                # Recurrence day for this month
+                rec_day = min(rec.start_date.day, last_day_num)
+                # If the recurrence day is in the future, add to recorrentes_futuras
+                if rec_day > today.day:
+                    recorrentes_futuras += amount
 
         # 4. percentual_comprometido: (gasto_ate_hoje + recorrentes_futuras) / receita_esperada * 100
         percentual_comprometido = None
