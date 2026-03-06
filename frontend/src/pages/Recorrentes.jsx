@@ -214,7 +214,8 @@ const Recorrentes = () => {
       const categoryType = activeTab === 'despesas' ? 'expense' : 'income';
       const [expensesRes, summaryRes] = await Promise.all([
         api.get(`/recurring-expenses/?category_type=${categoryType}`),
-        api.get('/recurring-expenses/summary')
+        api.get('/recurring-expenses/summary'),
+        fetchDependencies()
       ]);
       setRecurringExpenses(expensesRes.data);
       setSummary(summaryRes.data);

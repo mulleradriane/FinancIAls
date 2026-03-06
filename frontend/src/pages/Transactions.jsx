@@ -204,7 +204,10 @@ const Transactions = () => {
   };
 
   const handleTransactionCreated = async (newTransaction) => {
-    await fetchTransactions();
+    await Promise.all([
+      fetchTransactions(),
+      fetchAccounts()
+    ]);
     if (newTransaction && newTransaction.id) {
       setHighlightId(newTransaction.id);
       setTimeout(() => setHighlightId(null), 2000);
@@ -251,6 +254,7 @@ const Transactions = () => {
         await api.delete(`/transactions/${transaction.id}`);
         toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} excluída!`);
         fetchTransactions();
+        fetchAccounts();
       } catch (error) {
         console.error(`Error deleting ${type}:`, error);
         const detail = error.response?.data?.detail || `Erro ao excluir ${type}.`;
