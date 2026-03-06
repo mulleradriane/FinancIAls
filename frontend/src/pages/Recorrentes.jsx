@@ -468,11 +468,7 @@ const Recorrentes = () => {
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <p className="text-2xl font-black">
-                  <InfoTooltip content="Calculado sobre a média de receita dos últimos 3 meses. Abaixo de 30% é considerado saudável.">
-                    <span>{summary.commitment_percentage}%</span>
-                  </InfoTooltip>
-                </p>
+                <p className="text-2xl font-black">{summary.commitment_percentage}%</p>
                 <p className="text-[10px] text-muted-foreground font-bold uppercase">Comprometido</p>
               </div>
             </div>
@@ -481,7 +477,7 @@ const Recorrentes = () => {
               <div>
                 <div className="flex items-center gap-1.5">
                   <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Comprometimento Mensal</p>
-                  <InfoTooltip content="Percentual da sua renda mensal já comprometido com despesas recorrentes fixas." />
+                  <InfoTooltip content="Percentual da sua renda mensal já comprometido com despesas recorrentes fixas. Calculado sobre a média de receita dos últimos 3 meses. Abaixo de 30% é considerado saudável." />
                 </div>
                 <h2 className="text-4xl font-black mt-1 text-primary"><PrivateValue value={formatCurrency(summary.total_recurring)} /></h2>
               </div>

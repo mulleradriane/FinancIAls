@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func, select
+from app.models.recurring_expense import RecurringExpense, RecurringType, FrequencyType
 from app.schemas.analytics import (
     OperationalMonthly, SavingsRate, BurnRate,
     NetWorth, AssetsLiabilities, AccountBalance,
@@ -213,7 +214,6 @@ class AnalyticsService:
 
     def get_projection(self, db: Session, user_id: UUID, months: int) -> ProjectionResponse:
         from app.services.financial_engine import financial_engine
-        from app.models.recurring_expense import RecurringExpense, RecurringType
         from app.models.category import Category, CategoryType
         from dateutil.relativedelta import relativedelta
         from sqlalchemy import select
@@ -340,7 +340,6 @@ class AnalyticsService:
 
     def get_monthly_commitment(self, db: Session, user_id: UUID) -> MonthlyCommitment:
         from app.models.transaction import Transaction, TransactionNature
-        from app.models.recurring_expense import RecurringExpense, FrequencyType, RecurringType
         from app.models.category import Category, CategoryType
 
         tz = pytz.timezone("America/Sao_Paulo")
