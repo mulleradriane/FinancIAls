@@ -25,6 +25,13 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
   const [initialBalanceDate, setInitialBalanceDate] = useState(
     account?.initial_balance_date || `${new Date().getFullYear()}-01-01`
   );
+  const [closingDay, setClosingDay] = useState(account?.closing_day || '');
+  const [dueDay, setDueDay] = useState(account?.due_day || '');
+  const [creditLimit, setCreditLimit] = useState(account?.credit_limit || 0);
+  const [displayCreditLimit, setDisplayCreditLimit] = useState(account?.credit_limit ?
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(account.credit_limit) : ''
+  );
+
   const [currentBalance, setCurrentBalance] = useState(account ? account.balance : 0);
   const [displayCurrentBalance, setDisplayCurrentBalance] = useState(account ?
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(account.balance) : ''
@@ -59,6 +66,12 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
         initial_balance: parseFloat(initialBalance),
         initial_balance_date: initialBalanceDate,
       };
+
+      if (type === 'cartao_credito') {
+        payload.closing_day = closingDay ? parseInt(closingDay) : null;
+        payload.due_day = dueDay ? parseInt(dueDay) : null;
+        payload.credit_limit = parseFloat(creditLimit);
+      }
 
       if (account) {
         if (isCurrentBalanceDirty) {
@@ -109,6 +122,59 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
             </SelectContent>
           </Select>
         </div>
+
+        {type === 'cartao_credito' && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="closingDay">Dia de fechamento</Label>
+                  <InfoTooltip content="Dia do mês em que a fatura fecha e os gastos do período são consolidados." />
+                </div>
+                <Input
+                  id="closingDay"
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={closingDay}
+                  onChange={(e) => setClosingDay(e.target.value)}
+                  placeholder="Ex: 10"
+                  className="bg-secondary/30 border-none h-11 rounded-xl"
+                />
+              </div>
+              <div className="grid gap-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="dueDay">Dia de vencimento</Label>
+                  <InfoTooltip content="Dia do mês em que a fatura vence e deve ser paga." />
+                </div>
+                <Input
+                  id="dueDay"
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={dueDay}
+                  onChange={(e) => setDueDay(e.target.value)}
+                  placeholder="Ex: 25"
+                  className="bg-secondary/30 border-none h-11 rounded-xl"
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="creditLimit">Limite do cartão</Label>
+                <InfoTooltip content="Limite total de crédito disponível no cartão." />
+              </div>
+              <Input
+                id="creditLimit"
+                type="text"
+                placeholder="R$ 0,00"
+                value={displayCreditLimit}
+                onChange={(e) => handleBalanceChange(e, setCreditLimit, setDisplayCreditLimit)}
+                className="bg-secondary/30 border-none h-11 rounded-xl font-semibold"
+              />
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="grid gap-2">

@@ -19,6 +19,9 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
             type=obj_in.type,
             initial_balance=obj_in.initial_balance,
             initial_balance_date=obj_in.initial_balance_date,
+            closing_day=obj_in.closing_day,
+            due_day=obj_in.due_day,
+            credit_limit=obj_in.credit_limit,
             user_id=user_id
         )
         db.add(db_obj)

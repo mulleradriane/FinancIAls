@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import AccountForm from '@/components/AccountForm';
 import TransferForm from '@/components/TransferForm';
-import { Plus, ArrowLeftRight, CreditCard, Landmark, Wallet, PiggyBank, Briefcase, Pencil, Trash2, Info } from 'lucide-react';
+import InvoicePaymentForm from '@/components/InvoicePaymentForm';
+import { Plus, ArrowLeftRight, CreditCard, Landmark, Wallet, PiggyBank, Briefcase, Pencil, Trash2, Info, Receipt } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,11 +27,13 @@ import {
 
 const Contas = () => {
   const [accounts, setAccounts] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchAccounts = async () => {
@@ -38,6 +41,20 @@ const Contas = () => {
       setLoading(true);
       const response = await api.get('/accounts/');
       setAccounts(response.data);
+
+      // Fetch transactions for credit cards with closing_day
+      const creditCards = response.data.filter(a => a.type === 'cartao_credito' && a.closing_day);
+      if (creditCards.length > 0) {
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+        const params = new URLSearchParams();
+        params.append('start_date', ninetyDaysAgo.toISOString().split('T')[0]);
+        params.append('limit', 1000);
+        creditCards.forEach(cc => params.append('account_id', cc.id));
+
+        const txResponse = await api.get('/transactions/', { params });
+        setTransactions(txResponse.data.items);
+      }
     } catch (error) {
       console.error('Error fetching accounts:', error);
     } finally {
@@ -79,6 +96,32 @@ const Contas = () => {
       style: 'currency',
       currency: 'BRL',
     }).format(value);
+  };
+
+  const calculateCurrentInvoice = (account) => {
+    if (account.type !== 'cartao_credito' || !account.closing_day) return 0;
+
+    const today = new Date();
+    const currentDay = today.getDate();
+    const closingDay = account.closing_day;
+
+    let startDate;
+    if (currentDay > closingDay) {
+      // Período = (closingDay + 1 do mês anterior) até hoje
+      startDate = new Date(today.getFullYear(), today.getMonth() - 1, closingDay + 1);
+    } else {
+      // Período = (closingDay + 1 de dois meses atrás) até hoje
+      startDate = new Date(today.getFullYear(), today.getMonth() - 2, closingDay + 1);
+    }
+
+    const invoiceTransactions = transactions.filter(t =>
+      t.account_id === account.id &&
+      new Date(t.date + 'T00:00:00') >= startDate &&
+      new Date(t.date + 'T00:00:00') <= today &&
+      t.nature !== 'TRANSFER' // Exclude invoice payments/transfers
+    );
+
+    return invoiceTransactions.reduce((acc, t) => acc + Math.abs(parseFloat(t.amount)), 0);
   };
 
   const handleEdit = (account) => {
@@ -157,16 +200,43 @@ const Contas = () => {
                       </Badge>
                     </div>
                   </div>
+                  {account.type === 'cartao_credito' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-lg h-8 text-[10px] font-bold uppercase tracking-wider"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedAccount(account);
+                        setIsPaymentModalOpen(true);
+                      }}
+                    >
+                      <Receipt size={14} className="mr-1" /> Pagar Fatura
+                    </Button>
+                  )}
                 </div>
 
-                <div className="mt-6">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Saldo Disponível</p>
-                  <div className={cn(
-                    "text-2xl font-black mt-1",
-                    account.balance >= 0 ? "text-success" : "text-destructive"
-                  )}>
-                    <PrivateValue value={formatCurrency(account.balance)} />
+                <div className="mt-6 space-y-2">
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                      {account.type === 'cartao_credito' ? 'Saldo Devedor' : 'Saldo Disponível'}
+                    </p>
+                    <div className={cn(
+                      "text-2xl font-black mt-1",
+                      account.balance >= 0 ? "text-success" : "text-destructive"
+                    )}>
+                      <PrivateValue value={formatCurrency(account.balance)} />
+                    </div>
                   </div>
+
+                  {account.type === 'cartao_credito' && account.closing_day && (
+                    <div className="pt-2 border-t border-dashed">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Fatura Atual</p>
+                      <p className="text-lg font-bold text-destructive">
+                        <PrivateValue value={formatCurrency(calculateCurrentInvoice(account))} />
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -205,6 +275,23 @@ const Contas = () => {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Pagamento de Fatura</DialogTitle>
+          </DialogHeader>
+          {selectedAccount && (
+            <InvoicePaymentForm
+              creditCard={selectedAccount}
+              invoiceAmount={calculateCurrentInvoice(selectedAccount)}
+              accounts={accounts}
+              onPaymentConfirmed={fetchAccounts}
+              onClose={() => setIsPaymentModalOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
         <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
@@ -234,15 +321,26 @@ const Contas = () => {
                 </SheetTitle>
               </SheetHeader>
 
-              <div className="flex-1 px-6 pt-8">
+              <div className="flex-1 px-6 pt-8 overflow-y-auto">
                 <div className="bg-primary/5 rounded-3xl p-6 mb-8 border border-primary/10">
-                  <p className="text-[10px] font-bold text-primary/60 uppercase tracking-widest mb-1">Saldo Atual</p>
+                  <p className="text-[10px] font-bold text-primary/60 uppercase tracking-widest mb-1">
+                    {selectedAccount.type === 'cartao_credito' ? 'Saldo Devedor' : 'Saldo Atual'}
+                  </p>
                   <div className={cn(
                     "text-3xl font-black tracking-tight",
                     selectedAccount.balance >= 0 ? "text-success" : "text-destructive"
                   )}>
                     <PrivateValue value={formatCurrency(selectedAccount.balance)} />
                   </div>
+
+                  {selectedAccount.type === 'cartao_credito' && selectedAccount.closing_day && (
+                    <div className="mt-4 pt-4 border-t border-primary/10">
+                      <p className="text-[10px] font-bold text-primary/60 uppercase tracking-widest mb-1">Fatura Atual</p>
+                      <div className="text-xl font-bold text-destructive tracking-tight">
+                        <PrivateValue value={formatCurrency(calculateCurrentInvoice(selectedAccount))} />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-6">
@@ -259,12 +357,44 @@ const Contas = () => {
                         <span className="text-xs text-muted-foreground font-medium">Saldo inicial</span>
                         <span className="text-xs font-bold">{formatCurrency(selectedAccount.initial_balance)}</span>
                       </div>
+
+                      {selectedAccount.type === 'cartao_credito' && (
+                        <>
+                          {selectedAccount.credit_limit && (
+                            <div className="flex justify-between items-center bg-secondary/20 p-3 rounded-xl">
+                              <span className="text-xs text-muted-foreground font-medium">Limite total</span>
+                              <span className="text-xs font-bold">{formatCurrency(selectedAccount.credit_limit)}</span>
+                            </div>
+                          )}
+                          {selectedAccount.closing_day && (
+                            <div className="flex justify-between items-center bg-secondary/20 p-3 rounded-xl">
+                              <span className="text-xs text-muted-foreground font-medium">Dia de fechamento</span>
+                              <span className="text-xs font-bold">{selectedAccount.closing_day}</span>
+                            </div>
+                          )}
+                          {selectedAccount.due_day && (
+                            <div className="flex justify-between items-center bg-secondary/20 p-3 rounded-xl">
+                              <span className="text-xs text-muted-foreground font-medium">Dia de vencimento</span>
+                              <span className="text-xs font-bold">{selectedAccount.due_day}</span>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="p-6 bg-secondary/10 border-t border-border/50 flex flex-col gap-3">
+                {selectedAccount.type === 'cartao_credito' && (
+                  <Button
+                    onClick={() => setIsPaymentModalOpen(true)}
+                    variant="outline"
+                    className="w-full rounded-xl h-12 font-bold text-primary border-primary/20 hover:bg-primary/5 mb-2"
+                  >
+                    <Receipt size={16} className="mr-2" /> Pagar Fatura
+                  </Button>
+                )}
                 <Button
                   onClick={() => handleEdit(selectedAccount)}
                   className="w-full rounded-xl h-12 font-bold shadow-sm"
