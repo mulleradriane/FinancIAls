@@ -1,6 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 import datetime
+from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import select, delete
 from app.crud.base import CRUDBase
@@ -119,7 +120,6 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
         return obj
 
     def propagate_changes(self, db: Session, *, db_obj: RecurringExpense, apply_from: datetime.date, user_id: UUID) -> List[Transaction]:
-        from decimal import Decimal, ROUND_HALF_UP
         # Reset apply_from to the 1st of the month
         first_day_apply_from = apply_from.replace(day=1)
 
@@ -190,7 +190,6 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
 
     def get_summary(self, db: Session, *, user_id: UUID) -> dict:
         from app.services.financial_engine import financial_engine
-        from decimal import Decimal
 
         today = datetime.date.today()
         first_day_of_month = today.replace(day=1)
