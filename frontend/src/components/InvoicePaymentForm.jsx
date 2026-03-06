@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CreditCard, Wallet } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 
 const InvoicePaymentForm = ({ creditCard, invoiceAmount, accounts, onPaymentConfirmed, onClose }) => {
   const [debitAccountId, setDebitAccountId] = useState('');
