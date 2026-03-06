@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import InfoTooltip from '@/components/ui/InfoTooltip';
 
 const AccountForm = ({ account, onAccountCreated, onClose }) => {
   const [name, setName] = useState(account ? account.name : '');
@@ -22,7 +23,7 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(account.initial_balance) : ''
   );
   const [initialBalanceDate, setInitialBalanceDate] = useState(
-    account?.initial_balance_date || new Date().toISOString().split('T')[0]
+    account?.initial_balance_date || `${new Date().getFullYear()}-01-01`
   );
   const [currentBalance, setCurrentBalance] = useState(account ? account.balance : 0);
   const [displayCurrentBalance, setDisplayCurrentBalance] = useState(account ?
@@ -122,7 +123,10 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="initialBalanceDate">Data Inicial</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="initialBalanceDate">Data de início</Label>
+              <InfoTooltip content="Transações anteriores a esta data não serão consideradas no saldo da conta." />
+            </div>
             <Input
               id="initialBalanceDate"
               type="date"
