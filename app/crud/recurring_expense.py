@@ -184,7 +184,12 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
                         subscriptions_paid += amount
 
             elif r.type == "installment":
-                total_installments += amount
+                # Monthly value for installments
+                monthly_val = amount
+                if r.total_installments and r.total_installments > 0:
+                    monthly_val = (amount / Decimal(str(r.total_installments))).quantize(Decimal("0.01"))
+
+                total_installments += monthly_val
 
                 # For installments, check which one falls into this month
                 this_month_trans = [t for t in r.transactions if first_day_of_month <= t.date <= last_day_of_month and t.deleted_at is None]

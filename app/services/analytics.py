@@ -287,16 +287,28 @@ class AnalyticsService:
                     is_active_this_month = False
 
                 if is_active_this_month:
-                    item = ProjectionItem(description=rec.description, amount=rec.amount)
+                    # Calculate monthly value for installments
+                    amount = abs(rec.amount)
+                    monthly_val = amount
+                    if rec.type == RecurringType.installment and rec.total_installments and rec.total_installments > 0:
+                        monthly_val = (amount / Decimal(str(rec.total_installments))).quantize(Decimal("0.01"))
+
+                    # Original rec.amount is used for income, but with monthly logic
                     if cat_type == CategoryType.income:
-                        month_income_recorrente += rec.amount
+                        rec_monthly_amount = rec.amount
+                        if rec.type == RecurringType.installment and rec.total_installments and rec.total_installments > 0:
+                            rec_monthly_amount = (rec.amount / Decimal(str(rec.total_installments))).quantize(Decimal("0.01"))
+
+                        item = ProjectionItem(description=rec.description, amount=rec_monthly_amount)
+                        month_income_recorrente += rec_monthly_amount
                         income_items.append(item)
                     else:
+                        item = ProjectionItem(description=rec.description, amount=monthly_val)
                         if rec.type == RecurringType.subscription:
-                            month_recurring_expenses += abs(rec.amount)
+                            month_recurring_expenses += monthly_val
                             recurring_items.append(item)
                         else:
-                            month_installments += abs(rec.amount)
+                            month_installments += monthly_val
                             installment_items.append(item)
 
             # Use average income if no recurring income?
@@ -328,7 +340,7 @@ class AnalyticsService:
 
     def get_monthly_commitment(self, db: Session, user_id: UUID) -> MonthlyCommitment:
         from app.models.transaction import Transaction, TransactionNature
-        from app.models.recurring_expense import RecurringExpense, FrequencyType
+        from app.models.recurring_expense import RecurringExpense, FrequencyType, RecurringType
         from app.models.category import Category, CategoryType
 
         tz = pytz.timezone("America/Sao_Paulo")
@@ -378,14 +390,19 @@ class AnalyticsService:
             # Ensure amount is treated as positive for calculations
             amount = abs(rec.amount)
 
+            # Use monthly value for installments
+            monthly_val = amount
+            if rec.type == RecurringType.installment and rec.total_installments and rec.total_installments > 0:
+                monthly_val = (amount / Decimal(str(rec.total_installments))).quantize(Decimal("0.01"))
+
             if cat_type == CategoryType.income:
-                receita_esperada += amount
+                receita_esperada += monthly_val
             elif cat_type == CategoryType.expense:
                 # Recurrence day for this month
                 rec_day = min(rec.start_date.day, last_day_num)
                 # If the recurrence day is in the future, add to recorrentes_futuras
                 if rec_day > today.day:
-                    recorrentes_futuras += amount
+                    recorrentes_futuras += monthly_val
 
         # 4. percentual_comprometido: (gasto_ate_hoje + recorrentes_futuras) / receita_esperada * 100
         percentual_comprometido = None
