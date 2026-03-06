@@ -8,7 +8,7 @@ class AccountBase(BaseModel):
     name: str
     type: AccountType
     initial_balance: Decimal = Decimal(0)
-    initial_balance_date: date | None = None
+    initial_balance_date: date
 
 class AccountCreate(AccountBase):
     pass
