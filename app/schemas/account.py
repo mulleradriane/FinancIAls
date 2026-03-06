@@ -9,6 +9,9 @@ class AccountBase(BaseModel):
     type: AccountType
     initial_balance: Decimal = Decimal(0)
     initial_balance_date: date
+    closing_day: int | None = None
+    due_day: int | None = None
+    credit_limit: Decimal | None = None
 
 class AccountCreate(AccountBase):
     pass
@@ -19,6 +22,9 @@ class AccountUpdate(BaseModel):
     initial_balance: Decimal | None = None
     initial_balance_date: date | None = None
     current_balance: Decimal | None = None
+    closing_day: int | None = None
+    due_day: int | None = None
+    credit_limit: Decimal | None = None
 
 class Account(AccountBase):
     id: UUID
