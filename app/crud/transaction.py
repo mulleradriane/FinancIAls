@@ -1,9 +1,10 @@
-from typing import List, Optional
+from __future__ import annotations
+from typing import Optional
 from uuid import UUID
 from datetime import datetime
 import datetime as dt
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import select, text, update
+from sqlalchemy import select, text, update, func
 from app.crud.base import CRUDBase
 from app.models.transaction import Transaction, TransactionNature
 from app.models.recurring_expense import RecurringExpense
@@ -54,7 +55,7 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
             .options(joinedload(Transaction.category))
         ).first()
 
-    def get_multi_by_user(self, db: Session, *, user_id: UUID, skip: int = 0, limit: int = 100) -> List[Transaction]:
+    def get_multi_by_user(self, db: Session, *, user_id: UUID, skip: int = 0, limit: int = 100) -> list[Transaction]:
         query = select(Transaction).filter(
             Transaction.user_id == user_id,
             Transaction.deleted_at == None
@@ -115,25 +116,35 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
         user_id: UUID,
         skip: int = 0,
         limit: int = 100,
-        account_id: Optional[UUID] = None,
-        category_id: Optional[UUID] = None,
-        start_date: Optional[dt.date] = None,
-        end_date: Optional[dt.date] = None,
-        search: Optional[str] = None
-    ) -> List[UnifiedTransactionResponse]:
+        account_id: UUID | list[UUID] | None = None,
+        category_id: UUID | list[UUID] | None = None,
+        start_date: dt.date | None = None,
+        end_date: dt.date | None = None,
+        search: str | None = None
+    ) -> dict:
         # Get Transactions
         query = select(Transaction).filter(Transaction.user_id == user_id, Transaction.deleted_at == None)
 
         if account_id:
-            query = query.filter(Transaction.account_id == account_id)
+            if isinstance(account_id, list):
+                query = query.filter(Transaction.account_id.in_(account_id))
+            else:
+                query = query.filter(Transaction.account_id == account_id)
         if category_id:
-            query = query.filter(Transaction.category_id == category_id)
+            if isinstance(category_id, list):
+                query = query.filter(Transaction.category_id.in_(category_id))
+            else:
+                query = query.filter(Transaction.category_id == category_id)
         if start_date:
             query = query.filter(Transaction.date >= start_date)
         if end_date:
             query = query.filter(Transaction.date <= end_date)
         if search:
             query = query.filter(Transaction.description.ilike(f"%{search}%"))
+
+        # Get total count before pagination
+        total_query = select(func.count()).select_from(query.subquery())
+        total = db.scalar(total_query)
 
         query = query.options(
             joinedload(Transaction.category),
@@ -167,9 +178,14 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
                 total_installments=t.recurring_expense.total_installments if t.recurring_expense else None
             ))
 
-        return unified_list
+        return {
+            "items": unified_list,
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
 
-    def get_unique_descriptions(self, db: Session, user_id: UUID) -> List[str]:
+    def get_unique_descriptions(self, db: Session, user_id: UUID) -> list[str]:
         result = db.execute(
             select(Transaction.description)
             .filter(Transaction.user_id == user_id, Transaction.deleted_at == None)
