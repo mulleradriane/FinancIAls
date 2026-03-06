@@ -13,6 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { usePrivacy } from '@/context/PrivacyContext';
 import InfoTooltip from '@/components/ui/InfoTooltip';
+import { parseLocalDate } from '@/lib/utils';
 
 const EvolutionChart = ({ data, loading }) => {
   const { isPrivate } = usePrivacy();
@@ -26,7 +27,8 @@ const EvolutionChart = ({ data, loading }) => {
   };
 
   const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
+    const date = parseLocalDate(dateStr);
+    if (!date) return dateStr;
     return new Intl.DateTimeFormat('pt-BR', { month: 'short', year: '2-digit' }).format(date);
   };
 
@@ -43,7 +45,8 @@ const EvolutionChart = ({ data, loading }) => {
   const currentYear = now.getFullYear();
 
   const filteredData = (data || []).filter(item => {
-    const itemDate = new Date(item.month);
+    const itemDate = parseLocalDate(item.month);
+    if (!itemDate) return true;
     // Include if year is less than current year OR
     // if year is same and month is less than or equal to current month
     return itemDate.getFullYear() < currentYear ||
