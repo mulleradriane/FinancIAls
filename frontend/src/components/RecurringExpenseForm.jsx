@@ -14,17 +14,32 @@ import {
 import { Card } from '@/components/ui/card';
 
 const RecurringExpenseForm = ({ categories = [], accounts = [], initialData, onSuccess, onCancel }) => {
+  const getDefaultAccountId = () => {
+    if (initialData?.account_id) return initialData.account_id;
+    if (accounts.length > 0) {
+      const defaultAccount = accounts.find(a => a.is_default);
+      return defaultAccount ? defaultAccount.id : accounts[0].id;
+    }
+    return '';
+  };
+
   const [formData, setFormData] = useState({
     description: initialData?.description || '',
     amount: initialData?.amount || 0,
     displayAmount: initialData ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(initialData.amount) : '',
     date: initialData?.start_date || new Date().toISOString().split('T')[0],
     categoryId: initialData?.category_id || '',
-    accountId: initialData?.account_id || (accounts.length > 0 ? accounts[0].id : ''),
+    accountId: getDefaultAccountId(),
     type: initialData?.type || 'subscription', // 'subscription' or 'installment'
     frequency: initialData?.frequency || 'monthly', // for subscription
     totalInstallments: initialData?.total_installments || '', // for installment
   });
+
+  React.useEffect(() => {
+    if (!initialData && accounts.length > 0 && !formData.accountId) {
+      setFormData(prev => ({ ...prev, accountId: getDefaultAccountId() }));
+    }
+  }, [accounts, initialData]);
 
   const handleAmountChange = (e) => {
     const value = e.target.value.replace(/\D/g, '');

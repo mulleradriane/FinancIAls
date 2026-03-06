@@ -29,5 +29,6 @@ class AccountUpdate(BaseModel):
 class Account(AccountBase):
     id: UUID
     balance: Decimal = Decimal(0)
+    is_default: bool
 
     model_config = ConfigDict(from_attributes=True)

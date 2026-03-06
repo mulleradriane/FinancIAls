@@ -1,5 +1,6 @@
 from typing import List, Optional
 from uuid import UUID
+import sqlalchemy as sa
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, or_, delete
 from app.crud.base import CRUDBase
@@ -14,6 +15,9 @@ from datetime import date
 
 class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
     def create_with_user(self, db: Session, *, obj_in: AccountCreate, user_id: UUID) -> Account:
+        # Check if it's the first account for the user
+        is_first_account = db.scalar(select(func.count(Account.id)).filter(Account.user_id == user_id)) == 0
+
         db_obj = Account(
             name=obj_in.name,
             type=obj_in.type,
@@ -22,7 +26,8 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
             closing_day=obj_in.closing_day,
             due_day=obj_in.due_day,
             credit_limit=obj_in.credit_limit,
-            user_id=user_id
+            user_id=user_id,
+            is_default=is_first_account
         )
         db.add(db_obj)
         db.commit()
@@ -129,5 +134,26 @@ class CRUDAccount(CRUDBase[Account, AccountCreate, AccountUpdate]):
     def get_balance(self, db: Session, account_id: UUID) -> Decimal:
         from app.services.financial_engine import financial_engine
         return financial_engine.get_account_balance(db, account_id)
+
+    def set_default(self, db: Session, *, account_id: UUID, user_id: UUID) -> Optional[Account]:
+        # Get the account to be set as default
+        db_obj = self.get_by_user(db, id=account_id, user_id=user_id)
+        if not db_obj:
+            return None
+
+        # Unset current default account(s) for the user
+        db.execute(
+            sa.update(Account)
+            .where(Account.user_id == user_id)
+            .values(is_default=False)
+        )
+
+        # Set the new default
+        db_obj.is_default = True
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+
+        return db_obj
 
 account = CRUDAccount(Account)

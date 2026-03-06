@@ -60,3 +60,16 @@ def delete_account(
     if not db_obj:
         raise HTTPException(status_code=404, detail="Account not found")
     return crud_account.remove_by_user(db, id=id, user_id=current_user.id)
+
+@router.patch("/{id}/set-default", response_model=Account)
+def set_default_account(
+    id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    db_obj = crud_account.set_default(db, account_id=id, user_id=current_user.id)
+    if not db_obj:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    # Return with balance to match response model expectations
+    return crud_account.get_with_balance(db, id=db_obj.id, user_id=current_user.id)

@@ -12,8 +12,9 @@ import {
 import AccountForm from '@/components/AccountForm';
 import TransferForm from '@/components/TransferForm';
 import InvoicePaymentForm from '@/components/InvoicePaymentForm';
-import { Plus, ArrowLeftRight, CreditCard, Landmark, Wallet, PiggyBank, Briefcase, Pencil, Trash2, Info, Receipt } from 'lucide-react';
+import { Plus, ArrowLeftRight, CreditCard, Landmark, Wallet, PiggyBank, Briefcase, Pencil, Trash2, Info, Receipt, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
@@ -145,6 +146,18 @@ const Contas = () => {
     }
   };
 
+  const handleSetDefault = async (e, id) => {
+    e.stopPropagation();
+    try {
+      await api.patch(`/accounts/${id}/set-default`);
+      toast.success('Conta definida como padrão!');
+      fetchAccounts();
+    } catch (error) {
+      console.error('Error setting default account:', error);
+      toast.error('Erro ao definir conta padrão.');
+    }
+  };
+
   return (
     <div className="space-y-8 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -200,20 +213,43 @@ const Contas = () => {
                       </Badge>
                     </div>
                   </div>
-                  {account.type === 'cartao_credito' && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="rounded-lg h-8 text-[10px] font-bold uppercase tracking-wider"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedAccount(account);
-                        setIsPaymentModalOpen(true);
-                      }}
-                    >
-                      <Receipt size={14} className="mr-1" /> Pagar Fatura
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className={cn(
+                              "h-8 w-8 rounded-full",
+                              account.is_default ? "text-yellow-500 cursor-default hover:bg-transparent" : "text-muted-foreground/30 hover:text-yellow-500"
+                            )}
+                            onClick={(e) => !account.is_default && handleSetDefault(e, account.id)}
+                          >
+                            <Star size={18} fill={account.is_default ? "currentColor" : "none"} />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{account.is_default ? "Conta padrão" : "Definir como padrão"}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    {account.type === 'cartao_credito' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-lg h-8 text-[10px] font-bold uppercase tracking-wider"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedAccount(account);
+                          setIsPaymentModalOpen(true);
+                        }}
+                      >
+                        <Receipt size={14} className="mr-1" /> Pagar Fatura
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mt-6 space-y-2">
