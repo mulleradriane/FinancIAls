@@ -171,6 +171,7 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
                 category_is_system=t.category.is_system if t.category else False,
                 is_transfer=(t.nature == TransactionNature.TRANSFER),
                 installment_number=t.installment_number,
+                account_id=t.account_id,
                 account_name=t.account.name if t.account else "Sem Conta",
                 account_type=t.account.type.value if t.account else None,
                 is_recurring=t.recurring_expense_id is not None,
