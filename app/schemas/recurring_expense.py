@@ -21,6 +21,9 @@ class RecurringExpenseBase(BaseModel):
 class RecurringExpenseCreate(RecurringExpenseBase):
     pass
 
+class PropagateUpdate(BaseModel):
+    apply_from: datetime.date
+
 class RecurringExpenseUpdate(BaseModel):
     description: str | None = None
     category_id: UUID | None = None
