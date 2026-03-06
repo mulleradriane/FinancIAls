@@ -158,7 +158,7 @@ const Relatorios = () => {
     );
   };
 
-  const TopCategoriesList = ({ items = [], limit = 5 }) => {
+  const TopCategoriesList = ({ items = [], limit = 9 }) => {
     if (loading) return (
       <div className="space-y-4">
         {[...Array(limit)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
@@ -324,7 +324,7 @@ const Relatorios = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="pt-4">
-                  <TopCategoriesList items={periodSummary?.top_categories} limit={5} />
+                  <TopCategoriesList items={periodSummary?.top_categories} limit={500} />
                 </CardContent>
               </Card>
 
@@ -506,7 +506,7 @@ const Relatorios = () => {
                   <CardDescription>Gastos acumulados no trimestre</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <TopCategoriesList items={periodSummary?.top_categories} limit={5} />
+                  <TopCategoriesList items={periodSummary?.top_categories} limit={500} />
                 </CardContent>
               </Card>
             </div>
@@ -584,7 +584,7 @@ const Relatorios = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                  <TopCategoriesList items={periodSummary?.top_categories} limit={8} />
+                  <TopCategoriesList items={periodSummary?.top_categories} limit={500} />
                 </div>
               </CardContent>
             </Card>

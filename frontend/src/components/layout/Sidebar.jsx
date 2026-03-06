@@ -35,6 +35,7 @@ const menuItems = [
   { path: '/categories', label: 'Categorias', icon: Tags },
   { path: '/metas', label: 'Metas', icon: Target },
   { path: '/relatorios', label: 'Relatórios', icon: FileText },
+  { path: '/importacao', label: 'Importar', icon: Upload },
 ];
 
 export function Sidebar() {
