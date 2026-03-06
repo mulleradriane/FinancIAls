@@ -498,7 +498,13 @@ const Recorrentes = () => {
                 <div>
                   <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Mensal</p>
                   <h3 className="text-2xl font-black text-emerald-600">
-                    <PrivateValue value={formatCurrency(recurringExpenses.reduce((acc, curr) => acc + Number(curr.amount), 0))} />
+                    <PrivateValue value={formatCurrency(recurringExpenses.reduce((acc, curr) => {
+                      const amount = Number(curr.amount);
+                      if (curr.type === 'installment' && curr.total_installments > 0) {
+                        return acc + (amount / curr.total_installments);
+                      }
+                      return acc + amount;
+                    }, 0))} />
                   </h3>
                 </div>
               </CardContent>
