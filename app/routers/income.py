@@ -33,7 +33,7 @@ def read_income(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    db_obj = crud_income.get(db, id=id)
+    db_obj = crud_income.get_by_user(db, id=id, user_id=current_user.id)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Income not found")
     return db_obj

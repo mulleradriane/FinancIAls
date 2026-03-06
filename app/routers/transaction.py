@@ -42,6 +42,11 @@ def preview_import_csv(
     content = file.file.read().decode("utf-8-sig")
     file.file.seek(0)
 
+    # Ownership check
+    acc = crud_account.get_by_user(db, id=account_id, user_id=current_user.id)
+    if not acc:
+        raise HTTPException(status_code=404, detail="Account not found")
+
     to_import = []
     duplicates = []
     errors = []
@@ -224,6 +229,11 @@ def confirm_import_csv(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # Ownership check
+    acc = crud_account.get_by_user(db, id=request.account_id, user_id=current_user.id)
+    if not acc:
+        raise HTTPException(status_code=404, detail="Account not found")
+
     try:
         categories = db.scalars(
             select(Category).filter(
