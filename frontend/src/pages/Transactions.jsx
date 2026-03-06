@@ -3,7 +3,7 @@ import api from '@/api/api';
 import { toast } from 'sonner';
 import TransactionForm from '@/components/TransactionForm';
 import TransactionList from '@/components/TransactionList';
-import { Plus, Filter, X, ArrowUpCircle, ArrowDownCircle, Wallet, SearchX, Download, Calendar, Search, ChevronDown } from 'lucide-react';
+import { Plus, Filter, X, ArrowUpCircle, ArrowDownCircle, Wallet, SearchX, Download, Calendar, Search, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from "@/components/ui/checkbox";
@@ -41,14 +41,13 @@ const Transactions = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [total, setTotal] = useState(0);
   const [skip, setSkip] = useState(0);
-  const limit = 100;
+  const limit = 50;
   const [highlightId, setHighlightId] = useState(null);
 
   // Filters
-  const [period, setPeriod] = useState('30days');
+  const [period, setPeriod] = useState('month');
   const [accountIds, setAccountIds] = useState([]);
   const [categoryIds, setCategoryIds] = useState([]);
   const [search, setSearch] = useState('');
@@ -75,14 +74,14 @@ const Transactions = () => {
   };
 
   const getFilterParams = (customLimit, customSkip) => {
-    const params = {
-      limit: customLimit ?? limit,
-      skip: customSkip ?? 0
-    };
+    const params = new URLSearchParams();
+    params.append('limit', customLimit ?? limit);
+    params.append('skip', customSkip ?? 0);
 
-    if (accountIds.length === 1) params.account_id = accountIds[0];
-    if (categoryIds.length === 1) params.category_id = categoryIds[0];
-    if (debouncedSearch) params.search = debouncedSearch;
+    accountIds.forEach(id => params.append('account_id', id));
+    categoryIds.forEach(id => params.append('category_id', id));
+
+    if (debouncedSearch) params.append('search', debouncedSearch);
 
     let start = '';
     let end = '';
@@ -134,51 +133,26 @@ const Transactions = () => {
         break;
     }
 
-    if (start) params.start_date = start;
-    if (end) params.end_date = end;
+    if (start) params.append('start_date', start);
+    if (end) params.append('end_date', end);
 
     return params;
   };
 
-  const applyClientFilters = (data) => {
-    let filteredData = [...data];
-    if (accountIds.length > 1) {
-      filteredData = filteredData.filter(t => accountIds.includes(t.account_id));
-    }
-    if (categoryIds.length > 1) {
-      filteredData = filteredData.filter(t => categoryIds.includes(t.category_id));
-    }
-    return filteredData;
-  };
-
-  const fetchTransactions = async (isLoadMore = false) => {
+  const fetchTransactions = async (currentSkip = 0) => {
     try {
-      if (isLoadMore) {
-        setLoadingMore(true);
-      } else {
-        setLoading(true);
-        setSkip(0);
-      }
+      setLoading(true);
 
-      const currentSkip = isLoadMore ? skip + limit : 0;
       const params = getFilterParams(limit, currentSkip);
 
       const response = await api.get('/transactions/', { params });
-      const data = applyClientFilters(response.data);
-
-      if (isLoadMore) {
-        setTransactions(prev => [...prev, ...data]);
-        setSkip(currentSkip);
-      } else {
-        setTransactions(data);
-      }
-
-      setHasMore(response.data.length === limit);
+      setTransactions(response.data.items);
+      setTotal(response.data.total);
+      setSkip(response.data.skip);
     } catch (error) {
       console.error('Error fetching transactions:', error);
     } finally {
       setLoading(false);
-      setLoadingMore(false);
     }
   };
 
@@ -195,7 +169,7 @@ const Transactions = () => {
   }, [search]);
 
   useEffect(() => {
-    fetchTransactions();
+    fetchTransactions(0);
   }, [period, accountIds, categoryIds, debouncedSearch, startDate, endDate]);
 
   const handleEdit = (transaction) => {
@@ -215,7 +189,7 @@ const Transactions = () => {
   };
 
   const clearFilters = () => {
-    setPeriod('30days');
+    setPeriod('month');
     setAccountIds([]);
     setCategoryIds([]);
     setSearch('');
@@ -268,7 +242,7 @@ const Transactions = () => {
       toast.info('Preparando exportação...');
       const params = getFilterParams(-1, 0);
       const response = await api.get('/transactions/', { params });
-      const data = applyClientFilters(response.data);
+      const data = response.data.items;
 
       if (data.length === 0) {
         toast.error('Nenhuma transação para exportar');
@@ -550,7 +524,7 @@ const Transactions = () => {
         <div className="flex items-center justify-between mb-6 px-1">
           <h2 className="text-2xl font-bold tracking-tight flex items-center gap-3">
             Histórico
-            {!loading && <Badge variant="secondary" className="rounded-full px-2 py-0 text-xs">{transactions.length}</Badge>}
+            {!loading && <Badge variant="secondary" className="rounded-full px-2 py-0 text-xs">{total}</Badge>}
           </h2>
         </div>
 
@@ -568,26 +542,39 @@ const Transactions = () => {
               onDelete={handleDelete}
               highlightId={highlightId}
             />
-            {hasMore && (
-              <div className="mt-8 flex justify-center">
+
+            {/* Paginação */}
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 px-1">
+              <p className="text-sm text-muted-foreground">
+                Mostrando <span className="font-medium">{transactions.length}</span> de <span className="font-medium">{total}</span> transações
+              </p>
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
-                  size="lg"
-                  onClick={() => fetchTransactions(true)}
-                  disabled={loadingMore}
-                  className="rounded-xl px-12"
+                  size="sm"
+                  onClick={() => fetchTransactions(skip - limit)}
+                  disabled={skip === 0 || loading}
+                  className="rounded-lg h-9 w-9 p-0"
                 >
-                  {loadingMore ? (
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                      Carregando...
-                    </div>
-                  ) : (
-                    'Carregar Mais'
-                  )}
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+
+                <div className="flex items-center gap-1 mx-2">
+                  <span className="text-sm font-medium">Página {Math.floor(skip / limit) + 1}</span>
+                  <span className="text-sm text-muted-foreground">de {Math.ceil(total / limit) || 1}</span>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fetchTransactions(skip + limit)}
+                  disabled={skip + limit >= total || loading}
+                  className="rounded-lg h-9 w-9 p-0"
+                >
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
-            )}
+            </div>
           </>
         ) : (
           <EmptyState

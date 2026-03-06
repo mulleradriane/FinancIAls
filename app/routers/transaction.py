@@ -1,8 +1,9 @@
+from __future__ import annotations
 import uuid
 import csv
 import io
 import re
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
@@ -18,7 +19,8 @@ from app.schemas.transaction import (
     TransactionUpdate,
     UnifiedTransactionResponse,
     UnifiedTransactionCreate,
-    TransferCreate
+    TransferCreate,
+    TransactionListResponse
 )
 from app.schemas.import_csv import ImportPreviewRow, ImportPreviewResponse, ImportConfirmRequest
 from app.core.database import get_db
@@ -345,15 +347,15 @@ def create_transfer_transaction(
         "transfer_group_id": str(transfer_group_id)
     }
 
-@router.get("/", response_model=List[UnifiedTransactionResponse])
+@router.get("/", response_model=TransactionListResponse)
 def read_transactions(
     skip: int = 0,
-    limit: int = 100,
-    account_id: Optional[UUID] = None,
-    category_id: Optional[UUID] = None,
-    start_date: Optional[date] = None,
-    end_date: Optional[date] = None,
-    search: Optional[str] = None,
+    limit: int = 50,
+    account_id: list[UUID] | None = Query(None),
+    category_id: list[UUID] | None = Query(None),
+    start_date: date | None = None,
+    end_date: date | None = None,
+    search: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -369,7 +371,7 @@ def read_transactions(
         search=search
     )
 
-@router.get("/descriptions/", response_model=List[str])
+@router.get("/descriptions/", response_model=list[str])
 def get_descriptions(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)

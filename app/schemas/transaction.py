@@ -95,3 +95,10 @@ class UnifiedTransactionResponse(BaseModel):
     total_installments: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TransactionListResponse(BaseModel):
+    items: list[UnifiedTransactionResponse]
+    total: int
+    skip: int
+    limit: int
