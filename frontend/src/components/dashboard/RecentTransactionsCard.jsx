@@ -17,7 +17,7 @@ const RecentTransactionsCard = () => {
     try {
       setLoading(true);
       const response = await api.get('/transactions/', { params: { limit: 5 } });
-      setTransactions(response.data);
+      setTransactions(response.data.items || []);
     } catch (error) {
       console.error('Error fetching recent transactions:', error);
     } finally {
