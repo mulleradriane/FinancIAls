@@ -102,24 +102,24 @@ const Contas = () => {
     if (account.type !== 'cartao_credito' || !account.closing_day) return 0;
 
     const today = new Date();
+    today.setHours(23, 59, 59, 999);
     const currentDay = today.getDate();
     const closingDay = account.closing_day;
 
-    let startDate;
-    if (currentDay > closingDay) {
-      // Período = (closingDay + 1 do mês anterior) até hoje
-      startDate = new Date(today.getFullYear(), today.getMonth() - 1, closingDay + 1);
-    } else {
-      // Período = (closingDay + 1 de dois meses atrás) até hoje
-      startDate = new Date(today.getFullYear(), today.getMonth() - 2, closingDay + 1);
-    }
+    // Conforme regra do FIX: inicia sempre no dia (closingDay + 1) do mês anterior
+    const startDate = new Date(today.getFullYear(), today.getMonth() - 1, closingDay + 1);
+    startDate.setHours(0, 0, 0, 0);
 
-    const invoiceTransactions = transactions.filter(t =>
-      t.account_id === account.id &&
-      new Date(t.date + 'T00:00:00') >= startDate &&
-      new Date(t.date + 'T00:00:00') <= today &&
-      t.nature !== 'TRANSFER' // Exclude invoice payments/transfers
-    );
+    const invoiceTransactions = transactions.filter(t => {
+      const txDate = new Date(t.date + 'T00:00:00');
+      const amount = parseFloat(t.amount);
+      return (
+        t.account_id === account.id &&
+        txDate >= startDate &&
+        txDate <= today &&
+        amount < 0
+      );
+    });
 
     return invoiceTransactions.reduce((acc, t) => acc + Math.abs(parseFloat(t.amount)), 0);
   };
