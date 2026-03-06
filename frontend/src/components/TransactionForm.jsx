@@ -23,16 +23,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from '@/components/ui/card';
 
 const TransactionForm = ({ categories = [], accounts = [], transaction, onTransactionCreated, onClose }) => {
-  // LOG 1: Montagem do componente
-  console.log('🔥 [MOUNT] TransactionForm montou', { 
-    transactionId: transaction?.id,
-    transactionExists: !!transaction,
-    categoriesLength: categories.length,
-    accountsLength: accounts.length,
-    transactionData: transaction,
-    timestamp: new Date().toISOString()
-  });
-
   const descriptionRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [fullTransaction, setFullTransaction] = useState(transaction);
@@ -40,7 +30,6 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
   // Função auxiliar para extrair IDs considerando diferentes possíveis nomes de campos
   const extractCategoryId = (trans) => {
     if (!trans) return '';
-    // Tenta diferentes formas como o campo pode vir
     return trans.category_id || trans.categoryId || trans.category?.id || '';
   };
 
@@ -65,22 +54,12 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
     }
   });
 
-  // LOG 2: Estado inicial do formData
-  console.log('📝 [INITIAL_STATE] formData inicial', {
-    description: formData.description,
-    categoryId: formData.categoryId,
-    accountId: formData.accountId,
-    amount: formData.amount,
-    rawTransaction: fullTransaction
-  });
-
   // EFEITO PARA BUSCAR A TRANSAÇÃO COMPLETA QUANDO FOR EDIÇÃO
   useEffect(() => {
     const fetchFullTransaction = async () => {
       if (transaction?.id && (!transaction.category_id || !transaction.account_id)) {
         setLoading(true);
         try {
-          console.log('🔍 Buscando transação completa:', transaction.id);
           const response = await api.get(`/transactions/${transaction.id}`);
           const fullTrans = response.data;
           setFullTransaction(fullTrans);
@@ -94,8 +73,6 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
             categoryId: extractCategoryId(fullTrans),
             accountId: extractAccountId(fullTrans)
           }));
-          
-          console.log('✅ Transação completa carregada:', fullTrans);
         } catch (error) {
           console.error('Erro ao buscar transação completa:', error);
           toast.error('Erro ao carregar dados da transação');
@@ -111,47 +88,24 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
   const [suggestions, setSuggestions] = useState([]);
   const [openSuggestions, setOpenSuggestions] = useState(false);
 
-  // LOG 3: Efeito para quando fullTransaction/categories/accounts mudam
+  // Pre-selecionar conta padrão para novas transações
   useEffect(() => {
-    console.log('🔄 [DEPENDENCY_CHANGE] fullTransaction, categories ou accounts mudaram', {
-      fullTransaction: fullTransaction ? {
-        id: fullTransaction.id,
-        category_id: fullTransaction.category_id,
-        categoryId: fullTransaction.categoryId,
-        account_id: fullTransaction.account_id,
-        accountId: fullTransaction.accountId,
-        description: fullTransaction.description
-      } : null,
-      categoriesCount: categories.length,
-      accountsCount: accounts.length,
-      categoriesList: categories.map(c => ({ id: c.id, name: c.name })),
-      accountsList: accounts.map(a => ({ id: a.id, name: a.name })),
-      currentFormData: {
-        categoryId: formData.categoryId,
-        accountId: formData.accountId
-      }
-    });
+    if (!fullTransaction && accounts.length > 0) {
+      const defaultAccount = accounts.find(a => a.is_default) || accounts[0];
+      const accountExists = accounts.some(a => a.id === formData.accountId);
 
-    // TENTATIVA DE FIX: Força atualização do formData quando fullTransaction chega
+      if (!formData.accountId || !accountExists) {
+        setFormData(prev => ({ ...prev, accountId: defaultAccount?.id || '' }));
+      }
+    }
+  }, [accounts, fullTransaction, formData.accountId]);
+
+  // Sincronizar dados quando fullTransaction é carregado (edição)
+  useEffect(() => {
     if (fullTransaction && categories.length > 0 && accounts.length > 0) {
       const categoryId = extractCategoryId(fullTransaction);
       const accountId = extractAccountId(fullTransaction);
       
-      const categoryExists = categories.some(c => c.id === categoryId);
-      const accountExists = accounts.some(a => a.id === accountId);
-      
-      console.log('🎯 [FIX_ATTEMPT] Verificando match', {
-        extractedCategoryId: categoryId,
-        extractedAccountId: accountId,
-        categoryExists,
-        accountExists,
-        matchingCategory: categories.find(c => c.id === categoryId),
-        matchingAccount: accounts.find(a => a.id === accountId),
-        allCategoryIds: categories.map(c => c.id),
-        allAccountIds: accounts.map(a => a.id)
-      });
-
-      // ATUALIZA O FORM COM OS IDs
       if (categoryId || accountId) {
         setFormData(prev => ({
           ...prev,
@@ -163,9 +117,6 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
   }, [fullTransaction, categories, accounts]);
 
   useEffect(() => {
-    if (!fullTransaction && accounts && accounts.length > 0 && !formData.accountId) {
-      setFormData(prev => ({ ...prev, accountId: accounts[0].id }));
-    }
     fetchSuggestions();
 
     // Auto-focus description
@@ -434,7 +385,6 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
               <Select
                 value={formData.categoryId}
                 onValueChange={(val) => {
-                  console.log('📌 [CATEGORY_CHANGE]', val);
                   setFormData(prev => ({ ...prev, categoryId: val }));
                 }}
                 required
@@ -466,7 +416,6 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
               <Select
                 value={formData.accountId}
                 onValueChange={(val) => {
-                  console.log('📌 [ACCOUNT_CHANGE]', val);
                   setFormData(prev => ({ ...prev, accountId: val }));
                 }}
                 required

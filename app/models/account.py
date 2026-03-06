@@ -30,6 +30,7 @@ class Account(Base):
     closing_day = Column(sa.Integer, nullable=True)
     due_day = Column(sa.Integer, nullable=True)
     credit_limit = Column(sa.Numeric(12, 2), nullable=True)
+    is_default = Column(sa.Boolean, nullable=False, default=False)
 
     user = relationship("User")
     transactions = relationship("Transaction", back_populates="account")
