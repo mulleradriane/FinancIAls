@@ -5,6 +5,7 @@ import {
   Package,
   Tv,
   Trash2,
+  ChevronRight,
   TrendingDown,
   TrendingUp,
   CreditCard,
@@ -55,6 +56,7 @@ import { cn, parseLocalDate } from '@/lib/utils';
 import PrivateValue from '@/components/ui/PrivateValue';
 
 import RecurringExpenseForm from '@/components/RecurringExpenseForm';
+import InfoTooltip from '@/components/ui/InfoTooltip';
 
 const RecurringCard = ({ item, type, onEdit, onTerminate, onDelete }) => {
   const isInstallment = item.type === 'installment';
@@ -260,6 +262,19 @@ const Recorrentes = () => {
     setIsFormOpen(true);
   };
 
+  const handlePropagate = async (applyFrom) => {
+    try {
+      await api.patch(`/recurring-expenses/${editingItem.id}/propagate`, { apply_from: applyFrom });
+      toast.success('Transações futuras atualizadas!');
+      setIsPropagateModalOpen(false);
+      setEditingItem(null);
+      fetchData();
+    } catch (error) {
+      console.error('Error propagating changes:', error);
+      toast.error('Erro ao atualizar transações futuras.');
+    }
+  };
+
   const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   const chartData = [
@@ -269,6 +284,13 @@ const Recorrentes = () => {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [isPropagateModalOpen, setIsPropagateModalOpen] = useState(false);
+  const [propagateDate, setPropagateDate] = useState(() => {
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    nextMonth.setDate(1);
+    return nextMonth.toISOString().split('T')[0];
+  });
   const [categories, setCategories] = useState([]);
   const [accounts, setAccounts] = useState([]);
 
@@ -324,16 +346,100 @@ const Recorrentes = () => {
                   initialData={editingItem}
                   categories={categories}
                   accounts={accounts}
-                  onSuccess={() => {
+                  onSuccess={(wasEdit) => {
                     setIsFormOpen(false);
-                    setEditingItem(null);
-                    fetchData();
+                    if (wasEdit) {
+                      setIsPropagateModalOpen(true);
+                    } else {
+                      setEditingItem(null);
+                      fetchData();
+                    }
                   }}
                   onCancel={() => {
                     setIsFormOpen(false);
                     setEditingItem(null);
                   }}
                 />
+              </CardContent>
+            </Card>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isPropagateModalOpen} onOpenChange={(open) => {
+          if (!open) {
+            setIsPropagateModalOpen(false);
+            setEditingItem(null);
+            fetchData();
+          }
+        }}>
+          <DialogContent className="sm:max-w-[450px] p-0 border-none bg-transparent shadow-none overflow-visible">
+            <Card className="border-none shadow-2xl rounded-2xl overflow-hidden">
+              <CardHeader className="bg-amber-500 pb-8 pt-6">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Repeat className="text-white/80" />
+                  Atualizar transações futuras?
+                </CardTitle>
+                <CardDescription className="text-white/80">
+                  Deseja propagar as alterações para as transações futuras vinculadas a esta recorrência?
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 bg-secondary/20 rounded-xl cursor-pointer hover:bg-secondary/30 transition-colors"
+                       onClick={() => {
+                         const nextMonth = new Date();
+                         nextMonth.setMonth(nextMonth.getMonth() + 1);
+                         nextMonth.setDate(1);
+                         handlePropagate(nextMonth.toISOString().split('T')[0]);
+                       }}>
+                    <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600 border border-amber-500/20">
+                      <Calendar size={20} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-sm">Apenas meses futuros</p>
+                      <p className="text-xs text-muted-foreground font-medium">A partir do próximo mês</p>
+                    </div>
+                    <ChevronRight className="text-muted-foreground" size={18} />
+                  </div>
+
+                  <div className="space-y-3 p-4 bg-secondary/20 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 border border-blue-500/20">
+                        <Calendar size={20} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-bold text-sm">A partir de um mês específico</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        type="date"
+                        value={propagateDate}
+                        onChange={(e) => setPropagateDate(e.target.value)}
+                        className="bg-background border-none h-10 rounded-lg flex-1"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => handlePropagate(propagateDate)}
+                        className="rounded-lg font-bold h-10 px-4"
+                      >
+                        Aplicar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  className="w-full rounded-xl h-12 text-muted-foreground font-medium hover:bg-secondary/50"
+                  onClick={() => {
+                    setIsPropagateModalOpen(false);
+                    setEditingItem(null);
+                    fetchData();
+                  }}
+                >
+                  Não atualizar transações
+                </Button>
               </CardContent>
             </Card>
           </DialogContent>
@@ -362,14 +468,21 @@ const Recorrentes = () => {
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <p className="text-2xl font-black">{summary.commitment_percentage}%</p>
+                <p className="text-2xl font-black">
+                  <InfoTooltip content="Calculado sobre a média de receita dos últimos 3 meses. Abaixo de 30% é considerado saudável.">
+                    <span>{summary.commitment_percentage}%</span>
+                  </InfoTooltip>
+                </p>
                 <p className="text-[10px] text-muted-foreground font-bold uppercase">Comprometido</p>
               </div>
             </div>
 
             <div className="flex-1 space-y-6">
               <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Comprometimento Mensal</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Comprometimento Mensal</p>
+                  <InfoTooltip content="Percentual da sua renda mensal já comprometido com despesas recorrentes fixas." />
+                </div>
                 <h2 className="text-4xl font-black mt-1 text-primary"><PrivateValue value={formatCurrency(summary.total_recurring)} /></h2>
               </div>
 
@@ -379,6 +492,7 @@ const Recorrentes = () => {
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full bg-amber-500" />
                       <span className="text-xs font-bold text-muted-foreground uppercase">Parcelas</span>
+                      <InfoTooltip content="Valor já pago em parcelamentos este mês vs total esperado de parcelas no mês." />
                     </div>
                   </div>
                   <div className="flex items-baseline gap-2">
@@ -393,6 +507,7 @@ const Recorrentes = () => {
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full bg-blue-500" />
                       <span className="text-xs font-bold text-muted-foreground uppercase">Assinaturas</span>
+                      <InfoTooltip content="Valor já debitado em assinaturas este mês vs total esperado de assinaturas no mês." />
                     </div>
                   </div>
                   <div className="flex items-baseline gap-2">

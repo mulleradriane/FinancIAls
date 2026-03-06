@@ -70,6 +70,7 @@ const RecurringExpenseForm = ({ categories = [], accounts = [], initialData, onS
         };
         await api.put(`/recurring-expenses/${initialData.id}`, payload);
         toast.success('Recorrência atualizada com sucesso!');
+        if (onSuccess) return onSuccess(true);
       } else {
         // Create mode
         const selectedCategory = categories.find(c => c.id === formData.categoryId);
@@ -91,7 +92,7 @@ const RecurringExpenseForm = ({ categories = [], accounts = [], initialData, onS
         await api.post('/transactions/', payload);
         toast.success('Recorrência criada com sucesso!');
       }
-      if (onSuccess) onSuccess();
+      if (onSuccess) onSuccess(false);
     } catch (error) {
       console.error('Error saving recurring expense:', error);
       const detail = error.response?.data?.detail || 'Erro ao salvar recorrência.';

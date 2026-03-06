@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.crud.recurring_expense import recurring_expense as crud_recurring_expense
-from app.schemas.recurring_expense import RecurringExpense, RecurringExpenseCreate, RecurringExpenseUpdate
+from app.schemas.recurring_expense import RecurringExpense, RecurringExpenseCreate, RecurringExpenseUpdate, PropagateUpdate
 from app.models.category import CategoryType
 from app.core.database import get_db
 from app.routers.auth import get_current_user
@@ -30,6 +30,22 @@ def read_recurring_expenses(
     return crud_recurring_expense.get_multi_by_user(
         db, user_id=current_user.id, skip=skip, limit=limit, category_type=category_type
     )
+
+@router.patch("/{id}/propagate")
+def propagate_recurring_expense(
+    id: UUID,
+    obj_in: PropagateUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    db_obj = crud_recurring_expense.get_by_user(db, id=id, user_id=current_user.id)
+    if not db_obj:
+        raise HTTPException(status_code=404, detail="Recurring expense not found")
+
+    transactions = crud_recurring_expense.propagate_changes(
+        db, db_obj=db_obj, apply_from=obj_in.apply_from, user_id=current_user.id
+    )
+    return {"message": f"{len(transactions)} transações atualizadas com sucesso"}
 
 @router.put("/{id}", response_model=RecurringExpense)
 def update_recurring_expense(

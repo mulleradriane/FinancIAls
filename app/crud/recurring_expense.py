@@ -118,6 +118,61 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
             )
         return obj
 
+    def propagate_changes(self, db: Session, *, db_obj: RecurringExpense, apply_from: datetime.date, user_id: UUID) -> List[Transaction]:
+        from decimal import Decimal, ROUND_HALF_UP
+        # Reset apply_from to the 1st of the month
+        first_day_apply_from = apply_from.replace(day=1)
+
+        # Calculate monthly amount
+        amount = abs(db_obj.amount)
+        monthly_amount = amount
+        if db_obj.type == "installment" and db_obj.total_installments and db_obj.total_installments > 0:
+            monthly_amount = (amount / Decimal(str(db_obj.total_installments))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+        # Fetch transactions to update
+        transactions = db.scalars(
+            select(Transaction)
+            .where(
+                Transaction.recurring_expense_id == db_obj.id,
+                Transaction.user_id == user_id,
+                Transaction.date >= first_day_apply_from,
+                Transaction.deleted_at == None
+            )
+        ).all()
+
+        import calendar
+        for t in transactions:
+            # Update fields
+            t.description = db_obj.description
+            t.category_id = db_obj.category_id
+            t.account_id = db_obj.account_id
+
+            # Apply amount with original sign
+            is_negative = t.amount < 0
+            t.amount = -monthly_amount if is_negative else monthly_amount
+
+            # Recalculate date if start_date day changed
+            new_day = db_obj.start_date.day
+            if t.date.day != new_day:
+                _, last_day_of_t_month = calendar.monthrange(t.date.year, t.date.month)
+                t.date = t.date.replace(day=min(new_day, last_day_of_t_month))
+
+            db.add(t)
+
+        db.commit()
+
+        # Update balance history for affected account (one or more)
+        affected_account_ids = {t.account_id for t in transactions}
+        if db_obj.account_id:
+            affected_account_ids.add(db_obj.account_id)
+
+        for acc_id in affected_account_ids:
+            if acc_id:
+                balance = crud_account.get_balance(db, acc_id)
+                crud_account._record_history(db, acc_id, balance)
+
+        return transactions
+
     def update_by_user(self, db: Session, *, db_obj: RecurringExpense, obj_in: RecurringExpenseUpdate, user_id: UUID) -> RecurringExpense:
         update_data = obj_in.model_dump(exclude_unset=True)
         for field, value in update_data.items():
