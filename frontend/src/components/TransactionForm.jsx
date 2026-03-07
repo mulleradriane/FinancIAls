@@ -25,6 +25,7 @@ import { Card } from '@/components/ui/card';
 const TransactionForm = ({ categories = [], accounts = [], transaction, onTransactionCreated, onClose }) => {
   const descriptionRef = useRef(null);
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [fullTransaction, setFullTransaction] = useState(transaction);
   
   // Função auxiliar para extrair IDs considerando diferentes possíveis nomes de campos
@@ -194,9 +195,22 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
+    setSubmitted(true);
 
-    if (!formData.description || !formData.amount || !formData.categoryId || !formData.accountId) {
-      toast.error("Por favor, preencha todos os campos obrigatórios.");
+    if (!formData.description) {
+      toast.error("Informe a descrição da transação");
+      return;
+    }
+    if (!formData.amount || formData.amount === 0) {
+      toast.error("Informe o valor da transação");
+      return;
+    }
+    if (!formData.categoryId) {
+      toast.error("Selecione uma categoria");
+      return;
+    }
+    if (!formData.accountId) {
+      toast.error("Selecione uma conta");
       return;
     }
 
@@ -275,6 +289,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
   return (
     <form
       onSubmit={handleSubmit}
+      noValidate
       className="space-y-6 outline-none"
       onKeyDown={handleKeyDown}
     >
@@ -293,7 +308,10 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
               }}
               onFocus={() => setOpenSuggestions(true)}
               placeholder="O que foi comprado?"
-              className="bg-secondary/50 border-none h-11 rounded-xl pr-10"
+              className={cn(
+                "bg-secondary/50 border-none h-11 rounded-xl pr-10",
+                submitted && !formData.description && "ring-2 ring-destructive"
+              )}
               autoComplete="off"
               required
             />
@@ -338,7 +356,10 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
               value={formData.displayAmount}
               onChange={handleAmountChange}
               required
-              className="bg-secondary/50 border-none h-11 rounded-xl text-lg font-semibold"
+              className={cn(
+                "bg-secondary/50 border-none h-11 rounded-xl text-lg font-semibold",
+                submitted && (!formData.amount || formData.amount === 0) && "ring-2 ring-destructive"
+              )}
             />
           </div>
           <div className="grid gap-2">
@@ -365,7 +386,13 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
                 }}
                 required
               >
-                <SelectTrigger id="category" className="bg-secondary/50 border-none h-11 rounded-xl">
+                <SelectTrigger
+                  id="category"
+                  className={cn(
+                    "bg-secondary/50 border-none h-11 rounded-xl",
+                    submitted && !formData.categoryId && "ring-2 ring-destructive"
+                  )}
+                >
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -396,7 +423,13 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
                 }}
                 required
               >
-                <SelectTrigger id="account" className="bg-secondary/50 border-none h-11 rounded-xl text-left">
+                <SelectTrigger
+                  id="account"
+                  className={cn(
+                    "bg-secondary/50 border-none h-11 rounded-xl text-left",
+                    submitted && !formData.accountId && "ring-2 ring-destructive"
+                  )}
+                >
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
