@@ -310,7 +310,7 @@ const Settings = () => {
                 </Button>
               </div>
 
-              <p className="text-center text-[10px] text-muted-foreground pt-4">
+              <p className="text-center text-[10px] text-muted-foreground pt-4">{/* design-token: manter */}
                 Membro desde: {new Date(profile.createdAt).toLocaleDateString('pt-BR')}
               </p>
             </div>

@@ -67,19 +67,19 @@ const MonthlyCommitmentCard = ({ data, loading }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <div className="space-y-1">
-            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Gasto até hoje</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Gasto até hoje</p>
             <p className="text-2xl font-bold text-destructive">
               <PrivateValue value={formatCurrency(gasto_ate_hoje)} />
             </p>
           </div>
           <div className="space-y-1">
-            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Recorrentes futuras</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Recorrentes futuras</p>
             <p className="text-2xl font-bold text-amber-500">
               <PrivateValue value={formatCurrency(recorrentes_futuras)} />
             </p>
           </div>
           <div className="space-y-1">
-            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Receita esperada</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Receita esperada</p>
             <p className="text-2xl font-bold text-success">
               <PrivateValue value={formatCurrency(receita_esperada)} />
             </p>

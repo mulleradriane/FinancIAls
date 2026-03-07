@@ -123,7 +123,7 @@ const Login = () => {
         <h1 className="text-5xl font-black tracking-tighter text-white drop-shadow-2xl">
           Ronromia
         </h1>
-        <p className="text-white/70 text-center mt-2 font-medium tracking-widest uppercase text-[10px]">
+        <p className="text-white/70 text-center mt-2 font-medium tracking-widest uppercase text-[10px]">{/* design-token: manter */}
           miau
         </p>
       </div>

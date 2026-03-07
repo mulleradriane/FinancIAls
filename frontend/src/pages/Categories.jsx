@@ -208,21 +208,21 @@ function Categories() {
                         <h3 className="font-bold text-lg truncate pr-2">{category.name}</h3>
                         <div className="flex flex-wrap gap-1 mt-1">
                           <Badge variant="outline" className={cn(
-                            "text-[10px] uppercase font-bold",
+                            "text-[10px] uppercase font-bold", /* design-token: manter */
                             category.type === 'expense' ? "text-destructive border-destructive/20 bg-destructive/5" : "text-success border-success/20 bg-success/5"
                           )}>
                             {category.type === 'expense' ? 'Despesa' : 'Receita'}
                           </Badge>
                           {category.is_system && (
                             <Badge variant="secondary" className={cn(
-                              "text-[10px] uppercase font-bold border-primary/20",
+                              "text-[10px] uppercase font-bold border-primary/20", /* design-token: manter */
                               category.has_override ? "bg-primary/20 text-primary" : "bg-primary/5 text-primary/60"
                             )}>
                               {category.has_override ? '✏️ Personalizada' : '⚙️ Sistema'}
                             </Badge>
                           )}
                           {category.monthly_budget && (
-                            <Badge variant="outline" className="text-[10px] uppercase font-bold border-primary/20 bg-primary/5 text-primary">
+                            <Badge variant="outline" className="text-[10px] uppercase font-bold border-primary/20 bg-primary/5 text-primary">{/* design-token: manter */}
                               {category.type === 'expense' ? 'Limite' : 'Meta'}: <PrivateValue value={category.monthly_budget} />
                             </Badge>
                           )}

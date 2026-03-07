@@ -141,12 +141,12 @@ const Goals = () => {
                     <div>
                       <h3 className="font-bold text-lg">{goal.name}</h3>
                       <div className="flex items-center gap-3 mt-1">
-                         <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider">
+                         <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider">{/* design-token: manter */}
                            {goal.goal_type === 'SAVINGS' ? 'Reserva' : 'Patrimônio'}
                          </Badge>
                          <div className="flex items-center gap-1 text-muted-foreground">
                             <Calendar size={12} />
-                            <span className="text-[10px] font-medium uppercase tracking-tighter">Até {formatDate(goal.target_date)}</span>
+                            <span className="text-[10px] font-medium uppercase tracking-tighter">{/* design-token: manter */}Até {formatDate(goal.target_date)}</span>
                          </div>
                       </div>
                     </div>
@@ -154,7 +154,7 @@ const Goals = () => {
                   <div className="flex items-center gap-2">
                     <Badge
                       variant={goal.on_track ? "secondary" : "destructive"}
-                      className={`text-[10px] font-bold uppercase px-2 py-0.5 ${goal.on_track ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : ''}`}
+                      className={`text-[10px] font-bold uppercase px-2 py-0.5 ${goal.on_track ? 'bg-success/10 text-success border-success/20' : ''}`} /* design-token: manter */
                     >
                       {goal.on_track ? (
                         <div className="flex items-center gap-1"><CheckCircle2 size={10} /> No Prazo</div>
@@ -184,11 +184,11 @@ const Goals = () => {
                 <div className="space-y-3">
                    <div className="flex justify-between items-end">
                       <div className="space-y-1">
-                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Progresso Real</p>
+                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{/* design-token: manter */}Progresso Real</p>
                          <p className="text-2xl font-black">{goal.percentage_completed}%</p>
                       </div>
                       <div className="text-right space-y-1">
-                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Acumulado / Alvo</p>
+                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{/* design-token: manter */}Acumulado / Alvo</p>
                          <p className="text-sm font-bold">
                             <PrivateValue value={formatCurrency(goal.current_amount)} />
                             <span className="text-muted-foreground mx-1">/</span>
@@ -201,11 +201,11 @@ const Goals = () => {
                    <div className="flex justify-between items-center pt-2">
                       <div className="flex items-center gap-1 text-muted-foreground">
                          <TrendingUp size={12} />
-                         <span className="text-[10px] font-bold uppercase tracking-tighter">
+                         <span className="text-[10px] font-bold uppercase tracking-tighter">{/* design-token: manter */}
                             Faltam <PrivateValue value={formatCurrency(goal.remaining_amount)} />
                          </span>
                       </div>
-                      <div className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">
+                      <div className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">{/* design-token: manter */}
                          {goal.days_remaining} dias restantes
                       </div>
                    </div>
