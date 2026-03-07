@@ -127,7 +127,7 @@ const UpcomingExpensesCard = () => {
             <CalendarClock className="h-5 w-5 text-primary" />
             Próximas Despesas
           </CardTitle>
-          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
             Total 30 dias: <PrivateValue value={formatCurrency(totalNext30)} />
           </p>
         </div>
@@ -156,7 +156,7 @@ const UpcomingExpensesCard = () => {
                   <div className="flex items-center gap-2 mt-1">
                     <Badge
                       variant="secondary"
-                      className="text-[10px] h-5 px-1.5 font-bold uppercase tracking-wider whitespace-nowrap"
+                      className="text-[10px] h-5 px-1.5 font-bold uppercase tracking-wider whitespace-nowrap" /* design-token: manter */
                       style={{
                         backgroundColor: `${item.category?.color}12`,
                         color: item.category?.color,
@@ -166,7 +166,7 @@ const UpcomingExpensesCard = () => {
                       <span className="mr-1">{item.category?.icon || '💰'}</span>
                       {item.category?.name || 'Sem Categoria'}
                     </Badge>
-                    <span className="text-[10px] text-muted-foreground font-bold uppercase whitespace-nowrap">
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase whitespace-nowrap">{/* design-token: manter */}
                       {formatDatePTBR(item.nextOccurrence)}
                     </span>
                   </div>

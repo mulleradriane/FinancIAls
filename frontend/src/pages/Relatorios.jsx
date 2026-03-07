@@ -141,8 +141,8 @@ const Relatorios = () => {
 
   const SummaryCard = ({ title, value, variant = 'neutral', isPercentage = false }) => {
     const variants = {
-      success: 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500 font-bold',
-      danger: 'bg-red-50 dark:bg-red-950/20 text-red-500 font-bold',
+      success: 'bg-success/10 text-success font-bold',
+      danger: 'bg-destructive/10 text-destructive font-bold',
       neutral: 'bg-secondary/30 text-foreground font-bold',
     };
 
@@ -194,7 +194,7 @@ const Relatorios = () => {
                   </p>
                   {cat.previous_total > 0 && (
                     <div className={cn(
-                      "flex items-center justify-end gap-0.5 text-[10px] font-bold uppercase",
+                          "flex items-center justify-end gap-0.5 text-[10px] font-bold uppercase", /* design-token: manter */
                       diff > 0 ? "text-red-500" : "text-emerald-500"
                     )}>
                       {diff > 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
@@ -353,7 +353,7 @@ const Relatorios = () => {
                             </div>
                             <div>
                               <p className="font-bold text-sm leading-tight">{t.description}</p>
-                              <Badge variant="outline" className="text-[10px] font-black uppercase h-5 px-2 mt-1 border-secondary/50">
+                              <Badge variant="outline" className="text-[10px] font-black uppercase h-5 px-2 mt-1 border-secondary/50">{/* design-token: manter */}
                                 {t.category_name}
                               </Badge>
                             </div>

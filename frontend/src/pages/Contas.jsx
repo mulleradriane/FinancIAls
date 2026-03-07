@@ -244,7 +244,7 @@ const Contas = () => {
                     </div>
                     <div>
                       <h3 className="font-bold text-lg">{account.name}</h3>
-                      <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider mt-1">
+                      <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider mt-1">{/* design-token: manter */}
                         {account.type.replace('_', ' ')}
                       </Badge>
                     </div>
@@ -275,7 +275,7 @@ const Contas = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="rounded-lg h-8 text-[10px] font-bold uppercase tracking-wider"
+                        className="rounded-lg h-8 text-[10px] font-bold uppercase tracking-wider" /* design-token: manter */
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedAccount(account);
@@ -303,7 +303,7 @@ const Contas = () => {
 
                   {account.type === 'cartao_credito' && account.closing_day && (
                     <div className="pt-2 border-t border-dashed">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Fatura Atual</p>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{/* design-token: manter */}Fatura Atual</p>
                       <p className="text-lg font-bold text-destructive">
                         <PrivateValue value={formatCurrency(calculateCurrentInvoice(account))} />
                       </p>
@@ -384,7 +384,7 @@ const Contas = () => {
               <SheetHeader className="p-6 pb-0">
                 <div className="flex items-center gap-2 text-muted-foreground mb-4">
                   {getAccountIcon(selectedAccount.type, 18)}
-                  <span className="text-[10px] font-bold tracking-widest uppercase">
+                  <span className="text-[10px] font-bold tracking-widest uppercase">{/* design-token: manter */}
                     {getAccountTypeName(selectedAccount.type)}
                   </span>
                 </div>
@@ -395,7 +395,7 @@ const Contas = () => {
 
               <div className="flex-1 px-6 pt-8 overflow-y-auto">
                 <div className="bg-primary/5 rounded-3xl p-6 mb-8 border border-primary/10">
-                  <p className="text-[10px] font-bold text-primary/60 uppercase tracking-widest mb-1">
+                  <p className="text-[10px] font-bold text-primary/60 uppercase tracking-widest mb-1">{/* design-token: manter */}
                     {selectedAccount.type === 'cartao_credito' ? 'Saldo Devedor' : 'Saldo Atual'}
                   </p>
                   <div className={cn(
@@ -407,7 +407,7 @@ const Contas = () => {
 
                   {selectedAccount.type === 'cartao_credito' && selectedAccount.closing_day && (
                     <div className="mt-4 pt-4 border-t border-primary/10">
-                      <p className="text-[10px] font-bold text-primary/60 uppercase tracking-widest mb-1">Fatura Atual</p>
+                      <p className="text-[10px] font-bold text-primary/60 uppercase tracking-widest mb-1">{/* design-token: manter */}Fatura Atual</p>
                       <div className="text-xl font-bold text-destructive tracking-tight">
                         <PrivateValue value={formatCurrency(calculateCurrentInvoice(selectedAccount))} />
                       </div>
@@ -417,7 +417,7 @@ const Contas = () => {
 
                 <div className="space-y-6">
                   <div>
-                    <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-2">{/* design-token: manter */}
                       <Info size={12} /> Informações
                     </h4>
                     <div className="space-y-4">

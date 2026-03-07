@@ -76,7 +76,7 @@ const RecentTransactionsCard = () => {
                   <div className="flex items-center gap-2 mt-1">
                      <Badge
                       variant="secondary"
-                      className="text-[10px] h-5 px-1.5 font-bold uppercase tracking-wider whitespace-nowrap"
+                      className="text-[10px] h-5 px-1.5 font-bold uppercase tracking-wider whitespace-nowrap" /* design-token: manter */
                       style={{
                         backgroundColor: t.is_transfer ? undefined : `${t.category_color}12`,
                         color: t.is_transfer ? undefined : t.category_color,
@@ -86,7 +86,7 @@ const RecentTransactionsCard = () => {
                       <span className="mr-1">{t.is_transfer ? '💸' : (t.category_icon || '💰')}</span>
                       {t.category_is_system ? 'Sistema' : t.category_name}
                     </Badge>
-                    <span className="text-[10px] text-muted-foreground font-medium uppercase truncate max-w-[80px]">
+                    <span className="text-[10px] text-muted-foreground font-medium uppercase truncate max-w-[80px]">{/* design-token: manter */}
                       {t.account_name}
                     </span>
                   </div>

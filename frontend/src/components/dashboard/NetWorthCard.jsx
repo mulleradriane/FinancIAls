@@ -32,7 +32,7 @@ const NetWorthCard = ({ netWorth, assets, liabilities, loading }) => {
               <Landmark className="h-6 w-6 text-primary" />
             </div>
             <div className={cn(
-              "flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide uppercase border",
+              "flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide uppercase border", /* design-token: manter */
               isPositive
                 ? "bg-success/[0.03] text-success/90 border-success/10"
                 : "bg-destructive/[0.03] text-destructive/90 border-destructive/10"
@@ -43,7 +43,7 @@ const NetWorthCard = ({ netWorth, assets, liabilities, loading }) => {
           </div>
 
           <div className="flex items-center gap-2">
-            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Patrimônio Líquido Total</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Patrimônio Líquido Total</p>
             <InfoTooltip content="Patrimônio Líquido = Total de Ativos (contas bancárias, investimentos) menos Total de Passivos (cartão de crédito, dívidas). Representa sua riqueza real." />
           </div>
           <h2 className="text-4xl font-bold mt-2 tracking-tight">
@@ -54,14 +54,14 @@ const NetWorthCard = ({ netWorth, assets, liabilities, loading }) => {
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 text-success">
                 <ArrowUpRight size={14} />
-                <span className="text-[10px] font-bold uppercase tracking-wider">Ativos</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider">{/* design-token: manter */}Ativos</span>
               </div>
               <p className="text-lg font-bold"><PrivateValue value={formatCurrency(assets)} /></p>
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 text-destructive">
                 <ArrowDownRight size={14} />
-                <span className="text-[10px] font-bold uppercase tracking-wider">Passivos</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider">{/* design-token: manter */}Passivos</span>
               </div>
               <p className="text-lg font-bold"><PrivateValue value={formatCurrency(liabilities)} /></p>
             </div>

@@ -271,7 +271,7 @@ const Projection = () => {
                       <Wallet size={24} />
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Saldo Inicial</p>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{/* design-token: manter */}Saldo Inicial</p>
                       <h3 className="text-xl font-black"><PrivateValue value={formatCurrency(p.initial_balance)} /></h3>
                     </div>
                   </CardContent>
@@ -282,7 +282,7 @@ const Projection = () => {
                       <ArrowUpCircle size={24} />
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Entradas Totais</p>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{/* design-token: manter */}Entradas Totais</p>
                       <h3 className="text-xl font-black"><PrivateValue value={formatCurrency(p.income)} /></h3>
                     </div>
                   </CardContent>
@@ -293,7 +293,7 @@ const Projection = () => {
                       <Wallet size={24} />
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Saldo Final</p>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{/* design-token: manter */}Saldo Final</p>
                       <h3 className="text-xl font-black"><PrivateValue value={formatCurrency(p.projected_balance)} /></h3>
                     </div>
                   </CardContent>
@@ -376,7 +376,7 @@ const Projection = () => {
                     <div className="flex justify-between items-center py-2">
                       <div className="space-y-1">
                         <span className="text-sm font-medium">Estimativa Variável</span>
-                        <p className="text-[10px] text-muted-foreground font-bold uppercase">Média dos últimos 3 meses</p>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase">{/* design-token: manter */}Média dos últimos 3 meses</p>
                       </div>
                       <span className="font-bold text-slate-600"><PrivateValue value={formatCurrency(p.variable_expenses)} /></span>
                     </div>

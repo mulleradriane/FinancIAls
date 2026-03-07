@@ -76,23 +76,23 @@ const RecurringCard = ({ item, type, onEdit, onTerminate, onDelete }) => {
           <div className="flex gap-4">
             <div className={cn(
               "w-12 h-12 rounded-xl flex items-center justify-center border",
-              isIncome ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+            isIncome ? "bg-success/10 text-success border-success/20" :
                 (isInstallment ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : "bg-blue-500/10 text-blue-600 border-blue-500/20")
             )}>
               {isInstallment ? <Package size={22} /> : (isIncome ? <Repeat size={22} /> : <Tv size={22} />)}
             </div>
             <div>
               <h4 className="font-bold leading-tight">{item.description}</h4>
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-1">{item.category?.name || 'Sem Categoria'}</p>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-1">{/* design-token: manter */}{item.category?.name || 'Sem Categoria'}</p>
               {isInstallment ? (
                 <Badge variant="secondary" className={cn(
-                  "mt-2 text-[10px] font-black h-5 px-2 border-none",
-                  isIncome ? "bg-emerald-500/10 text-emerald-700" : "bg-amber-500/10 text-amber-700"
+                  "mt-2 text-[10px] font-black h-5 px-2 border-none", /* design-token: manter */
+                isIncome ? "bg-success/10 text-success" : "bg-amber-500/10 text-amber-700"
                 )}>
                   {completed}/{total}
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-[9px] uppercase font-black h-4 px-1.5 mt-2">
+                <Badge variant="outline" className="text-[10px] uppercase font-black h-4 px-1.5 mt-2">{/* design-token: manter */}
                   {item.frequency === 'monthly' ? 'Mensal' : 'Anual'}
                 </Badge>
               )}
@@ -100,13 +100,13 @@ const RecurringCard = ({ item, type, onEdit, onTerminate, onDelete }) => {
           </div>
           <div className="text-right">
             <p className="font-black text-xl"><PrivateValue value={formatCurrency(item.amount)} /></p>
-            {isInstallment && <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">até {endDateStr}</p>}
+            {isInstallment && <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">{/* design-token: manter */}até {endDateStr}</p>}
           </div>
         </div>
 
         {isInstallment && (
           <div className="mt-6 space-y-2">
-            <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{/* design-token: manter */}
               <span>Progresso</span>
               <span>{Math.round(progress)}%</span>
             </div>
@@ -470,7 +470,7 @@ const Recorrentes = () => {
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <p className="text-2xl font-black">{summary.commitment_percentage}%</p>
-                <p className="text-[10px] text-muted-foreground font-bold uppercase">Comprometido</p>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase">{/* design-token: manter */}Comprometido</p>
               </div>
             </div>
 

@@ -40,7 +40,7 @@ const MonthlySummaryCard = ({ data, loading }) => {
     <Card className="border-none shadow-md rounded-2xl">
       <CardContent className="p-8">
         <div className="flex items-center gap-2 mb-6">
-          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
             Resumo de {capitalizedMonth} de {currentYear}
           </p>
           <InfoTooltip content="O resultado pode ser negativo no início do mês porque as despesas chegam antes do salário. Este valor fica mais preciso no final do mês." />
@@ -52,7 +52,7 @@ const MonthlySummaryCard = ({ data, loading }) => {
               <CircleArrowUp className="h-5 w-5 text-success" />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{/* design-token: manter */ }
                 Receitas
               </p>
               <p className="text-2xl font-bold text-success mt-1">
@@ -66,7 +66,7 @@ const MonthlySummaryCard = ({ data, loading }) => {
               <CircleArrowDown className="h-5 w-5 text-destructive" />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{/* design-token: manter */ }
                 Despesas
               </p>
               <p className="text-2xl font-bold text-destructive mt-1">
@@ -80,7 +80,7 @@ const MonthlySummaryCard = ({ data, loading }) => {
               <Scale className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{/* design-token: manter */ }
                 Resultado Líquido
               </p>
               <p className={`text-2xl font-bold mt-1 ${netResult >= 0 ? 'text-success' : 'text-destructive'}`}>
@@ -94,7 +94,7 @@ const MonthlySummaryCard = ({ data, loading }) => {
               <PiggyBank className="h-5 w-5 text-indigo-500" />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{/* design-token: manter */ }
                 Taxa de Poupança
               </p>
               <p className="text-2xl font-bold text-indigo-500 mt-1">

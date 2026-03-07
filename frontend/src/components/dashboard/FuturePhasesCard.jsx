@@ -11,9 +11,9 @@ const FuturePhaseItem = ({ icon: Icon, title, description }) => (
     <div className="space-y-1">
       <div className="flex items-center gap-2">
         <h4 className="text-sm font-bold text-muted-foreground">{title}</h4>
-        <Badge variant="secondary" className="h-4 text-[9px] uppercase tracking-tighter px-1.5 font-bold bg-muted-foreground/10 text-muted-foreground/70">Em breve</Badge>
+        <Badge variant="secondary" className="h-4 text-[10px] uppercase tracking-tighter px-1.5 font-bold bg-muted-foreground/10 text-muted-foreground/70">{/* design-token: manter */}Em breve</Badge>
       </div>
-      <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+      <p className="text-xs text-muted-foreground/60 leading-relaxed">
         {description}
       </p>
     </div>
@@ -27,7 +27,7 @@ const FuturePhasesCard = () => {
       <CardContent className="p-8">
         <div className="flex items-center gap-2 mb-6">
           <Zap className="h-4 w-4 text-primary" />
-          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Recursos Inteligentes</p>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Recursos Inteligentes</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

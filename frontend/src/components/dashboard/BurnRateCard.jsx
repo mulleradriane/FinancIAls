@@ -54,7 +54,7 @@ const BurnRateCard = ({ avgMonthlyExpense, trend, previousAvg, loading }) => {
               <Flame className="h-6 w-6 text-orange-500" />
             </div>
             <div className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border", /* design-token: manter */
               getTrendColor()
             )}>
               {getTrendIcon()}
@@ -63,7 +63,7 @@ const BurnRateCard = ({ avgMonthlyExpense, trend, previousAvg, loading }) => {
           </div>
 
           <div className="flex items-center gap-2">
-            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Burn Rate (Média 3 meses)</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Burn Rate (Média 3 meses)</p>
             <InfoTooltip content="Média dos seus gastos mensais nos últimos 3 meses. Indica o ritmo de consumo do seu dinheiro. Tendência de alta significa que você está gastando mais do que antes." />
           </div>
           <h2 className="text-4xl font-bold mt-2 tracking-tight">

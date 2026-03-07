@@ -22,7 +22,7 @@ const GoalItem = ({ goal }) => {
             <h4 className="text-sm font-bold tracking-tight">{goal.name}</h4>
             <div className="flex items-center gap-2 mt-1">
               <Clock className="h-3 w-3 text-muted-foreground" />
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">{/* design-token: manter */}
                 Prazo: {new Date(goal.target_date + 'T12:00:00').toLocaleDateString('pt-BR')}
               </p>
             </div>
@@ -31,9 +31,9 @@ const GoalItem = ({ goal }) => {
         <div className="text-right">
           <Badge
             variant={goal.on_track ? "secondary" : "destructive"}
-            className={`text-[10px] font-bold uppercase px-2 py-0.5 ${goal.on_track ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20' : ''}`}
+            className={`text-[10px] font-bold uppercase px-2 py-0.5 ${goal.on_track ? 'bg-success/10 text-success hover:bg-success/20 border-success/20' : ''}`} /* design-token: manter */
           >
-            {goal.on_track ? "On Track" : "Behind"}
+            {goal.on_track ? "No Prazo" : "Atrasada"}
           </Badge>
         </div>
       </div>
@@ -41,11 +41,11 @@ const GoalItem = ({ goal }) => {
       <div className="space-y-2.5">
         <div className="flex justify-between items-end">
           <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Progresso</span>
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Progresso</span>
             <span className="text-xl font-bold tracking-tight">{goal.percentage_completed}%</span>
           </div>
           <div className="flex flex-col items-end text-right">
-            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Acumulado / Alvo</span>
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Acumulado / Alvo</span>
             <span className="text-sm font-medium">
               <PrivateValue value={`R$ ${parseFloat(goal.current_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} /> /
               <span className="text-primary ml-1">
@@ -84,10 +84,10 @@ const GoalsCard = ({ goals, loading }) => {
             <div className="p-1.5 bg-primary rounded-lg">
               <Target className="h-4 w-4 text-white" />
             </div>
-            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Metas Financeiras</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em]">Metas Financeiras</p>
             <InfoTooltip content="Progresso das suas metas financeiras ativas. O percentual é calculado com base no patrimônio atual em relação ao valor alvo definido." />
           </div>
-          <Badge variant="outline" className="text-[10px] font-bold text-muted-foreground uppercase">
+          <Badge variant="outline" className="text-[10px] font-bold text-muted-foreground uppercase">{/* design-token: manter */}
             {goals?.length || 0} {goals?.length === 1 ? 'Ativa' : 'Ativas'}
           </Badge>
         </div>
@@ -102,7 +102,7 @@ const GoalsCard = ({ goals, loading }) => {
                 <Target className="h-6 w-6 text-muted-foreground/40" />
               </div>
               <p className="text-sm font-medium text-muted-foreground">Nenhuma meta ativa definida.</p>
-              <p className="text-[11px] text-muted-foreground/60 mt-1 uppercase tracking-wider font-bold">Use o menu de Metas para começar.</p>
+              <p className="text-xs text-muted-foreground/60 mt-1 uppercase tracking-wider font-bold">Use o menu de Metas para começar.</p>
             </div>
           )}
         </div>

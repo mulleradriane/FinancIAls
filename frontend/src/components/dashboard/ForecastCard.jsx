@@ -20,7 +20,7 @@ const ForecastCard = ({ forecast, loading }) => {
     return (
       <Card className="border-none shadow-sm bg-white/50 backdrop-blur-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
             <Sparkles className="w-3 h-3" />
             Projeção Financeira
           </CardTitle>
@@ -82,7 +82,7 @@ const ForecastCard = ({ forecast, loading }) => {
     <Card className="border-none shadow-sm bg-white/50 backdrop-blur-sm hover:bg-white/80 transition-all duration-300">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
-          <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
             <Sparkles className="w-3 h-3 text-blue-500" />
             Projeção Financeira
           </CardTitle>
@@ -98,7 +98,7 @@ const ForecastCard = ({ forecast, loading }) => {
           <div className="text-4xl font-bold tracking-tight text-slate-900 mb-1">
             <PrivateValue value={formatCurrency(current_net_worth)} />
           </div>
-          <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-widest flex items-center gap-2">
             Patrimônio Atual
             {avg_monthly_result_last_3m !== 0 && (
               <span className={`flex items-center gap-0.5 ${avg_monthly_result_last_3m > 0 ? 'text-green-600' : 'text-destructive'}`}>
@@ -110,19 +110,19 @@ const ForecastCard = ({ forecast, loading }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="p-4 rounded-xl bg-slate-50/50 border border-slate-100/50">
-            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Em 3 Meses</div>
+            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">{/* design-token: manter */}Em 3 Meses</div>
             <div className={`text-xl font-semibold ${projected_3m >= 0 ? 'text-slate-900' : 'text-destructive'}`}>
               <PrivateValue value={formatCurrency(projected_3m)} />
             </div>
           </div>
           <div className="p-4 rounded-xl bg-slate-50/50 border border-slate-100/50">
-            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Em 6 Meses</div>
+            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">{/* design-token: manter */}Em 6 Meses</div>
             <div className={`text-xl font-semibold ${projected_6m >= 0 ? 'text-slate-900' : 'text-destructive'}`}>
               <PrivateValue value={formatCurrency(projected_6m)} />
             </div>
           </div>
           <div className="p-4 rounded-xl bg-slate-50/50 border border-slate-100/50">
-            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Em 1 Ano</div>
+            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">{/* design-token: manter */}Em 1 Ano</div>
             <div className={`text-xl font-semibold ${projected_12m >= 0 ? 'text-slate-900' : 'text-destructive'}`}>
               <PrivateValue value={formatCurrency(projected_12m)} />
             </div>
@@ -147,7 +147,7 @@ const ForecastCard = ({ forecast, loading }) => {
           </div>
         )}
 
-        <p className="text-[10px] text-muted-foreground italic text-center">
+        <p className="text-[10px] text-muted-foreground italic text-center">{/* design-token: manter */}
           * Projeção linear baseada no resultado médio dos últimos 3 meses fechados.
         </p>
       </CardContent>

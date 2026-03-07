@@ -520,7 +520,7 @@ const Transactions = () => {
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 bg-background rounded-xl px-3 h-10 border shadow-sm">
                   <Filter className="h-4 w-4 text-primary" />
-                  <Badge variant="secondary" className="rounded-full px-1.5 h-5 min-w-[20px] flex items-center justify-center text-[10px] font-bold">
+                  <Badge variant="secondary" className="rounded-full px-1.5 h-5 min-w-[20px] flex items-center justify-center text-[10px] font-bold">{/* design-token: manter */}
                     {activeFiltersCount}
                   </Badge>
                 </div>

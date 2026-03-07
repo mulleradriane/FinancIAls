@@ -191,7 +191,7 @@ const FluxoCaixa = () => {
                   <ArrowUpCircle size={24} />
                 </div>
                 <div>
-                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Receitas do Mês</p>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Receitas do Mês</p>
                   <h3 className="text-2xl font-bold text-success mt-0.5"><PrivateValue value={formatCurrency(lastMonth.income)} /></h3>
                 </div>
               </div>
@@ -205,7 +205,7 @@ const FluxoCaixa = () => {
                   <ArrowDownCircle size={24} />
                 </div>
                 <div>
-                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Despesas do Mês</p>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Despesas do Mês</p>
                   <h3 className="text-2xl font-bold text-destructive mt-0.5"><PrivateValue value={formatCurrency(lastMonth.expense)} /></h3>
                 </div>
               </div>
@@ -225,7 +225,7 @@ const FluxoCaixa = () => {
                   {lastMonth.net >= 0 ? <TrendingUp size={24} /> : <TrendingDown size={24} />}
                 </div>
                 <div>
-                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Resultado Líquido</p>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Resultado Líquido</p>
                   <h3 className={cn(
                     "text-2xl font-bold mt-0.5",
                     lastMonth.net >= 0 ? "text-success" : "text-destructive"
