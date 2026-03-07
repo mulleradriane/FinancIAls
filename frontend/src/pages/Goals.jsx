@@ -11,6 +11,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -21,7 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import GoalForm from '@/components/GoalForm';
-import { Plus, Target, Trash2, Calendar, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Plus, Target, Trash2, Calendar, TrendingUp, AlertCircle, CheckCircle2, MoreVertical } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -156,14 +162,22 @@ const Goals = () => {
                         <div className="flex items-center gap-1"><AlertCircle size={10} /> Atrasado</div>
                       )}
                     </Badge>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(goal.id)}
-                      className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Trash2 size={14} className="text-destructive" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                          <MoreVertical size={18} className="text-muted-foreground" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="rounded-xl border-border/50 shadow-xl">
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(goal.id)}
+                          className="cursor-pointer gap-2 py-2.5 text-destructive"
+                        >
+                          <Trash2 size={14} />
+                          <span>Excluir</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
 
