@@ -119,7 +119,7 @@ export function Sidebar() {
             }}>
               <img 
                 src={logoSrc}
-                alt="Ronromia"
+                alt="FinancIAls"
                 style={{
                   height: '40px',
                   width: 'auto',

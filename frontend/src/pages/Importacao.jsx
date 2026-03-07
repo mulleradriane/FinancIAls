@@ -68,7 +68,7 @@ export default function Importacao() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', 'template_ronromia.csv');
+    link.setAttribute('download', 'template_financials.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -262,7 +262,7 @@ export default function Importacao() {
                   <CardTitle className="text-lg">Extrato Conta Corrente</CardTitle>
                   <CardDescription>PIX, débito, transferências.</CardDescription>
                 </div>
-                <Badge variant="secondary">Formato Ronromia</Badge>
+                <Badge variant="secondary">Formato FinancIAls</Badge>
               </CardHeader>
               <CardContent className="text-sm text-foreground/70 dark:text-foreground/60">
                 Para extratos de conta bancária. Use o template padronizado para facilitar a importação.

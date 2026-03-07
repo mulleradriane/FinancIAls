@@ -199,7 +199,7 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
         return db.scalars(
             select(Transaction)
             .filter(
-                Transaction.description.ilike(description),
+                Transaction.description.ilike(f"%{description}%"),
                 Transaction.user_id == user_id,
                 Transaction.deleted_at == None
             )
