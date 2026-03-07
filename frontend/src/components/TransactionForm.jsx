@@ -194,15 +194,6 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    
-    // LOG 4: Validação antes de submit
-    console.log('✅ [SUBMIT] Validando formulário', {
-      description: formData.description,
-      amount: formData.amount,
-      categoryId: formData.categoryId,
-      accountId: formData.accountId,
-      isEditing: !!fullTransaction
-    });
 
     if (!formData.description || !formData.amount || !formData.categoryId || !formData.accountId) {
       toast.error("Por favor, preencha todos os campos obrigatórios.");
@@ -221,8 +212,6 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
         category_id: formData.categoryId,
         account_id: formData.accountId,
       };
-
-      console.log('📤 [SUBMIT] Enviando payload', payload);
 
       let response;
       if (fullTransaction) {
@@ -263,19 +252,6 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
       onClose();
     }
   };
-
-  // LOG 5: Renderização
-  console.log('🖼️ [RENDER] TransactionForm renderizando', {
-    transactionId: fullTransaction?.id,
-    loading,
-    formData: {
-      description: formData.description,
-      categoryId: formData.categoryId,
-      accountId: formData.accountId
-    },
-    categoriesAvailable: categories.length,
-    accountsAvailable: accounts.length
-  });
 
   if (loading) {
     return (

@@ -211,6 +211,15 @@ const Transactions = () => {
 
   const currentPeriodLabel = periodOptions.find(o => o.value === period)?.label || 'Período';
 
+  const activeFiltersCount = accountIds.length +
+    categoryIds.length +
+    (period !== 'month' ? 1 : 0) +
+    (search !== '' ? 1 : 0) +
+    (startDate !== '' ? 1 : 0) +
+    (endDate !== '' ? 1 : 0);
+
+  const hasActiveFilters = activeFiltersCount > 0;
+
   const totals = transactions.reduce((acc, t) => {
     if (t.category_is_system) return acc;
     const val = parseFloat(t.amount);
@@ -491,9 +500,19 @@ const Transactions = () => {
               </Popover>
             </div>
 
-            <Button variant="ghost" onClick={clearFilters} className="rounded-xl h-10 px-4 hover:bg-background">
-              <X className="mr-2 h-4 w-4" /> Limpar
-            </Button>
+            {hasActiveFilters && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 bg-background rounded-xl px-3 h-10 border shadow-sm">
+                  <Filter className="h-4 w-4 text-primary" />
+                  <Badge variant="secondary" className="rounded-full px-1.5 h-5 min-w-[20px] flex items-center justify-center text-[10px] font-bold">
+                    {activeFiltersCount}
+                  </Badge>
+                </div>
+                <Button variant="ghost" onClick={clearFilters} className="rounded-xl h-10 px-4 hover:bg-background">
+                  <X className="mr-2 h-4 w-4" /> Limpar
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
