@@ -8,8 +8,8 @@ from app.crud.recurring_expense import recurring_expense as crud_recurring_expen
 from app.crud.account import account as crud_account
 from app.schemas.transaction import UnifiedTransactionCreate, TransactionCreate
 from app.schemas.recurring_expense import RecurringExpenseCreate
-from app.models.recurring_expense import RecurringType
-from app.models.transaction import TransactionNature
+from app.models.recurring_expense import RecurringExpense, RecurringType
+from app.models.transaction import Transaction, TransactionNature
 from app.models.category import Category, CategoryType
 from uuid import UUID
 import logging
@@ -87,26 +87,29 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate, us
     if obj_in.nature == TransactionNature.INCOME:
         recurring_amount = abs(obj_in.amount)
 
-    recurring_in = RecurringExpenseCreate(
-        description=obj_in.description,
-        category_id=obj_in.category_id,
-        amount=recurring_amount,
-        type=obj_in.recurring_type,
-        frequency=obj_in.frequency,
-        total_installments=obj_in.total_installments,
-        current_installment=1 if obj_in.recurring_type == RecurringType.installment else None,
-        start_date=obj_in.date,
-        end_date=end_date,
-        active=True,
-        account_id=obj_in.account_id
-    )
-    db_recurring = crud_recurring_expense.create_with_user(db, obj_in=recurring_in, user_id=user_id)
-
     # Determine amount multiplier for associated transactions
     multiplier = 1 if obj_in.nature == TransactionNature.INCOME else -1
 
     # Create associated transactions
     if obj_in.recurring_type == RecurringType.installment:
+        # 1. Create RecurringExpense manually (atomic)
+        db_recurring = RecurringExpense(
+            description=obj_in.description,
+            category_id=obj_in.category_id,
+            amount=recurring_amount,
+            type=obj_in.recurring_type,
+            frequency=obj_in.frequency,
+            total_installments=obj_in.total_installments,
+            current_installment=1,
+            start_date=obj_in.date,
+            end_date=end_date,
+            active=True,
+            account_id=obj_in.account_id,
+            user_id=user_id
+        )
+        db.add(db_recurring)
+        db.flush() # Generate ID without committing
+
         num_installments = obj_in.total_installments or 1
         # Treat input amount as TOTAL value and divide it
         total_amount = Decimal(str(obj_in.amount))
@@ -118,7 +121,7 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate, us
         total_calculated = base_installment * Decimal(str(num_installments))
         difference = total_amount - total_calculated
 
-        first_transaction = None
+        transactions_to_create = []
         for i in range(1, num_installments + 1):
             # Add the difference to the first installment
             current_installment_amount = base_installment
@@ -127,7 +130,8 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate, us
 
             # Calculate date for each installment (monthly)
             installment_date = obj_in.date + relativedelta(months=i-1)
-            transaction_in = TransactionCreate(
+
+            db_transaction = Transaction(
                 description=f"{obj_in.description} ({i}/{num_installments})",
                 category_id=obj_in.category_id,
                 amount=multiplier * abs(current_installment_amount),
@@ -135,16 +139,42 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate, us
                 date=installment_date,
                 recurring_expense_id=db_recurring.id,
                 installment_number=i,
-                account_id=obj_in.account_id
+                account_id=obj_in.account_id,
+                user_id=user_id
             )
-            db_transaction = crud_transaction.create_with_user(db, obj_in=transaction_in, user_id=user_id)
-            if i == 1:
-                first_transaction = db_transaction
+            transactions_to_create.append(db_transaction)
 
-        # After all installments are created, history is already updated by the last one
+        db.add_all(transactions_to_create)
+        db.commit()
+
+        # Refresh only what's needed
+        db.refresh(db_recurring)
+        first_transaction = transactions_to_create[0]
+        db.refresh(first_transaction)
+
+        # Update balance history once
+        balance = crud_account.get_balance(db, obj_in.account_id)
+        crud_account._record_history(db, obj_in.account_id, balance)
+
         return first_transaction
     else:
-        # Subscription: Create only the first transaction
+        # Subscription: Preserve existing behavior
+        recurring_in = RecurringExpenseCreate(
+            description=obj_in.description,
+            category_id=obj_in.category_id,
+            amount=recurring_amount,
+            type=obj_in.recurring_type,
+            frequency=obj_in.frequency,
+            total_installments=obj_in.total_installments,
+            current_installment=None,
+            start_date=obj_in.date,
+            end_date=end_date,
+            active=True,
+            account_id=obj_in.account_id
+        )
+        db_recurring = crud_recurring_expense.create_with_user(db, obj_in=recurring_in, user_id=user_id)
+
+        # Create only the first transaction
         transaction_in = TransactionCreate(
             description=obj_in.description,
             category_id=obj_in.category_id,
