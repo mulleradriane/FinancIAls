@@ -25,6 +25,16 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Contas = () => {
   const [accounts, setAccounts] = useState([]);
@@ -35,6 +45,7 @@ const Contas = () => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchAccounts = async () => {
@@ -131,18 +142,23 @@ const Contas = () => {
     setIsDetailsOpen(false);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Tem certeza que deseja excluir esta conta? Todas as transações vinculadas perderão o vínculo.')) {
-      try {
-        await api.delete(`/accounts/${id}`);
-        toast.success('Conta excluída!');
-        setIsDetailsOpen(false);
-        fetchAccounts();
-      } catch (error) {
-        console.error('Error deleting account:', error);
-        const detail = error.response?.data?.detail || 'Erro ao excluir conta.';
-        toast.error(detail);
-      }
+  const handleDelete = (id) => {
+    setDeleteTarget(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await api.delete(`/accounts/${deleteTarget}`);
+      toast.success('Conta excluída!');
+      setIsDetailsOpen(false);
+      fetchAccounts();
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      const detail = error.response?.data?.detail || 'Erro ao excluir conta.';
+      toast.error(detail);
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -184,6 +200,26 @@ const Contas = () => {
           </Button>
         </div>
       </div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent className="rounded-2xl border-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta conta? Todas as transações vinculadas perderão o vínculo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="rounded-xl bg-destructive hover:bg-destructive/90 text-white"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (

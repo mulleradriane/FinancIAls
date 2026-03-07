@@ -14,6 +14,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -40,6 +50,7 @@ const Transactions = () => {
   const [transactions, setTransactions] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [skip, setSkip] = useState(0);
@@ -230,19 +241,24 @@ const Transactions = () => {
 
   const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
-  const handleDelete = async (transaction) => {
-    const type = transaction.is_transfer ? 'transferência' : 'transação';
-    if (window.confirm(`Tem certeza que deseja excluir esta ${type}?`)) {
-      try {
-        await api.delete(`/transactions/${transaction.id}`);
-        toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} excluída!`);
-        fetchTransactions();
-        fetchAccounts();
-      } catch (error) {
-        console.error(`Error deleting ${type}:`, error);
-        const detail = error.response?.data?.detail || `Erro ao excluir ${type}.`;
-        toast.error(detail);
-      }
+  const handleDelete = (transaction) => {
+    setDeleteTarget(transaction);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const type = deleteTarget.is_transfer ? 'transferência' : 'transação';
+    try {
+      await api.delete(`/transactions/${deleteTarget.id}`);
+      toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} excluída!`);
+      fetchTransactions();
+      fetchAccounts();
+    } catch (error) {
+      console.error(`Error deleting ${type}:`, error);
+      const detail = error.response?.data?.detail || `Erro ao excluir ${type}.`;
+      toast.error(detail);
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -538,6 +554,26 @@ const Transactions = () => {
           />
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent className="rounded-2xl border-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta {deleteTarget?.is_transfer ? 'transferência' : 'transação'}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="rounded-xl bg-destructive hover:bg-destructive/90 text-white"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="mt-8">
         <div className="flex items-center justify-between mb-6 px-1">
