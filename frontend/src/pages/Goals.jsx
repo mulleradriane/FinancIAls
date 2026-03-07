@@ -10,6 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import GoalForm from '@/components/GoalForm';
 import { Plus, Target, Trash2, Calendar, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
@@ -21,6 +31,7 @@ import PrivateValue from '@/components/ui/PrivateValue';
 const Goals = () => {
   const [goals, setGoals] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchGoals = async () => {
@@ -40,16 +51,21 @@ const Goals = () => {
     fetchGoals();
   }, []);
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Tem certeza que deseja excluir esta meta?')) {
-      try {
-        await goalsApi.deleteGoal(id);
-        toast.success('Meta excluída!');
-        fetchGoals();
-      } catch (error) {
-        console.error('Error deleting goal:', error);
-        toast.error('Erro ao excluir meta.');
-      }
+  const handleDelete = (id) => {
+    setDeleteTarget(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await goalsApi.deleteGoal(deleteTarget);
+      toast.success('Meta excluída!');
+      fetchGoals();
+    } catch (error) {
+      console.error('Error deleting goal:', error);
+      toast.error('Erro ao excluir meta.');
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -78,6 +94,26 @@ const Goals = () => {
           <Plus className="mr-2 h-5 w-5" /> Nova Meta
         </Button>
       </div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent className="rounded-2xl border-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta meta?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="rounded-xl bg-destructive hover:bg-destructive/90 text-white"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {loading ? (

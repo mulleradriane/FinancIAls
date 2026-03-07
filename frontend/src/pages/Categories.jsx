@@ -18,6 +18,16 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -40,6 +50,7 @@ function Categories() {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   // Quick Budget state
   const [budgetAmount, setBudgetAmount] = useState('');
@@ -72,17 +83,22 @@ function Categories() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (category) => {
+  const handleDelete = (category) => {
     if (category.is_system) return;
-    if (window.confirm('Tem certeza que deseja excluir esta categoria?')) {
-      try {
-        await api.delete(`/categories/${category.id}`);
-        toast.success('Categoria excluída!');
-        fetchCategories();
-      } catch (err) {
-        toast.error('Erro ao excluir categoria.');
-        console.error(err);
-      }
+    setDeleteTarget(category);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await api.delete(`/categories/${deleteTarget.id}`);
+      toast.success('Categoria excluída!');
+      fetchCategories();
+    } catch (err) {
+      toast.error('Erro ao excluir categoria.');
+      console.error(err);
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -127,6 +143,26 @@ function Categories() {
           <Plus className="mr-2 h-5 w-5" /> Nova Categoria
         </Button>
       </div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent className="rounded-2xl border-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta categoria?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="rounded-xl bg-destructive hover:bg-destructive/90 text-white"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="flex items-center gap-4 max-w-sm">
         <div className="relative w-full">
