@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { CircleArrowUp, CircleArrowDown, Scale, PiggyBank } from 'lucide-react';
 import InfoTooltip from '@/components/ui/InfoTooltip';
 import PrivateValue from '@/components/ui/PrivateValue';
@@ -30,8 +31,25 @@ const MonthlySummaryCard = ({ data, loading }) => {
 
   if (loading) {
     return (
-      <Card className="border-none shadow-md animate-pulse">
-        <div className="h-[200px] w-full bg-secondary/10 p-8 rounded-2xl" />
+      <Card className="border-none shadow-md rounded-2xl">
+        <CardContent className="p-8">
+          <div className="flex items-center gap-2 mb-6">
+            <Skeleton className="h-3 w-48" />
+            <Skeleton className="h-4 w-4 rounded-full" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-x-8 gap-y-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="space-y-4">
+                <Skeleton className="h-9 w-9 rounded-lg" />
+                <div className="space-y-2">
+                  <Skeleton className="h-2 w-16" />
+                  <Skeleton className="h-8 w-32" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
       </Card>
     );
   }

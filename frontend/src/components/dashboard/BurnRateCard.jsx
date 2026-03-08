@@ -1,6 +1,7 @@
 import React from 'react';
 import { Flame, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import PrivateValue from '@/components/ui/PrivateValue';
 import InfoTooltip from '@/components/ui/InfoTooltip';
@@ -15,8 +16,24 @@ const BurnRateCard = ({ avgMonthlyExpense, trend, previousAvg, loading }) => {
 
   if (loading) {
     return (
-      <Card className="border-none shadow-md overflow-hidden animate-pulse h-full">
-        <div className="p-8 h-full bg-secondary/10" />
+      <Card className="border-none shadow-md overflow-hidden h-full">
+        <CardContent className="p-8">
+          <div className="flex justify-between items-start mb-6">
+            <Skeleton className="h-11 w-11 rounded-xl" />
+            <Skeleton className="h-6 w-24 rounded-full" />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-3 w-44" />
+            <Skeleton className="h-4 w-4 rounded-full" />
+          </div>
+          <Skeleton className="h-10 w-48 mt-2" />
+
+          <div className="mt-6">
+            <Skeleton className="h-4 w-40" />
+          </div>
+        </CardContent>
+        <div className="h-1.5 w-full bg-orange-500/10" />
       </Card>
     );
   }
