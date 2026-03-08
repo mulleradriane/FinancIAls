@@ -38,7 +38,7 @@ const menuItems = [
   { path: '/importacao', label: 'Importar', icon: Upload },
 ];
 
-export function Sidebar() {
+export function Sidebar({ onNavigate, isMobile }) {
   const { theme, toggleTheme } = useTheme();
   const { isPrivate, togglePrivacy } = usePrivacy();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -87,14 +87,14 @@ export function Sidebar() {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',
-        borderRight: `1px solid ${currentStyle.border}`,
+        height: isMobile ? '100%' : '100vh',
+        borderRight: isMobile ? 'none' : `1px solid ${currentStyle.border}`,
         backgroundColor: currentStyle.background,
         transition: 'all 0.5s ease-in-out',
-        position: 'sticky',
+        position: isMobile ? 'static' : 'sticky',
         top: 0,
         zIndex: 50,
-        width: isCollapsed ? '80px' : '260px',
+        width: isMobile ? '260px' : (isCollapsed ? '80px' : '260px'),
       }}
     >
       {/* Header com logo - CENTRALIZADO */}
@@ -106,10 +106,10 @@ export function Sidebar() {
         width: '100%',
         borderBottom: `1px solid ${currentStyle.border}`,
       }}>
-        {!isCollapsed ? (
+        {(!isCollapsed || isMobile) ? (
           <>
             {/* Espaçador invisível com a MESMA largura do botão */}
-            <div style={{ width: '32px' }} />
+            {!isMobile && <div style={{ width: '32px' }} />}
             
             {/* Container da logo para garantir centralização */}
             <div style={{
@@ -119,7 +119,7 @@ export function Sidebar() {
             }}>
               <img 
                 src={logoSrc}
-                alt="Ronromia"
+                alt="FinancIAls"
                 style={{
                   height: '40px',
                   width: 'auto',
@@ -130,24 +130,26 @@ export function Sidebar() {
             </div>
             
             {/* Botão com largura fixa */}
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: currentStyle.text,
-                padding: '0.25rem',
-                borderRadius: '0.375rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '32px',
-                height: '32px',
-              }}
-            >
-              {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-            </button>
+            {!isMobile && (
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: currentStyle.text,
+                  padding: '0.25rem',
+                  borderRadius: '0.375rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px',
+                }}
+              >
+                {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+              </button>
+            )}
           </>
         ) : (
           <button
@@ -182,6 +184,7 @@ export function Sidebar() {
             key={item.path}
             to={item.path}
             end={item.end}
+            onClick={() => onNavigate?.()}
             style={({ isActive }) => ({
               display: 'flex',
               alignItems: 'center',
@@ -226,6 +229,7 @@ export function Sidebar() {
         {/* Item Configurações */}
         <NavLink
           to="/settings"
+          onClick={() => onNavigate?.()}
           style={({ isActive }) => ({
             display: 'flex',
             alignItems: 'center',
