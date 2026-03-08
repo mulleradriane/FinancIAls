@@ -145,6 +145,11 @@ const Dashboard = () => {
       </div>
 
       {/* Main Grid */}
+      <div className="flex items-center gap-3">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Resumo do Mês</h2>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+
       {/* LINHA 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <MonthlySummaryCard
@@ -169,11 +174,19 @@ const Dashboard = () => {
       </div>
 
       {/* LINHA 2 */}
+      <div className="flex items-center gap-3">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Comprometimento Mensal</h2>
+        <div className="flex-1 h-px bg-border" />
+      </div>
       <div className="grid grid-cols-1 gap-8">
         <MonthlyCommitmentCard data={monthlyCommitment} loading={loading} />
       </div>
 
       {/* LINHA 3 */}
+      <div className="flex items-center gap-3">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Ritmo de Gastos</h2>
+        <div className="flex-1 h-px bg-border" />
+      </div>
       <div className="grid grid-cols-1 gap-8">
         <SpendingPaceCard
           data={dailyExpenses}
@@ -184,6 +197,10 @@ const Dashboard = () => {
       </div>
 
       {/* LINHA 4 */}
+      <div className="flex items-center gap-3">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Evolução Patrimonial</h2>
+        <div className="flex-1 h-px bg-border" />
+      </div>
       <div className="grid grid-cols-1 gap-8">
         <EvolutionChart
           data={operationalMonthly}
@@ -192,6 +209,10 @@ const Dashboard = () => {
       </div>
 
       {/* LINHA 5 */}
+      <div className="flex items-center gap-3">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Metas e Atividade Recente</h2>
+        <div className="flex-1 h-px bg-border" />
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <GoalsCard goals={goals} loading={loading} />
         <RecentTransactionsCard />
