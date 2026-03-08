@@ -232,10 +232,9 @@ const Transactions = () => {
   const hasActiveFilters = activeFiltersCount > 0;
 
   const totals = transactions.reduce((acc, t) => {
-    if (t.category_is_system) return acc;
     const val = parseFloat(t.amount);
-    if (val > 0) acc.incomes += val;
-    else acc.expenses += Math.abs(val);
+    if (t.nature === 'INCOME') acc.incomes += val;
+    else if (t.nature === 'EXPENSE') acc.expenses += val;
     return acc;
   }, { incomes: 0, expenses: 0 });
 
@@ -351,7 +350,7 @@ const Transactions = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Saídas</p>
-              <h3 className="text-2xl font-bold text-destructive"><PrivateValue value={formatCurrency(totals.expenses)} /></h3>
+              <h3 className="text-2xl font-bold text-destructive"><PrivateValue value={formatCurrency(Math.abs(totals.expenses))} /></h3>
             </div>
           </CardContent>
         </Card>
@@ -362,7 +361,7 @@ const Transactions = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Saldo do Período</p>
-              <h3 className="text-2xl font-bold text-primary"><PrivateValue value={formatCurrency(totals.incomes - totals.expenses)} /></h3>
+              <h3 className="text-2xl font-bold text-primary"><PrivateValue value={formatCurrency(totals.incomes + totals.expenses)} /></h3>
             </div>
           </CardContent>
         </Card>
