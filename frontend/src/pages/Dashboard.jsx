@@ -24,6 +24,7 @@ import ForecastCard from '@/components/dashboard/ForecastCard';
 import RecentTransactionsCard from '@/components/dashboard/RecentTransactionsCard';
 import UpcomingExpensesCard from '@/components/dashboard/UpcomingExpensesCard';
 import MonthlyCommitmentCard from '@/components/dashboard/MonthlyCommitmentCard';
+import MonthOverviewCard from '@/components/MonthOverviewCard';
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -40,6 +41,7 @@ const Dashboard = () => {
   const [forecast, setForecast] = useState(null);
   const [dailyExpenses, setDailyExpenses] = useState(null);
   const [monthlyCommitment, setMonthlyCommitment] = useState(null);
+  const [monthTransactions, setMonthTransactions] = useState([]);
 
   // Form requirements
   const [categories, setCategories] = useState([]);
@@ -60,6 +62,9 @@ const Dashboard = () => {
       const now = new Date();
       const year = now.getFullYear();
       const month = now.getMonth() + 1;
+      const lastDay = new Date(year, month, 0).getDate();
+      const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+      const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
       const results = await Promise.allSettled([
         analyticsApi.getNetWorth(),           // 0
@@ -72,7 +77,8 @@ const Dashboard = () => {
         analyticsApi.getDailyExpenses(year, month), // 7
         api.get('/categories/'),              // 8
         api.get('/accounts/'),                // 9
-        analyticsApi.getMonthlyCommitment()   // 10
+        analyticsApi.getMonthlyCommitment(),   // 10
+        api.get('/transactions/', { params: { date_from: startDate, date_to: endDate, limit: 500 } }) // 11
       ]);
 
       if (results[0].status === 'fulfilled') setNetWorth(results[0].value.data.net_worth);
@@ -86,6 +92,7 @@ const Dashboard = () => {
       if (results[8].status === 'fulfilled') setCategories(results[8].value.data);
       if (results[9].status === 'fulfilled') setAccounts(results[9].value.data);
       if (results[10].status === 'fulfilled') setMonthlyCommitment(results[10].value.data);
+      if (results[11].status === 'fulfilled') setMonthTransactions(results[11].value.data.items || []);
 
       results.forEach((result, index) => {
         if (result.status === 'rejected') {
@@ -180,6 +187,19 @@ const Dashboard = () => {
       </div>
       <div className="grid grid-cols-1 gap-8">
         <MonthlyCommitmentCard data={monthlyCommitment} loading={loading} />
+      </div>
+
+      {/* Visão do Mês */}
+      <div className="flex items-center gap-3">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Visão do Mês</h2>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+      <div className="grid grid-cols-1 gap-8">
+        <MonthOverviewCard
+          accounts={accounts}
+          transactions={monthTransactions}
+          loading={loading}
+        />
       </div>
 
       {/* LINHA 3 */}
