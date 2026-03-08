@@ -57,15 +57,15 @@ const MonthOverviewCard = ({ accounts, transactions, loading }) => {
   // Use a stable "today" string for comparison (YYYY-MM-DD) in local time
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-  // 1. Saldo Disponível: Soma de current_balance de contas com type = 'banco'
+  // 1. Saldo Disponível: Soma de balance de contas com type = 'banco'
   const saldoDisponivel = accounts
     .filter(acc => acc.type === 'banco')
-    .reduce((sum, acc) => sum + Number(acc.current_balance || 0), 0);
+    .reduce((sum, acc) => sum + Number(acc.balance || 0), 0);
 
-  // 2. Investido: Soma de current_balance de contas com type = 'investimento'
+  // 2. Investido: Soma de balance de contas com type = 'investimento'
   const investido = accounts
     .filter(acc => acc.type === 'investimento')
-    .reduce((sum, acc) => sum + Number(acc.current_balance || 0), 0);
+    .reduce((sum, acc) => sum + Number(acc.balance || 0), 0);
 
   // 3. Já gastei este mês: EXPENSE, date <= hoje
   const jaGastei = transactions
