@@ -48,6 +48,7 @@ const Transactions = () => {
   const [categories, setCategories] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [summary, setSummary] = useState({ total_income: 0, total_expense: 0 });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -158,6 +159,10 @@ const Transactions = () => {
 
       const response = await api.get('/transactions/', { params });
       setTransactions(response.data.items);
+      setSummary({
+        total_income: response.data.total_income,
+        total_expense: response.data.total_expense
+      });
       setTotal(response.data.total);
       setSkip(response.data.skip);
     } catch (error) {
@@ -230,13 +235,6 @@ const Transactions = () => {
     (endDate !== '' ? 1 : 0);
 
   const hasActiveFilters = activeFiltersCount > 0;
-
-  const totals = transactions.reduce((acc, t) => {
-    const val = parseFloat(t.amount);
-    if (t.nature === 'INCOME') acc.incomes += val;
-    else if (t.nature === 'EXPENSE') acc.expenses += val;
-    return acc;
-  }, { incomes: 0, expenses: 0 });
 
   const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
@@ -339,7 +337,7 @@ const Transactions = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Entradas</p>
-              <h3 className="text-2xl font-bold text-success"><PrivateValue value={formatCurrency(totals.incomes)} /></h3>
+              <h3 className="text-2xl font-bold text-success"><PrivateValue value={formatCurrency(summary.total_income)} /></h3>
             </div>
           </CardContent>
         </Card>
@@ -350,7 +348,7 @@ const Transactions = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Saídas</p>
-              <h3 className="text-2xl font-bold text-destructive"><PrivateValue value={formatCurrency(Math.abs(totals.expenses))} /></h3>
+              <h3 className="text-2xl font-bold text-destructive"><PrivateValue value={formatCurrency(Math.abs(summary.total_expense))} /></h3>
             </div>
           </CardContent>
         </Card>
@@ -361,7 +359,7 @@ const Transactions = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Saldo do Período</p>
-              <h3 className="text-2xl font-bold text-primary"><PrivateValue value={formatCurrency(totals.incomes + totals.expenses)} /></h3>
+              <h3 className="text-2xl font-bold text-primary"><PrivateValue value={formatCurrency(Number(summary.total_income) + Number(summary.total_expense))} /></h3>
             </div>
           </CardContent>
         </Card>
