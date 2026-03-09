@@ -66,6 +66,13 @@ const Dashboard = () => {
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
       const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
+      // 0. Auto-generate future transactions
+      try {
+        await api.post('/recurring-expenses/generate');
+      } catch (err) {
+        console.error('Failed to auto-generate transactions:', err);
+      }
+
       const results = await Promise.allSettled([
         analyticsApi.getNetWorth(),           // 0
         analyticsApi.getAssetsLiabilities(),  // 1

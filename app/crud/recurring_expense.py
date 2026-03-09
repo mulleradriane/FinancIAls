@@ -3,7 +3,7 @@ from uuid import UUID
 import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy.orm import Session, joinedload, selectinload
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, extract
 from app.crud.base import CRUDBase
 from app.crud.account import account as crud_account
 from app.models.recurring_expense import RecurringExpense
@@ -187,6 +187,93 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
             .options(joinedload(RecurringExpense.category))
             .filter(self.model.id == db_obj.id, self.model.user_id == user_id)
         )
+
+    def generate_future_transactions(self, db: Session, *, user_id: UUID) -> int:
+        from app.models.transaction import Transaction, TransactionNature
+        import calendar
+        from dateutil.relativedelta import relativedelta
+
+        today = datetime.date.today()
+        # Range: current month, next month, month after next
+        target_months = [today.replace(day=1) + relativedelta(months=i) for i in range(3)]
+
+        # Get active recurring expenses with categories
+        recurrings = db.scalars(
+            select(RecurringExpense)
+            .options(joinedload(RecurringExpense.category))
+            .filter(
+                RecurringExpense.user_id == user_id,
+                RecurringExpense.active == True,
+                RecurringExpense.type == "subscription"
+            )
+        ).unique().all()
+
+        created_count = 0
+        affected_account_ids = set()
+
+        for r in recurrings:
+            for target_month_start in target_months:
+                # Check if it should occur in this month
+                if target_month_start < r.start_date.replace(day=1):
+                    continue
+                if r.end_date and target_month_start > r.end_date:
+                    continue
+
+                # Check frequency
+                if r.frequency == "yearly":
+                    if r.start_date.month != target_month_start.month:
+                        continue
+
+                # Check if transaction already exists for this recurring and this month/year
+                exists = db.scalar(
+                    select(Transaction.id)
+                    .filter(
+                        Transaction.recurring_expense_id == r.id,
+                        Transaction.user_id == user_id,
+                        extract('year', Transaction.date) == target_month_start.year,
+                        extract('month', Transaction.date) == target_month_start.month,
+                        Transaction.deleted_at == None
+                    )
+                )
+
+                if not exists:
+                    # Calculate transaction date
+                    _, last_day = calendar.monthrange(target_month_start.year, target_month_start.month)
+                    t_date = target_month_start.replace(day=min(r.start_date.day, last_day))
+
+                    # Determine nature
+                    nature = TransactionNature.EXPENSE
+                    if r.category and r.category.type == CategoryType.income:
+                        nature = TransactionNature.INCOME
+
+                    amount = r.amount
+                    if nature == TransactionNature.EXPENSE:
+                        amount = -abs(r.amount)
+                    else:
+                        amount = abs(r.amount)
+
+                    new_t = Transaction(
+                        description=r.description,
+                        amount=amount,
+                        date=t_date,
+                        nature=nature,
+                        category_id=r.category_id,
+                        account_id=r.account_id,
+                        recurring_expense_id=r.id,
+                        user_id=user_id
+                    )
+                    db.add(new_t)
+                    created_count += 1
+                    if r.account_id:
+                        affected_account_ids.add(r.account_id)
+
+        if created_count > 0:
+            db.commit()
+            for acc_id in affected_account_ids:
+                balance = crud_account.get_balance(db, acc_id)
+                crud_account._record_history(db, acc_id, balance)
+
+        return created_count
 
     def get_summary(self, db: Session, *, user_id: UUID) -> dict:
         from app.services.financial_engine import financial_engine
