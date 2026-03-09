@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Wallet, TrendingUp, Receipt, Clock, ArrowDownCircle, Target } from 'lucide-react';
 import InfoTooltip from '@/components/ui/InfoTooltip';
 import PrivateValue from '@/components/ui/PrivateValue';
-import { formatCurrency, cn } from '@/lib/utils';
+import { formatCurrency, cn, parseLocalDate } from '@/lib/utils';
 
 const MetricItem = ({ icon: Icon, label, value, tooltip, isPositive, highlight, colorClass }) => (
   <div className={cn("p-6 flex flex-col gap-2", highlight && "md:col-span-1")}>
@@ -47,15 +47,16 @@ const MonthOverviewCard = ({ accounts, transactions, loading }) => {
 
   const now = new Date();
   const year = now.getFullYear();
-  const month = now.getMonth();
+
+  // Datas de referência para filtro (garantindo 00:00:00 local)
+  const hoje = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1);
+  const fimMes = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
   // Format Month/Year title
   const monthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(now);
   const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
   const titleDate = `${capitalizedMonth}/${year}`;
-
-  // Use a stable "today" string for comparison (YYYY-MM-DD) in local time
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   // 1. Saldo Disponível: Soma de balance de contas com type = 'banco'
   const saldoDisponivel = accounts
@@ -67,19 +68,29 @@ const MonthOverviewCard = ({ accounts, transactions, loading }) => {
     .filter(acc => acc.type === 'investimento')
     .reduce((sum, acc) => sum + Number(acc.balance || 0), 0);
 
-  // 3. Já gastei este mês: EXPENSE, date <= hoje
+  // 3. Já gastei este mês: EXPENSE, dentro do mês atual até hoje
   const jaGastei = transactions
-    .filter(t => t.nature === 'EXPENSE' && t.date <= todayStr)
+    .filter(t => {
+      const data = parseLocalDate(t.date);
+      return t.nature === 'EXPENSE' && data >= inicioMes && data <= hoje;
+    })
     .reduce((sum, t) => sum + Math.abs(Number(t.amount || 0)), 0);
 
-  // 4. Recorrências pendentes: EXPENSE or TRANSFER (neg), date > hoje
+  // 4. Recorrências pendentes: (EXPENSE ou TRANSFER neg), de amanhã até fim do mês
   const recorrenciasPendentes = transactions
-    .filter(t => (t.nature === 'EXPENSE' || (t.nature === 'TRANSFER' && Number(t.amount) < 0)) && t.date > todayStr)
+    .filter(t => {
+      const data = parseLocalDate(t.date);
+      const isNegativeTransfer = t.nature === 'TRANSFER' && Number(t.amount) < 0;
+      return (t.nature === 'EXPENSE' || isNegativeTransfer) && data > hoje && data <= fimMes;
+    })
     .reduce((sum, t) => sum + Math.abs(Number(t.amount || 0)), 0);
 
-  // 5. Ainda entra este mês: INCOME, date > hoje
+  // 5. Ainda entra este mês: INCOME, de amanhã até fim do mês
   const aindaEntra = transactions
-    .filter(t => t.nature === 'INCOME' && t.date > todayStr)
+    .filter(t => {
+      const data = parseLocalDate(t.date);
+      return t.nature === 'INCOME' && data > hoje && data <= fimMes;
+    })
     .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   // 6. Projeção fim do mês: Saldo Disponível - Recorrências Pendentes + Ainda Entra
