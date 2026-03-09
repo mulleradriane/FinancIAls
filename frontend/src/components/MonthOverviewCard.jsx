@@ -147,9 +147,9 @@ const MonthOverviewCard = ({ accounts, transactions, loading }) => {
           />
           <MetricItem
             icon={Target}
-            label="Projeção fim do mês"
+            label="Saldo estimado (só fixos)"
             value={projecaoFimMes}
-            tooltip="Estimativa de saldo disponível no fim do mês: Saldo Disponível − Recorrências Pendentes + Ainda Entra."
+            tooltip="Estimativa de saldo disponível no fim do mês considerando apenas compromissos fixos (recorrências e salários). Não inclui gastos variáveis como mercado, restaurante e lazer."
             highlight={true}
             isPositive={projecaoFimMes >= 0}
             colorClass={projecaoFimMes >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}
