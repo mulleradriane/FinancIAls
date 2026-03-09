@@ -103,3 +103,5 @@ class TransactionListResponse(BaseModel):
     total: int
     skip: int
     limit: int
+    total_income: Decimal
+    total_expense: Decimal

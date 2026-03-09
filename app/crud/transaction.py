@@ -3,8 +3,10 @@ from typing import Optional
 from uuid import UUID
 from datetime import datetime
 import datetime as dt
+import pytz
+from decimal import Decimal
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import select, text, update, func
+from sqlalchemy import select, text, update, func, and_
 from app.crud.base import CRUDBase
 from app.models.transaction import Transaction, TransactionNature
 from app.models.recurring_expense import RecurringExpense
@@ -146,6 +148,52 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
         total_query = select(func.count()).select_from(query.subquery())
         total = db.scalar(total_query)
 
+        # Calculate totals for the filtered period
+        # total_income: nature == INCOME AND date <= today
+        # total_expense: nature == EXPENSE
+        tz = pytz.timezone("America/Sao_Paulo")
+        today = datetime.now(tz).date()
+
+        income_query = select(func.sum(Transaction.amount)).filter(
+            Transaction.user_id == user_id,
+            Transaction.deleted_at == None,
+            Transaction.nature == TransactionNature.INCOME,
+            Transaction.date <= today
+        )
+        expense_query = select(func.sum(Transaction.amount)).filter(
+            Transaction.user_id == user_id,
+            Transaction.deleted_at == None,
+            Transaction.nature == TransactionNature.EXPENSE
+        )
+
+        # Re-apply the same filters to totals
+        if account_id:
+            if isinstance(account_id, list):
+                income_query = income_query.filter(Transaction.account_id.in_(account_id))
+                expense_query = expense_query.filter(Transaction.account_id.in_(account_id))
+            else:
+                income_query = income_query.filter(Transaction.account_id == account_id)
+                expense_query = expense_query.filter(Transaction.account_id == account_id)
+        if category_id:
+            if isinstance(category_id, list):
+                income_query = income_query.filter(Transaction.category_id.in_(category_id))
+                expense_query = expense_query.filter(Transaction.category_id.in_(category_id))
+            else:
+                income_query = income_query.filter(Transaction.category_id == category_id)
+                expense_query = expense_query.filter(Transaction.category_id == category_id)
+        if start_date:
+            income_query = income_query.filter(Transaction.date >= start_date)
+            expense_query = expense_query.filter(Transaction.date >= start_date)
+        if end_date:
+            income_query = income_query.filter(Transaction.date <= end_date)
+            expense_query = expense_query.filter(Transaction.date <= end_date)
+        if search:
+            income_query = income_query.filter(Transaction.description.ilike(f"%{search}%"))
+            expense_query = expense_query.filter(Transaction.description.ilike(f"%{search}%"))
+
+        total_income = db.scalar(income_query) or Decimal("0.00")
+        total_expense = db.scalar(expense_query) or Decimal("0.00")
+
         query = query.options(
             joinedload(Transaction.category),
             joinedload(Transaction.account),
@@ -183,7 +231,9 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
             "items": unified_list,
             "total": total,
             "skip": skip,
-            "limit": limit
+            "limit": limit,
+            "total_income": total_income,
+            "total_expense": total_expense
         }
 
     def get_unique_descriptions(self, db: Session, user_id: UUID) -> list[str]:
