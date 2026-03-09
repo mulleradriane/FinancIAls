@@ -82,6 +82,14 @@ def terminate_recurring_expense(
         raise HTTPException(status_code=404, detail="Recurring expense not found")
     return crud_recurring_expense.terminate_by_user(db, id=id, user_id=current_user.id)
 
+@router.post("/generate")
+def generate_future_transactions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    count = crud_recurring_expense.generate_future_transactions(db, user_id=current_user.id)
+    return {"message": f"{count} transações geradas com sucesso"}
+
 @router.get("/summary")
 def get_recurring_summary(
     db: Session = Depends(get_db),
