@@ -3,7 +3,7 @@ from uuid import UUID
 import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy.orm import Session, joinedload, selectinload
-from sqlalchemy import select, delete, extract
+from sqlalchemy import select, delete, extract, func
 from app.crud.base import CRUDBase
 from app.crud.account import account as crud_account
 from app.models.recurring_expense import RecurringExpense
@@ -230,8 +230,7 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
                     .filter(
                         Transaction.recurring_expense_id == r.id,
                         Transaction.user_id == user_id,
-                        extract('year', Transaction.date) == target_month_start.year,
-                        extract('month', Transaction.date) == target_month_start.month,
+                        func.date_trunc('month', Transaction.date) == func.date_trunc('month', target_month_start),
                         Transaction.deleted_at == None
                     )
                 )
