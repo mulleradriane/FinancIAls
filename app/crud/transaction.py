@@ -122,10 +122,17 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
         category_id: UUID | list[UUID] | None = None,
         start_date: dt.date | None = None,
         end_date: dt.date | None = None,
-        search: str | None = None
+        search: str | None = None,
+        include_future: bool = False
     ) -> dict:
         # Get Transactions
         query = select(Transaction).filter(Transaction.user_id == user_id, Transaction.deleted_at == None)
+
+        tz = pytz.timezone("America/Sao_Paulo")
+        today = datetime.now(tz).date()
+
+        if not include_future:
+            query = query.filter(Transaction.date <= today)
 
         if account_id:
             if isinstance(account_id, list):
@@ -151,21 +158,21 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
         # Calculate totals for the filtered period
         # total_income: nature == INCOME AND date <= today
         # total_expense: nature == EXPENSE
-        tz = pytz.timezone("America/Sao_Paulo")
-        today = datetime.now(tz).date()
 
         income_query = select(func.sum(Transaction.amount)).filter(
             Transaction.user_id == user_id,
             Transaction.deleted_at == None,
-            Transaction.nature == TransactionNature.INCOME,
-            Transaction.date <= today
+            Transaction.nature == TransactionNature.INCOME
         )
         expense_query = select(func.sum(Transaction.amount)).filter(
             Transaction.user_id == user_id,
             Transaction.deleted_at == None,
-            Transaction.nature == TransactionNature.EXPENSE,
-            Transaction.date <= today
+            Transaction.nature == TransactionNature.EXPENSE
         )
+
+        if not include_future:
+            income_query = income_query.filter(Transaction.date <= today)
+            expense_query = expense_query.filter(Transaction.date <= today)
 
         # Re-apply the same filters to totals
         if account_id:
