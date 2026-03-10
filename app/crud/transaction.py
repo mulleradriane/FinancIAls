@@ -163,7 +163,8 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
         expense_query = select(func.sum(Transaction.amount)).filter(
             Transaction.user_id == user_id,
             Transaction.deleted_at == None,
-            Transaction.nature == TransactionNature.EXPENSE
+            Transaction.nature == TransactionNature.EXPENSE,
+            Transaction.date <= today
         )
 
         # Re-apply the same filters to totals
