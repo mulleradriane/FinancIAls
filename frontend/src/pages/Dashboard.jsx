@@ -85,7 +85,7 @@ const Dashboard = () => {
         api.get('/categories/'),              // 8
         api.get('/accounts/'),                // 9
         analyticsApi.getMonthlyCommitment(),   // 10
-        api.get('/transactions/', { params: { date_from: startDate, date_to: endDate, limit: 500 } }) // 11
+        api.get('/transactions/', { params: { date_from: startDate, date_to: endDate, limit: 500, include_future: true } }) // 11
       ]);
 
       if (results[0].status === 'fulfilled') setNetWorth(results[0].value.data.net_worth);

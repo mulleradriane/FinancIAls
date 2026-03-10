@@ -366,6 +366,7 @@ def read_transactions(
     start_date: date | None = None,
     end_date: date | None = None,
     search: str | None = None,
+    include_future: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -378,7 +379,8 @@ def read_transactions(
         category_id=category_id,
         start_date=start_date,
         end_date=end_date,
-        search=search
+        search=search,
+        include_future=include_future
     )
 
 @router.get("/descriptions/", response_model=list[str])
