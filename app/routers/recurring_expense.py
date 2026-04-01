@@ -96,3 +96,10 @@ def get_recurring_summary(
     current_user: User = Depends(get_current_user)
 ):
     return crud_recurring_expense.get_summary(db, user_id=current_user.id)
+
+@router.get("/reminders")
+def get_recurring_reminders(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return crud_recurring_expense.get_reminders(db, user_id=current_user.id)

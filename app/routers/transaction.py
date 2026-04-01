@@ -383,6 +383,33 @@ def read_transactions(
         include_future=include_future
     )
 
+@router.post("/{id}/match-recurring/{recurring_id}")
+def match_transaction_to_recurring(
+    id: UUID,
+    recurring_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Manually associates a transaction with a recurring expense.
+    Useful for imported transactions that weren't auto-matched.
+    """
+    tx = crud_transaction.get_by_user(db, id=id, user_id=current_user.id)
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    from app.crud.recurring_expense import recurring_expense as crud_recurring
+    re = crud_recurring.get_by_user(db, id=recurring_id, user_id=current_user.id)
+    if not re:
+        raise HTTPException(status_code=404, detail="Recurring expense not found")
+
+    tx.recurring_expense_id = re.id
+    db.add(tx)
+    db.commit()
+    db.refresh(tx)
+
+    return {"message": "Transação vinculada com sucesso", "transaction_id": str(tx.id)}
+
 @router.get("/descriptions/", response_model=list[str])
 def get_descriptions(
     db: Session = Depends(get_db),

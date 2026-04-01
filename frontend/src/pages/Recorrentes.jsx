@@ -199,6 +199,7 @@ const RecurringCard = ({ item, type, onEdit, onTerminate, onDelete }) => {
 const Recorrentes = () => {
   const [activeTab, setActiveTab] = useState('despesas');
   const [recurringExpenses, setRecurringExpenses] = useState([]);
+  const [reminders, setReminders] = useState([]);
   const [summary, setSummary] = useState({
     total_recurring: 0,
     total_subscriptions: 0,
@@ -215,13 +216,15 @@ const Recorrentes = () => {
     try {
       setLoading(true);
       const categoryType = activeTab === 'despesas' ? 'expense' : 'income';
-      const [expensesRes, summaryRes] = await Promise.all([
+      const [expensesRes, summaryRes, remindersRes] = await Promise.all([
         api.get(`/recurring-expenses/?category_type=${categoryType}`),
         api.get('/recurring-expenses/summary'),
+        api.get('/recurring-expenses/reminders'),
         fetchDependencies()
       ]);
       setRecurringExpenses(expensesRes.data);
       setSummary(summaryRes.data);
+      setReminders(remindersRes.data);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -294,6 +297,8 @@ const Recorrentes = () => {
   });
   const [categories, setCategories] = useState([]);
   const [accounts, setAccounts] = useState([]);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedCard, setSelectedCard] = useState(null);
 
   const fetchDependencies = async () => {
     try {
@@ -536,6 +541,43 @@ const Recorrentes = () => {
         </Card>
       </div>
 
+      {reminders.length > 0 && activeTab === 'despesas' && (
+        <div className="space-y-4">
+          <h3 className="text-xl font-bold flex items-center gap-2 px-1">
+            <Info className="text-primary" size={20} />
+            Lembretes de Pagamento
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {reminders.map((rem, idx) => (
+              <Card key={idx} className="border-none shadow-md bg-primary/5 rounded-2xl overflow-hidden border-l-4 border-l-primary">
+                <CardContent className="p-5 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-primary/10 rounded-xl text-primary">
+                      <CreditCard size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm">{rem.title}</p>
+                      <p className="text-xs text-muted-foreground font-medium">Vencimento: Dia {rem.due_day}</p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="rounded-lg h-8 text-[10px] font-bold uppercase"
+                    onClick={() => {
+                      const acc = accounts.find(a => a.id === rem.account_id);
+                      setSelectedCard(acc);
+                      setIsPaymentModalOpen(true);
+                    }}
+                  >
+                    Pagar
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-secondary/30 p-1 rounded-xl h-12">
           <TabsTrigger value="despesas" className="rounded-lg px-8 font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all h-full">
@@ -685,6 +727,26 @@ const Recorrentes = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Pagamento de Fatura</DialogTitle>
+          </DialogHeader>
+          {selectedCard && (
+            <InvoicePaymentForm
+              creditCard={selectedCard}
+              invoiceAmount={reminders.find(r => r.account_id === selectedCard.id)?.amount || 0}
+              accounts={accounts}
+              onPaymentConfirmed={fetchData}
+              onClose={() => {
+                setIsPaymentModalOpen(false);
+                setSelectedCard(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
