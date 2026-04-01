@@ -274,6 +274,46 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
 
         return created_count
 
+    def get_reminders(self, db: Session, *, user_id: UUID) -> List[dict]:
+        """
+        Returns actionable reminders for the user, like credit card payments.
+        """
+        from app.models.account import Account, AccountType
+        from app.services.analytics import analytics_service
+
+        tz = pytz.timezone("America/Sao_Paulo")
+        today = datetime.datetime.now(tz).date()
+
+        reminders = []
+
+        # 1. Credit Card Payment Reminders
+        invoices = analytics_service.get_credit_card_invoices(db, user_id)
+        for inv in invoices:
+            if inv.current_invoice_amount > 0:
+                # Check if already paid (dual entry transfer to this account)
+                already_paid = db.scalar(
+                    select(func.count(Transaction.id))
+                    .filter(
+                        Transaction.account_id == inv.account_id,
+                        Transaction.nature == "TRANSFER",
+                        Transaction.amount > 0,
+                        Transaction.date >= inv.start_date,
+                        Transaction.date <= today,
+                        Transaction.deleted_at == None
+                    )
+                ) > 0
+
+                if not already_paid:
+                    reminders.append({
+                        "type": "credit_card_payment",
+                        "title": f"Pagar fatura: {inv.account_name}",
+                        "amount": inv.current_invoice_amount,
+                        "due_day": inv.due_day,
+                        "account_id": inv.account_id
+                    })
+
+        return reminders
+
     def get_summary(self, db: Session, *, user_id: UUID) -> dict:
         from app.services.financial_engine import financial_engine
 

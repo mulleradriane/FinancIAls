@@ -45,14 +45,29 @@ const Contas = () => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [invoices, setInvoices] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchAccounts = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/accounts/');
-      setAccounts(response.data);
+      const [accountsRes, invoicesRes, catsRes] = await Promise.all([
+        api.get('/accounts/'),
+        api.get('/analytics/credit-card-invoices'),
+        api.get('/categories/')
+      ]);
+
+      setAccounts(accountsRes.data);
+      setCategories(catsRes.data);
+
+      const invoiceMap = {};
+      invoicesRes.data.forEach(inv => {
+        invoiceMap[inv.account_id] = inv;
+      });
+      setInvoices(invoiceMap);
 
       // Fetch transactions for credit cards with closing_day
       const creditCards = response.data.filter(a => a.type === 'cartao_credito' && a.closing_day);
@@ -110,30 +125,8 @@ const Contas = () => {
     }).format(value);
   };
 
-  const calculateCurrentInvoice = (account) => {
-    if (account.type !== 'cartao_credito' || !account.closing_day) return 0;
-
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-    const currentDay = today.getDate();
-    const closingDay = account.closing_day;
-
-    // Conforme regra do FIX: inicia sempre no dia (closingDay + 1) do mês anterior
-    const startDate = new Date(today.getFullYear(), today.getMonth() - 1, closingDay + 1);
-    startDate.setHours(0, 0, 0, 0);
-
-    const invoiceTransactions = transactions.filter(t => {
-      const txDate = new Date(t.date + 'T00:00:00');
-      const amount = parseFloat(t.amount);
-      return (
-        t.account_id === account.id &&
-        txDate >= startDate &&
-        txDate <= today &&
-        amount < 0
-      );
-    });
-
-    return invoiceTransactions.reduce((acc, t) => acc + Math.abs(parseFloat(t.amount)), 0);
+  const getInvoiceAmount = (accountId) => {
+    return invoices[accountId]?.current_invoice_amount || 0;
   };
 
   const handleEdit = (account) => {
@@ -271,6 +264,19 @@ const Contas = () => {
                       </Tooltip>
                     </TooltipProvider>
 
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 rounded-full text-muted-foreground/50 hover:text-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedAccount(account);
+                        setIsTransactionModalOpen(true);
+                      }}
+                    >
+                      <Plus size={18} />
+                    </Button>
+
                     {account.type === 'cartao_credito' && (
                       <Button
                         size="sm"
@@ -305,7 +311,7 @@ const Contas = () => {
                     <div className="pt-2 border-t border-dashed">
                       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{/* design-token: manter */}Fatura Atual</p>
                       <p className="text-lg font-bold text-destructive">
-                        <PrivateValue value={formatCurrency(calculateCurrentInvoice(account))} />
+                        <PrivateValue value={formatCurrency(getInvoiceAmount(account.id))} />
                       </p>
                     </div>
                   )}
@@ -355,12 +361,27 @@ const Contas = () => {
           {selectedAccount && (
             <InvoicePaymentForm
               creditCard={selectedAccount}
-              invoiceAmount={calculateCurrentInvoice(selectedAccount)}
+              invoiceAmount={getInvoiceAmount(selectedAccount.id)}
               accounts={accounts}
               onPaymentConfirmed={fetchAccounts}
               onClose={() => setIsPaymentModalOpen(false)}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isTransactionModalOpen} onOpenChange={setIsTransactionModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Nova Transação em {selectedAccount?.name}</DialogTitle>
+          </DialogHeader>
+          <TransactionForm
+            categories={categories}
+            accounts={accounts}
+            transaction={selectedAccount ? { account_id: selectedAccount.id } : null}
+            onTransactionCreated={fetchAccounts}
+            onClose={() => setIsTransactionModalOpen(false)}
+          />
         </DialogContent>
       </Dialog>
 
@@ -409,7 +430,7 @@ const Contas = () => {
                     <div className="mt-4 pt-4 border-t border-primary/10">
                       <p className="text-[10px] font-bold text-primary/60 uppercase tracking-widest mb-1">{/* design-token: manter */}Fatura Atual</p>
                       <div className="text-xl font-bold text-destructive tracking-tight">
-                        <PrivateValue value={formatCurrency(calculateCurrentInvoice(selectedAccount))} />
+                        <PrivateValue value={formatCurrency(getInvoiceAmount(selectedAccount.id))} />
                       </div>
                     </div>
                   )}

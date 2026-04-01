@@ -194,7 +194,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
   };
 
   const handleSubmit = async (e) => {
-    if (e) e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setSubmitted(true);
 
     if (!formData.description) {
@@ -264,6 +264,10 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
   const handleKeyDown = (e) => {
     if (e.key === 'Escape' && onClose) {
       onClose();
+    }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      handleSubmit();
     }
   };
 
