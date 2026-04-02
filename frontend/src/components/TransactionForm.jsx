@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '@/api/api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -22,13 +22,47 @@ import { Search } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from '@/components/ui/card';
 
-const TransactionForm = ({ categories = [], accounts = [], transaction, onTransactionCreated, onClose }) => {
+const TransactionForm = ({
+  categories: categoriesProp = [],
+  accounts: accountsProp = [],
+  prefill,
+  transaction,
+  onTransactionCreated,
+  onClose,
+}) => {
   const descriptionRef = useRef(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]     = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [fullTransaction, setFullTransaction] = useState(transaction);
-  
-  // Função auxiliar para extrair IDs considerando diferentes possíveis nomes de campos
+
+  // ── Carregamento autônomo quando props chegam vazias ──────────────────────
+  const [internalCategories, setInternalCategories] = useState([]);
+  const [internalAccounts, setInternalAccounts]     = useState([]);
+
+  useEffect(() => {
+    const loadIfNeeded = async () => {
+      try {
+        const [catsRes, accsRes] = await Promise.allSettled([
+          categoriesProp.length === 0 ? api.get('/categories/') : Promise.resolve(null),
+          accountsProp.length === 0   ? api.get('/accounts/')   : Promise.resolve(null),
+        ]);
+        if (catsRes.status === 'fulfilled' && catsRes.value) {
+          setInternalCategories(catsRes.value.data);
+        }
+        if (accsRes.status === 'fulfilled' && accsRes.value) {
+          setInternalAccounts(accsRes.value.data);
+        }
+      } catch { /* silencioso */ }
+    };
+    loadIfNeeded();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoriesProp.length, accountsProp.length]);
+
+  // Merge: usa props se disponíveis, senão usa interno
+  const categories = categoriesProp.length > 0 ? categoriesProp : internalCategories;
+  const accounts   = accountsProp.length > 0   ? accountsProp   : internalAccounts;
+
+  // ── Utilitários de extração de ID ─────────────────────────────────────────
   const extractCategoryId = (trans) => {
     if (!trans) return '';
     return trans.category_id || trans.categoryId || trans.category?.id || '';
@@ -39,23 +73,37 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
     return trans.account_id || trans.accountId || trans.account?.id || '';
   };
 
-  const [formData, setFormData] = useState({
-    description: fullTransaction ? fullTransaction.description : '',
-    amount: fullTransaction ? fullTransaction.amount : 0,
-    displayAmount: fullTransaction ?
-      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fullTransaction.amount) : '',
-    date: fullTransaction ? fullTransaction.date : new Date().toISOString().split('T')[0],
-    categoryId: extractCategoryId(fullTransaction),
-    accountId: extractAccountId(fullTransaction),
-    isRecurring: false,
-    recurring: {
-      type: 'subscription',
-      frequency: 'monthly',
-      totalInstallments: '',
+  // ── Estado do formulário — suporta prefill do quick-add ───────────────────
+  const [formData, setFormData] = useState(() => {
+    const fmtCurrency = (v) =>
+      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+
+    if (fullTransaction) {
+      return {
+        description:   fullTransaction.description,
+        amount:        fullTransaction.amount,
+        displayAmount: fmtCurrency(fullTransaction.amount),
+        date:          fullTransaction.date,
+        categoryId:    extractCategoryId(fullTransaction),
+        accountId:     extractAccountId(fullTransaction),
+        isRecurring:   false,
+        recurring: { type: 'subscription', frequency: 'monthly', totalInstallments: '' },
+      };
     }
+
+    return {
+      description:   prefill?.description   || '',
+      amount:        prefill?.amount        || 0,
+      displayAmount: prefill?.amount        ? fmtCurrency(prefill.amount) : '',
+      date:          prefill?.date          || new Date().toISOString().split('T')[0],
+      categoryId:    prefill?.categoryId    || '',
+      accountId:     prefill?.accountId     || '',
+      isRecurring:   false,
+      recurring: { type: 'subscription', frequency: 'monthly', totalInstallments: '' },
+    };
   });
 
-  // EFEITO PARA BUSCAR A TRANSAÇÃO COMPLETA QUANDO FOR EDIÇÃO
+  // ── Busca transação completa ao editar (quando faltam campos) ─────────────
   useEffect(() => {
     const fetchFullTransaction = async () => {
       if (transaction?.id && (!transaction.category_id || !transaction.account_id)) {
@@ -64,15 +112,14 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
           const response = await api.get(`/transactions/${transaction.id}`);
           const fullTrans = response.data;
           setFullTransaction(fullTrans);
-          
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
-            description: fullTrans.description,
-            amount: fullTrans.amount,
+            description:   fullTrans.description,
+            amount:        fullTrans.amount,
             displayAmount: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fullTrans.amount),
-            date: fullTrans.date,
-            categoryId: extractCategoryId(fullTrans),
-            accountId: extractAccountId(fullTrans)
+            date:          fullTrans.date,
+            categoryId:    extractCategoryId(fullTrans),
+            accountId:     extractAccountId(fullTrans),
           }));
         } catch (error) {
           console.error('Erro ao buscar transação completa:', error);
@@ -82,54 +129,32 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
         }
       }
     };
-
     fetchFullTransaction();
   }, [transaction]);
 
-  const [suggestions, setSuggestions] = useState([]);
+  // ── Sugestões de descrição ────────────────────────────────────────────────
+  const [suggestions, setSuggestions]       = useState([]);
   const [openSuggestions, setOpenSuggestions] = useState(false);
 
-  // Pre-selecionar conta padrão para novas transações
   useEffect(() => {
-    if (!fullTransaction && accounts.length > 0) {
-      const defaultAccount = accounts.find(a => a.is_default) || accounts[0];
-      const accountExists = accounts.some(a => a.id === formData.accountId);
-
-      if (!formData.accountId || !accountExists) {
-        setFormData(prev => ({ ...prev, accountId: defaultAccount?.id || '' }));
-      }
-    }
-  }, [accounts, fullTransaction, formData.accountId]);
-
-  // Sincronizar dados quando fullTransaction é carregado (edição)
-  useEffect(() => {
-    if (fullTransaction && categories.length > 0 && accounts.length > 0) {
-      const categoryId = extractCategoryId(fullTransaction);
-      const accountId = extractAccountId(fullTransaction);
-      
-      if (categoryId || accountId) {
-        setFormData(prev => ({
-          ...prev,
-          categoryId: categoryId || prev.categoryId,
-          accountId: accountId || prev.accountId
-        }));
-      }
-    }
-  }, [fullTransaction, categories, accounts]);
-
-  useEffect(() => {
+    const fetchSuggestions = async () => {
+      try {
+        const response = await api.get('/transactions/descriptions/');
+        setSuggestions(response.data || []);
+      } catch { /* silencioso */ }
+    };
     fetchSuggestions();
 
-    // Auto-focus description
-    const timer = setTimeout(() => {
-      if (descriptionRef.current) descriptionRef.current.focus();
-    }, 100);
+    const timer = setTimeout(() => descriptionRef.current?.focus(), 100);
     return () => clearTimeout(timer);
-  }, [accounts, fullTransaction]);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (descriptionRef.current && !descriptionRef.current.closest('.relative')?.contains(e.target)) {
+      if (
+        descriptionRef.current &&
+        !descriptionRef.current.closest('.relative')?.contains(e.target)
+      ) {
         setOpenSuggestions(false);
       }
     };
@@ -137,136 +162,140 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // ── Sugestão automática de categoria/conta ao digitar ────────────────────
+  const applySuggestion = useCallback(async (desc) => {
+    if (!desc || fullTransaction) return;
+    try {
+      const response = await api.get(`/transactions/suggest/?description=${encodeURIComponent(desc)}`);
+      if (response.data) {
+        setFormData((prev) => ({
+          ...prev,
+          categoryId: response.data.category_id || prev.categoryId,
+          accountId:  response.data.account_id  || prev.accountId,
+        }));
+      }
+    } catch { /* sem sugestão */ }
+  }, [fullTransaction]);
+
   useEffect(() => {
-    // Simple intelligence matching
     if (!fullTransaction && formData.description.length >= 3) {
-      const match = suggestions.find(s =>
-        s.toLowerCase() === formData.description.toLowerCase() ||
-        (formData.description.length >= 5 && s.toLowerCase().startsWith(formData.description.toLowerCase()))
+      const match = suggestions.find(
+        (s) =>
+          s.toLowerCase() === formData.description.toLowerCase() ||
+          (formData.description.length >= 5 &&
+            s.toLowerCase().startsWith(formData.description.toLowerCase()))
       );
       if (match) {
         const timer = setTimeout(() => applySuggestion(match), 300);
         return () => clearTimeout(timer);
       }
     }
-  }, [formData.description]);
+  }, [formData.description, suggestions, fullTransaction, applySuggestion]);
 
-  const fetchSuggestions = async () => {
-    try {
-      const response = await api.get('/transactions/descriptions/');
-      setSuggestions(response.data || []);
-    } catch (error) {
-      console.error('Error fetching descriptions:', error);
+  // ── Pré-seleciona conta padrão ────────────────────────────────────────────
+  useEffect(() => {
+    if (!fullTransaction && accounts.length > 0 && !prefill?.accountId) {
+      const defaultAccount = accounts.find((a) => a.is_default) || accounts[0];
+      const accountExists  = accounts.some((a) => a.id === formData.accountId);
+      if (!formData.accountId || !accountExists) {
+        setFormData((prev) => ({ ...prev, accountId: defaultAccount?.id || '' }));
+      }
     }
-  };
+  }, [accounts, fullTransaction, prefill?.accountId]);
 
-  const applySuggestion = async (desc) => {
-    if (!desc || fullTransaction) return;
-    try {
-      const response = await api.get(`/transactions/suggest/?description=${desc}`);
-      if (response.data) {
-        setFormData(prev => ({
+  // ── Sincroniza IDs quando fullTransaction + listas carregam juntos ────────
+  useEffect(() => {
+    if (fullTransaction && categories.length > 0 && accounts.length > 0) {
+      const categoryId = extractCategoryId(fullTransaction);
+      const accountId  = extractAccountId(fullTransaction);
+      if (categoryId || accountId) {
+        setFormData((prev) => ({
           ...prev,
-          categoryId: response.data.category_id || prev.categoryId,
-          accountId: response.data.account_id || prev.accountId
+          categoryId: categoryId || prev.categoryId,
+          accountId:  accountId  || prev.accountId,
         }));
       }
-    } catch (error) {
-      console.log('No suggestion found for this description');
     }
-  };
+  }, [fullTransaction, categories, accounts]);
 
+  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleAmountChange = (e) => {
     const value = e.target.value.replace(/\D/g, '');
-    if (value === '') {
-      setFormData(prev => ({ ...prev, amount: 0, displayAmount: '' }));
+    if (!value) {
+      setFormData((prev) => ({ ...prev, amount: 0, displayAmount: '' }));
       return;
     }
-    const intValue = parseInt(value, 10);
+    const intValue  = parseInt(value, 10);
     const floatValue = intValue / 100;
-
-    const formatted = new Intl.NumberFormat('pt-BR', {
+    const formatted  = new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
     }).format(floatValue);
-
-    setFormData(prev => ({ ...prev, amount: floatValue, displayAmount: formatted }));
+    setFormData((prev) => ({ ...prev, amount: floatValue, displayAmount: formatted }));
   };
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     setSubmitted(true);
 
-    if (!formData.description) {
-      toast.error("Informe a descrição da transação");
-      return;
-    }
-    if (!formData.amount || formData.amount === 0) {
-      toast.error("Informe o valor da transação");
-      return;
-    }
-    if (!formData.categoryId) {
-      toast.error("Selecione uma categoria");
-      return;
-    }
-    if (!formData.accountId) {
-      toast.error("Selecione uma conta");
-      return;
-    }
+    if (!formData.description) { toast.error('Informe a descrição da transação'); return; }
+    if (!formData.amount)      { toast.error('Informe o valor da transação');     return; }
+    if (!formData.categoryId)  { toast.error('Selecione uma categoria');           return; }
+    if (!formData.accountId)   { toast.error('Selecione uma conta');               return; }
 
     try {
-      const selectedCategory = categories.find(c => c.id === formData.categoryId);
+      const selectedCategory = categories.find((c) => c.id === formData.categoryId);
       const nature = selectedCategory?.type === 'income' ? 'INCOME' : 'EXPENSE';
 
       const payload = {
         description: formData.description,
-        amount: formData.amount,
-        nature: nature,
-        date: formData.date,
+        amount:      formData.amount,
+        nature,
+        date:        formData.date,
         category_id: formData.categoryId,
-        account_id: formData.accountId,
+        account_id:  formData.accountId,
       };
 
       let response;
       if (fullTransaction) {
         response = await api.put(`/transactions/${fullTransaction.id}`, payload);
       } else {
-        const createPayload = {
+        response = await api.post('/transactions/', {
           ...payload,
-          is_recurring: formData.isRecurring,
-          recurring_type: formData.isRecurring ? formData.recurring.type : null,
-          total_installments: formData.isRecurring && formData.recurring.type === 'installment' ?
-            parseInt(formData.recurring.totalInstallments) : null,
-          frequency: formData.isRecurring && formData.recurring.type === 'subscription' ?
-            formData.recurring.frequency : null,
-        };
-        response = await api.post('/transactions/', createPayload);
+          is_recurring:      formData.isRecurring,
+          recurring_type:    formData.isRecurring ? formData.recurring.type : null,
+          total_installments:
+            formData.isRecurring && formData.recurring.type === 'installment'
+              ? parseInt(formData.recurring.totalInstallments)
+              : null,
+          frequency:
+            formData.isRecurring && formData.recurring.type === 'subscription'
+              ? formData.recurring.frequency
+              : null,
+        });
       }
 
       toast.success(fullTransaction ? 'Transação atualizada!' : 'Transação criada!');
-
       if (onTransactionCreated) onTransactionCreated(response.data);
       if (onClose) onClose();
-
     } catch (error) {
-      console.error('❌ [SUBMIT] Erro:', error);
       const detail = error.response?.data?.detail || 'Erro ao salvar transação.';
       toast.error(detail);
     }
   };
 
-  const formatCurrencySimple = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+  const formatCurrencySimple = (val) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 
-  const filteredSuggestions = suggestions.filter(s =>
+  const filteredSuggestions = suggestions.filter((s) =>
     s.toLowerCase().includes(formData.description.toLowerCase())
   );
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Escape' && onClose) {
-      onClose();
-    }
+    if (e.key === 'Escape' && onClose) onClose();
   };
 
+  // ── Loading skeleton ───────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="space-y-6 p-6">
@@ -286,6 +315,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
     );
   }
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <form
       onSubmit={handleSubmit}
@@ -294,6 +324,8 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
       onKeyDown={handleKeyDown}
     >
       <div className="space-y-4">
+
+        {/* Descrição */}
         <div className="grid gap-2 relative">
           <Label htmlFor="description">Descrição</Label>
           <div className="relative">
@@ -302,15 +334,14 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
               ref={descriptionRef}
               value={formData.description}
               onChange={(e) => {
-                const val = e.target.value;
-                setFormData(prev => ({ ...prev, description: val }));
+                setFormData((prev) => ({ ...prev, description: e.target.value }));
                 setOpenSuggestions(true);
               }}
               onFocus={() => setOpenSuggestions(true)}
               placeholder="O que foi comprado?"
               className={cn(
-                "bg-secondary/50 border-none h-11 rounded-xl pr-10",
-                submitted && !formData.description && "ring-2 ring-destructive"
+                'bg-secondary/50 border-none h-11 rounded-xl pr-10',
+                submitted && !formData.description && 'ring-2 ring-destructive'
               )}
               autoComplete="off"
               required
@@ -329,7 +360,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
                           key={s}
                           value={s}
                           onSelect={() => {
-                            setFormData(prev => ({ ...prev, description: s }));
+                            setFormData((prev) => ({ ...prev, description: s }));
                             applySuggestion(s);
                             setOpenSuggestions(false);
                           }}
@@ -346,6 +377,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
           </div>
         </div>
 
+        {/* Valor + Data */}
         <div className="grid grid-cols-2 gap-4">
           <div className="grid gap-2">
             <Label htmlFor="amount">Valor</Label>
@@ -357,8 +389,8 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
               onChange={handleAmountChange}
               required
               className={cn(
-                "bg-secondary/50 border-none h-11 rounded-xl text-lg font-semibold",
-                submitted && (!formData.amount || formData.amount === 0) && "ring-2 ring-destructive"
+                'bg-secondary/50 border-none h-11 rounded-xl text-lg font-semibold',
+                submitted && (!formData.amount || formData.amount === 0) && 'ring-2 ring-destructive'
               )}
             />
           </div>
@@ -368,44 +400,47 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
               id="date"
               type="date"
               value={formData.date}
-              onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, date: e.target.value }))}
               required
               className="bg-secondary/50 border-none h-11 rounded-xl w-full pr-10"
             />
           </div>
         </div>
 
+        {/* Categoria + Conta */}
         <div className="grid grid-cols-2 gap-4">
           <div className="grid gap-2">
             <Label htmlFor="category">Categoria</Label>
             {categories.length > 0 ? (
               <Select
                 value={formData.categoryId}
-                onValueChange={(val) => {
-                  setFormData(prev => ({ ...prev, categoryId: val }));
-                }}
+                onValueChange={(val) => setFormData((prev) => ({ ...prev, categoryId: val }))}
                 required
               >
                 <SelectTrigger
                   id="category"
                   className={cn(
-                    "bg-secondary/50 border-none h-11 rounded-xl",
-                    submitted && !formData.categoryId && "ring-2 ring-destructive"
+                    'bg-secondary/50 border-none h-11 rounded-xl',
+                    submitted && !formData.categoryId && 'ring-2 ring-destructive'
                   )}
                 >
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
                   {categories
-                    .filter(cat => cat.is_system === false && !['investimento', 'investimentos'].includes(cat.name.toLowerCase()))
+                    .filter(
+                      (cat) =>
+                        cat.is_system === false &&
+                        !['investimento', 'investimentos'].includes(cat.name.toLowerCase())
+                    )
                     .map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{cat.icon || '💰'}</span>
-                        <span>{cat.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
+                      <SelectItem key={cat.id} value={cat.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{cat.icon || '💰'}</span>
+                          <span>{cat.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             ) : (
@@ -418,22 +453,20 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
             {accounts.length > 0 ? (
               <Select
                 value={formData.accountId}
-                onValueChange={(val) => {
-                  setFormData(prev => ({ ...prev, accountId: val }));
-                }}
+                onValueChange={(val) => setFormData((prev) => ({ ...prev, accountId: val }))}
                 required
               >
                 <SelectTrigger
                   id="account"
                   className={cn(
-                    "bg-secondary/50 border-none h-11 rounded-xl text-left",
-                    submitted && !formData.accountId && "ring-2 ring-destructive"
+                    'bg-secondary/50 border-none h-11 rounded-xl text-left',
+                    submitted && !formData.accountId && 'ring-2 ring-destructive'
                   )}
                 >
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(accounts || []).map((acc) => (
+                  {accounts.map((acc) => (
                     <SelectItem key={acc.id} value={acc.id}>
                       {acc.name} ({formatCurrencySimple(acc.balance)})
                     </SelectItem>
@@ -446,32 +479,35 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
           </div>
         </div>
 
+        {/* Toggle recorrente */}
         {!fullTransaction && (
           <div className="flex items-center space-x-2 pt-2">
             <Checkbox
               id="recurring"
               checked={formData.isRecurring}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isRecurring: checked === true }))}
+              onCheckedChange={(checked) =>
+                setFormData((prev) => ({ ...prev, isRecurring: checked === true }))
+              }
             />
-            <Label
-              htmlFor="recurring"
-              className="text-sm font-medium leading-none cursor-pointer"
-            >
+            <Label htmlFor="recurring" className="text-sm font-medium leading-none cursor-pointer">
               É uma despesa recorrente ou parcelada?
             </Label>
           </div>
         )}
 
+        {/* Painel recorrente */}
         {formData.isRecurring && !fullTransaction && (
           <Card className="bg-secondary/20 border-dashed p-4 space-y-4 rounded-xl animate-in zoom-in-95 duration-200">
             <div className="grid gap-2">
               <Label htmlFor="recurringType">Tipo</Label>
               <Select
                 value={formData.recurring.type}
-                onValueChange={(val) => setFormData(prev => ({
-                  ...prev,
-                  recurring: { ...prev.recurring, type: val }
-                }))}
+                onValueChange={(val) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    recurring: { ...prev.recurring, type: val },
+                  }))
+                }
               >
                 <SelectTrigger className="bg-background border-none h-10 rounded-lg">
                   <SelectValue />
@@ -491,10 +527,12 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
                   type="number"
                   min="2"
                   value={formData.recurring.totalInstallments}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    recurring: { ...prev.recurring, totalInstallments: e.target.value }
-                  }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      recurring: { ...prev.recurring, totalInstallments: e.target.value },
+                    }))
+                  }
                   required
                   className="bg-background border-none h-10 rounded-lg"
                 />
@@ -504,10 +542,12 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
                 <Label htmlFor="frequency">Frequência</Label>
                 <Select
                   value={formData.recurring.frequency}
-                  onValueChange={(val) => setFormData(prev => ({
-                    ...prev,
-                    recurring: { ...prev.recurring, frequency: val }
-                  }))}
+                  onValueChange={(val) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      recurring: { ...prev.recurring, frequency: val },
+                    }))
+                  }
                 >
                   <SelectTrigger className="bg-background border-none h-10 rounded-lg">
                     <SelectValue />
@@ -523,6 +563,7 @@ const TransactionForm = ({ categories = [], accounts = [], transaction, onTransa
         )}
       </div>
 
+      {/* Ações */}
       <div className="flex gap-3 pt-4">
         <Button
           type="submit"

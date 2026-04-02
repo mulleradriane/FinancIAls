@@ -8,14 +8,15 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    if (token) {
+
+    // NÃO adiciona Authorization no login/register
+    if (token && !config.url.includes('/auth/login') && !config.url.includes('/auth/register')) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Interceptor to handle 401 Unauthorized
