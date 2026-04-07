@@ -1,44 +1,61 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Wallet, TrendingUp, Receipt, Clock, ArrowDownCircle, Target } from 'lucide-react';
+import { Wallet, Receipt, Clock, ArrowDownCircle, TrendingUp, History } from 'lucide-react';
 import InfoTooltip from '@/components/ui/InfoTooltip';
 import PrivateValue from '@/components/ui/PrivateValue';
 import { formatCurrency, cn, parseLocalDate } from '@/lib/utils';
 
-const MetricItem = ({ icon: Icon, label, value, tooltip, isPositive, highlight, colorClass }) => (
-  <div className={cn("p-6 flex flex-col gap-2", highlight && "md:col-span-1")}>
+const MetricBlock = ({ icon: Icon, label, value, tooltip, colorClass, valueClass, size = 'md', suffix }) => (
+  <div className="flex flex-col gap-3 p-5">
     <div className="flex items-center gap-2">
-      <div className={cn("p-2 rounded-lg", colorClass || "bg-muted")}>
-        <Icon className="h-5 w-5" />
+      <div className={cn('p-1.5 rounded-lg', colorClass || 'bg-muted text-muted-foreground')}>
+        <Icon className="h-4 w-4" />
       </div>
-      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider leading-none">
         {label}
       </p>
-      <InfoTooltip content={tooltip} />
+      {tooltip && <InfoTooltip content={tooltip} />}
     </div>
     <p className={cn(
-      "text-2xl font-bold tracking-tight mt-1",
-      highlight ? (isPositive ? "text-success text-3xl" : "text-destructive text-3xl") : ""
+      'font-bold tracking-tight tabular-nums leading-none',
+      size === 'lg' ? 'text-3xl' : 'text-xl',
+      valueClass,
     )}>
       <PrivateValue value={formatCurrency(value)} />
+      {suffix && <span className="text-sm font-normal text-muted-foreground ml-1.5">{suffix}</span>}
     </p>
   </div>
 );
 
-const MonthOverviewCard = ({ accounts, transactions, loading }) => {
+const MonthOverviewCard = ({
+  accounts = [],
+  transactions = [],
+  loading,
+  selectedYear,
+  selectedMonth,
+  historicalBalances = null,
+}) => {
   if (loading) {
     return (
       <Card className="border-none shadow-md rounded-2xl overflow-hidden">
-        <CardHeader className="pb-2">
-          <Skeleton className="h-6 w-48" />
-        </CardHeader>
         <CardContent className="p-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border-b border-border">
-            {[1, 2, 3].map(i => <div key={i} className="p-6 space-y-3"><Skeleton className="h-4 w-24" /><Skeleton className="h-8 w-32" /></div>)}
+          <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-border/50">
+            {[1,2,3].map(i => (
+              <div key={i} className="p-5 space-y-3">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 w-36" />
+              </div>
+            ))}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 bg-muted/30">
-            {[4, 5, 6].map(i => <div key={i} className="p-6 space-y-3"><Skeleton className="h-4 w-24" /><Skeleton className="h-8 w-32" /></div>)}
+          <div className="h-px bg-border/50" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border/50 bg-muted/20">
+            {[4,5].map(i => (
+              <div key={i} className="p-5 space-y-3">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-7 w-28" />
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -46,116 +63,199 @@ const MonthOverviewCard = ({ accounts, transactions, loading }) => {
   }
 
   const now = new Date();
-  const year = now.getFullYear();
+  const isCurrentMonth =
+    selectedYear === now.getFullYear() && selectedMonth === now.getMonth() + 1;
 
-  // Datas de referência para filtro (garantindo 00:00:00 local)
-  const hoje = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1);
-  const fimMes = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const hoje      = isCurrentMonth
+    ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    : new Date(selectedYear, selectedMonth - 1 + 1, 0);
+  const inicioMes = new Date(selectedYear, selectedMonth - 1, 1);
+  const fimMes    = new Date(selectedYear, selectedMonth - 1 + 1, 0);
+  const amanha    = new Date(hoje); amanha.setDate(amanha.getDate() + 1);
 
-  // Format Month/Year title
-  const monthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(now);
-  const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
-  const titleDate = `${capitalizedMonth}/${year}`;
+  const refDate   = new Date(selectedYear, selectedMonth - 1, 1);
+  const monthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(refDate);
+  const titleDate = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${selectedYear}`;
 
-  // 1. Saldo Disponível: Soma de balance de contas com type = 'banco'
-  const saldoDisponivel = accounts
-    .filter(acc => acc.type === 'banco')
-    .reduce((sum, acc) => sum + Number(acc.balance || 0), 0);
+  // Saldo disponível
+  const saldoDisponivel = (() => {
+    const bankAccounts = accounts.filter(a => a.type === 'banco');
+    if (isCurrentMonth) return bankAccounts.reduce((s, a) => s + Number(a.balance || 0), 0);
+    if (historicalBalances) return bankAccounts.reduce((s, a) => s + Number(historicalBalances[a.id] || 0), 0);
+    return null;
+  })();
 
-  // 2. Investido: Soma de balance de contas com type = 'investimento'
-  const investido = accounts
-    .filter(acc => acc.type === 'investimento')
-    .reduce((sum, acc) => sum + Number(acc.balance || 0), 0);
+  // Investido
+  const investido = (() => {
+    const invAccounts = accounts.filter(a => a.type === 'investimento');
+    if (isCurrentMonth) return invAccounts.reduce((s, a) => s + Number(a.balance || 0), 0);
+    if (historicalBalances) return invAccounts.reduce((s, a) => s + Number(historicalBalances[a.id] || 0), 0);
+    return null;
+  })();
 
-  // 3. Já gastei este mês: EXPENSE, dentro do mês atual até hoje
+  // Despesas realizadas até hoje
   const jaGastei = transactions
-    .filter(t => {
-      const data = parseLocalDate(t.date);
-      return t.nature === 'EXPENSE' && data >= inicioMes && data <= hoje;
-    })
-    .reduce((sum, t) => sum + Math.abs(Number(t.amount || 0)), 0);
+    .filter(t => { const d = parseLocalDate(t.date); return t.nature === 'EXPENSE' && d >= inicioMes && d <= hoje; })
+    .reduce((s, t) => s + Math.abs(Number(t.amount || 0)), 0);
 
-  // 4. Recorrências pendentes: (EXPENSE ou TRANSFER neg), de amanhã até fim do mês
-  const recorrenciasPendentes = transactions
-    .filter(t => {
-      const data = parseLocalDate(t.date);
-      const isNegativeTransfer = t.nature === 'TRANSFER' && Number(t.amount) < 0;
-      return (t.nature === 'EXPENSE' || isNegativeTransfer) && data > hoje && data <= fimMes;
-    })
-    .reduce((sum, t) => sum + Math.abs(Number(t.amount || 0)), 0);
+  // Receitas realizadas até hoje
+  const receitasRealizadas = transactions
+    .filter(t => { const d = parseLocalDate(t.date); return t.nature === 'INCOME' && d >= inicioMes && d <= hoje; })
+    .reduce((s, t) => s + Number(t.amount || 0), 0);
 
-  // 5. Ainda entra este mês: INCOME, de amanhã até fim do mês
-  const aindaEntra = transactions
-    .filter(t => {
-      const data = parseLocalDate(t.date);
-      return t.nature === 'INCOME' && data > hoje && data <= fimMes;
-    })
-    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  // Despesas futuras previstas (apenas nature EXPENSE, não TRANSFER)
+  const aGastarAinda = isCurrentMonth
+    ? transactions
+        .filter(t => { const d = parseLocalDate(t.date); return t.nature === 'EXPENSE' && d >= amanha && d <= fimMes; })
+        .reduce((s, t) => s + Math.abs(Number(t.amount || 0)), 0)
+    : 0;
 
-  // 6. Projeção fim do mês: Saldo Disponível - Recorrências Pendentes + Ainda Entra
-  const projecaoFimMes = saldoDisponivel - recorrenciasPendentes + aindaEntra;
+  // Receitas futuras previstas
+  const aindaEntra = isCurrentMonth
+    ? transactions
+        .filter(t => { const d = parseLocalDate(t.date); return t.nature === 'INCOME' && d >= amanha && d <= fimMes; })
+        .reduce((s, t) => s + Number(t.amount || 0), 0)
+    : 0;
 
-  return (
-    <Card className="border-none shadow-md rounded-2xl overflow-hidden">
-      <CardHeader className="pb-4 pt-6 px-6">
-        <CardTitle className="text-xl font-bold text-foreground">
-          Visão do Mês — {titleDate}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        {/* Linha de Cima: Situação Atual */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border-b border-border/50">
-          <MetricItem
-            icon={Wallet}
-            label="Saldo Disponível"
-            value={saldoDisponivel}
-            tooltip="Soma dos saldos atuais de todas as contas do tipo banco. Não inclui cartões de crédito nem investimentos."
-            colorClass="bg-primary/10 text-primary"
-          />
-          <MetricItem
-            icon={TrendingUp}
-            label="Investido"
-            value={investido}
-            tooltip="Soma dos saldos de todas as contas do tipo investimento."
-            colorClass="bg-indigo-500/10 text-indigo-500"
-          />
-          <MetricItem
+  const resultadoMes = receitasRealizadas - jaGastei;
+
+  if (isCurrentMonth) {
+    return (
+      <Card className="border-none shadow-md rounded-2xl overflow-hidden">
+        <div className="px-5 pt-4 pb-1">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{titleDate}</p>
+        </div>
+
+        {/* Linha 1: Saldo | Já gastei | A gastar */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-border/50">
+          {/* Saldo — destaque */}
+          <div className="flex flex-col gap-3 p-5 lg:p-6">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                <Wallet className="h-4 w-4" />
+              </div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Saldo disponível</p>
+              <InfoTooltip content="Soma dos saldos das contas bancárias agora. Não inclui cartão de crédito nem investimentos." />
+            </div>
+            {saldoDisponivel !== null ? (
+              <p className={cn('text-3xl font-bold tracking-tight tabular-nums', saldoDisponivel < 0 && 'text-destructive')}>
+                <PrivateValue value={formatCurrency(saldoDisponivel)} />
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">Sem dado</p>
+            )}
+          </div>
+
+          <MetricBlock
             icon={Receipt}
             label="Já gastei este mês"
             value={jaGastei}
-            tooltip="Total de despesas (EXPENSE) registradas no mês atual até hoje."
+            tooltip="Total de despesas confirmadas desde o dia 1 até hoje."
             colorClass="bg-destructive/10 text-destructive"
+            valueClass="text-destructive"
+          />
+
+          <MetricBlock
+            icon={Clock}
+            label="A gastar ainda"
+            value={aGastarAinda}
+            tooltip="Despesas já lançadas com data futura neste mês — recorrências e parcelamentos previstos."
+            colorClass="bg-amber-500/10 text-amber-600"
+            valueClass={aGastarAinda > 0 ? 'text-amber-600' : 'text-muted-foreground'}
+            suffix={aGastarAinda === 0 ? '(nenhuma prevista)' : undefined}
           />
         </div>
 
-        {/* Linha de Baixo: Projeção */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 bg-muted/30">
-          <MetricItem
-            icon={Clock}
-            label="Recorrências pendentes"
-            value={recorrenciasPendentes}
-            tooltip="Soma das transações futuras do mês atual (despesas com date > hoje e date <= fim do mês)."
-            colorClass="bg-amber-500/10 text-amber-500"
-          />
-          <MetricItem
+        <div className="h-px bg-border/50" />
+
+        {/* Linha 2: Ainda entra | Investido */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border/50 bg-muted/20">
+          <MetricBlock
             icon={ArrowDownCircle}
             label="Ainda entra este mês"
             value={aindaEntra}
-            tooltip="Soma das receitas futuras do mês atual (INCOME com date > hoje e date <= fim do mês)."
+            tooltip="Receitas já lançadas com data futura neste mês — salário e outras receitas previstas."
             colorClass="bg-success/10 text-success"
+            valueClass={aindaEntra > 0 ? 'text-success' : 'text-muted-foreground'}
+            suffix={aindaEntra === 0 ? '(nenhuma prevista)' : undefined}
           />
-          <MetricItem
-            icon={Target}
-            label="Saldo estimado (só fixos)"
-            value={projecaoFimMes}
-            tooltip="Estimativa de saldo disponível no fim do mês considerando apenas compromissos fixos (recorrências e salários). Não inclui gastos variáveis como mercado, restaurante e lazer."
-            highlight={true}
-            isPositive={projecaoFimMes >= 0}
-            colorClass={projecaoFimMes >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}
-          />
+          {investido !== null ? (
+            <MetricBlock
+              icon={TrendingUp}
+              label="Investido"
+              value={investido}
+              tooltip="Total nas contas de investimento."
+              colorClass="bg-indigo-500/10 text-indigo-500"
+              valueClass="text-indigo-500"
+            />
+          ) : (
+            <div className="p-5 text-sm text-muted-foreground italic">Nenhuma conta de investimento</div>
+          )}
         </div>
-      </CardContent>
+      </Card>
+    );
+  }
+
+  // ── Histórico ─────────────────────────────────────────────────────────────
+  return (
+    <Card className="border-none shadow-md rounded-2xl overflow-hidden">
+      <div className="px-5 pt-4 pb-1 flex items-center gap-2">
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{titleDate}</p>
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-muted-foreground bg-muted/50 rounded-full px-2 py-0.5">
+          <History className="h-3 w-3" /> Histórico
+        </span>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-border/50">
+        <MetricBlock
+          icon={ArrowDownCircle}
+          label="Receitas do mês"
+          value={receitasRealizadas}
+          tooltip="Total de receitas registradas neste mês."
+          colorClass="bg-success/10 text-success"
+          valueClass="text-success"
+        />
+        <MetricBlock
+          icon={Receipt}
+          label="Despesas do mês"
+          value={jaGastei}
+          tooltip="Total de despesas registradas neste mês."
+          colorClass="bg-destructive/10 text-destructive"
+          valueClass="text-destructive"
+        />
+        <MetricBlock
+          icon={Wallet}
+          label="Resultado do mês"
+          value={resultadoMes}
+          tooltip="Receitas menos Despesas do mês."
+          colorClass={resultadoMes >= 0 ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}
+          valueClass={resultadoMes >= 0 ? 'text-success' : 'text-destructive'}
+          size="lg"
+        />
+      </div>
+      {saldoDisponivel !== null && (
+        <>
+          <div className="h-px bg-border/50" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border/50 bg-muted/20">
+            <MetricBlock
+              icon={Wallet}
+              label="Saldo disponível no fim do mês"
+              value={saldoDisponivel}
+              tooltip="Saldo das contas bancárias no encerramento deste mês."
+              colorClass="bg-primary/10 text-primary"
+            />
+            {investido !== null && (
+              <MetricBlock
+                icon={TrendingUp}
+                label="Investido"
+                value={investido}
+                tooltip="Total nas contas de investimento no fim do mês."
+                colorClass="bg-indigo-500/10 text-indigo-500"
+                valueClass="text-indigo-500"
+              />
+            )}
+          </div>
+        </>
+      )}
     </Card>
   );
 };

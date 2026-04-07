@@ -77,11 +77,15 @@ export function Sidebar({ onNavigate, isMobile }) {
     }
   };
 
-  const currentStyle = theme === 'dark' ? styles.dark : styles.light;
-  
-  // Escolher a logo baseada no tema
-  const logoSrc = theme === 'dark' ? logoDark : logoLight;
+  // const currentStyle = theme === 'dark' ? styles.dark : styles.light;
+  // const logoSrc = theme === 'dark' ? logoDark : logoLight;
 
+  const resolvedTheme = theme === 'system'
+  ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+  : theme;
+  const currentStyle = resolvedTheme === 'dark' ? styles.dark : styles.light;
+  const logoSrc = resolvedTheme === 'dark' ? logoDark : logoLight;
+  
   return (
     <aside
       style={{

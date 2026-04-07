@@ -14,212 +14,143 @@ import TransactionForm from '@/components/TransactionForm';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-// Dashboard Components
 import NetWorthCard from '@/components/dashboard/NetWorthCard';
-import MonthlySummaryCard from '@/components/dashboard/MonthlySummaryCard';
 import SpendingPaceCard from '@/components/dashboard/SpendingPaceCard';
-import BurnRateCard from '@/components/dashboard/BurnRateCard';
 import EvolutionChart from '@/components/dashboard/EvolutionChart';
 import GoalsCard from '@/components/dashboard/GoalsCard';
 import RecentTransactionsCard from '@/components/dashboard/RecentTransactionsCard';
-import MonthlyCommitmentCard from '@/components/dashboard/MonthlyCommitmentCard';
 import MonthOverviewCard from '@/components/MonthOverviewCard';
 
-// ── Utilitários de data ────────────────────────────────────────────────────────
+// ── Utilitários de navegação de mês ───────────────────────────────────────────
 const MONTH_NAMES = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+  'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro',
 ];
 
-function isSameMonth(year, month) {
+const isSameMonth = (year, month) => {
   const now = new Date();
   return year === now.getFullYear() && month === now.getMonth() + 1;
-}
+};
 
-function prevMonth(year, month) {
-  return month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
-}
+const prevMonth = (year, month) =>
+  month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
 
-function nextMonth(year, month) {
-  return month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
-}
+const nextMonth = (year, month) =>
+  month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
 
 // ── Seletor de Mês ─────────────────────────────────────────────────────────────
-const MonthSelector = ({ year, month, onPrev, onNext, isCurrentMonth }) => {
-  return (
-    <div className="flex items-center gap-1 bg-secondary/50 rounded-xl p-1">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 rounded-lg hover:bg-background"
-        onClick={onPrev}
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-
-      <div className="flex items-center gap-1.5 px-2 min-w-[140px] justify-center">
-        <span className="text-sm font-semibold">
-          {MONTH_NAMES[month - 1]} {year}
+const MonthSelector = ({ year, month, onPrev, onNext, isCurrentMonth }) => (
+  <div className="flex items-center gap-1 bg-secondary/50 rounded-xl p-1">
+    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-background" onClick={onPrev}>
+      <ChevronLeft className="h-4 w-4" />
+    </Button>
+    <div className="flex items-center gap-1.5 px-2 min-w-[140px] justify-center">
+      <span className="text-sm font-semibold">{MONTH_NAMES[month - 1]} {year}</span>
+      {!isCurrentMonth && (
+        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted rounded-full px-1.5 py-0.5">
+          histórico
         </span>
-        {!isCurrentMonth && (
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted rounded-full px-1.5 py-0.5">
-            histórico
-          </span>
-        )}
-      </div>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        className={cn(
-          'h-8 w-8 rounded-lg hover:bg-background',
-          isCurrentMonth && 'opacity-30 cursor-not-allowed'
-        )}
-        onClick={onNext}
-        disabled={isCurrentMonth}
-      >
-        <ChevronRight className="h-4 w-4" />
-      </Button>
+      )}
     </div>
-  );
-};
+    <Button
+      variant="ghost"
+      size="icon"
+      className={cn('h-8 w-8 rounded-lg hover:bg-background', isCurrentMonth && 'opacity-30 cursor-not-allowed')}
+      onClick={onNext}
+      disabled={isCurrentMonth}
+    >
+      <ChevronRight className="h-4 w-4" />
+    </Button>
+  </div>
+);
 
 // ── Dashboard ──────────────────────────────────────────────────────────────────
 const Dashboard = () => {
   const navigate = useNavigate();
 
-  // ── Mês selecionado ──────────────────────────────────────────────────────
   const now = new Date();
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedYear, setSelectedYear]   = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
-
   const isCurrentMonth = isSameMonth(selectedYear, selectedMonth);
 
-  // ── UI State ─────────────────────────────────────────────────────────────
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]     = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [greeting, setGreeting] = useState('');
+  const [greeting, setGreeting]   = useState('');
 
-  // ── Data: sempre fixo (patrimônio, burnrate, metas — não dependem do mês) ─
-  const [netWorth, setNetWorth] = useState(0);
+  // Dados estáticos (não dependem do mês)
+  const [netWorth, setNetWorth]               = useState(0);
   const [assetsLiabilities, setAssetsLiabilities] = useState([]);
   const [operationalMonthly, setOperationalMonthly] = useState([]);
-  const [burnRate, setBurnRate] = useState({
-    avg_monthly_expense_last_3m: 0,
-    previous_3m_avg: 0,
-    trend: 'STABLE',
-  });
-  const [goals, setGoals] = useState([]);
-  const [accounts, setAccounts] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [goals, setGoals]                     = useState([]);
+  const [accounts, setAccounts]               = useState([]);
+  const [categories, setCategories]           = useState([]);
 
-  // ── Data: depende do mês selecionado ─────────────────────────────────────
+  // Dados dependentes do mês
   const [monthTransactions, setMonthTransactions] = useState([]);
-  const [dailyExpenses, setDailyExpenses] = useState(null);
-  const [monthlyCommitment, setMonthlyCommitment] = useState(null);
-  const [selectedMonthData, setSelectedMonthData] = useState({
-    total_income: 0,
-    total_expenses: 0,
-    net_result: 0,
-  });
+  const [dailyExpenses, setDailyExpenses]         = useState(null);
   const [historicalBalances, setHistoricalBalances] = useState(null);
 
-  // ── Saudação ──────────────────────────────────────────────────────────────
   const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return 'Bom dia';
-    if (hour >= 12 && hour < 18) return 'Boa tarde';
+    const h = new Date().getHours();
+    if (h >= 5 && h < 12) return 'Bom dia';
+    if (h >= 12 && h < 18) return 'Boa tarde';
     return 'Boa noite';
   };
 
-  // ── Fetch dados estáticos (só uma vez ao montar) ──────────────────────────
+  // ── Fetch dados estáticos ─────────────────────────────────────────────────
   const fetchStaticData = useCallback(async () => {
-    try {
-      // Auto-gera recorrências do mês atual silenciosamente
-      api.post('/recurring-expenses/generate').catch(() => {});
+    // Gera recorrências silenciosamente — sem bloquear o carregamento
+    api.post('/recurring-expenses/generate').catch(() => {});
 
-      const results = await Promise.allSettled([
-        analyticsApi.getNetWorth(),          // 0
-        analyticsApi.getAssetsLiabilities(), // 1
-        analyticsApi.getOperationalMonthly(),// 2
-        analyticsApi.getBurnRate(),          // 3
-        analyticsApi.getGoalsProgress(),     // 4
-        api.get('/accounts/'),               // 5
-        api.get('/categories/'),             // 6
-      ]);
+    const results = await Promise.allSettled([
+      analyticsApi.getNetWorth(),           // 0
+      analyticsApi.getAssetsLiabilities(),  // 1
+      analyticsApi.getOperationalMonthly(), // 2
+      analyticsApi.getGoalsProgress(),      // 3
+      api.get('/accounts/'),                // 4
+      api.get('/categories/'),              // 5
+    ]);
 
-      if (results[0].status === 'fulfilled') setNetWorth(results[0].value.data.net_worth);
-      if (results[1].status === 'fulfilled') setAssetsLiabilities(results[1].value.data);
-      if (results[2].status === 'fulfilled') setOperationalMonthly(results[2].value.data);
-      if (results[3].status === 'fulfilled') setBurnRate(results[3].value.data);
-      if (results[4].status === 'fulfilled') setGoals(results[4].value.data);
-      if (results[5].status === 'fulfilled') setAccounts(results[5].value.data);
-      if (results[6].status === 'fulfilled') setCategories(results[6].value.data);
-
-      results.forEach((r, i) => {
-        if (r.status === 'rejected') console.error(`fetchStaticData[${i}] failed`, r.reason);
-      });
-    } catch (err) {
-      console.error('fetchStaticData unexpected error', err);
-    }
+    if (results[0].status === 'fulfilled') setNetWorth(results[0].value.data.net_worth);
+    if (results[1].status === 'fulfilled') setAssetsLiabilities(results[1].value.data);
+    if (results[2].status === 'fulfilled') setOperationalMonthly(results[2].value.data);
+    if (results[3].status === 'fulfilled') setGoals(results[3].value.data);
+    if (results[4].status === 'fulfilled') setAccounts(results[4].value.data);
+    if (results[5].status === 'fulfilled') setCategories(results[5].value.data);
   }, []);
 
   // ── Fetch dados do mês selecionado ────────────────────────────────────────
-  const fetchMonthData = useCallback(
-    async (year, month) => {
-      setLoading(true);
-      try {
-        const lastDay = new Date(year, month, 0).getDate();
-        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-        const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  const fetchMonthData = useCallback(async (year, month) => {
+    setLoading(true);
+    try {
+      const lastDay   = new Date(year, month, 0).getDate();
+      const startDate = `${year}-${String(month).padStart(2,'0')}-01`;
+      const endDate   = `${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+      const isCurrent = isSameMonth(year, month);
 
-        const isCurrentM = isSameMonth(year, month);
+      const results = await Promise.allSettled([
+        api.get('/transactions/', {
+          params: { date_from: startDate, date_to: endDate, limit: 500, include_future: isCurrent },
+        }),                                          // 0
+        analyticsApi.getDailyExpenses(year, month),  // 1
+        !isCurrent
+          ? api.get(`/analytics/account-balances-history?year=${year}&month=${month}`)
+          : Promise.resolve(null),                   // 2
+      ]);
 
-        const results = await Promise.allSettled([
-          // Transações do mês (inclui futuras se for mês atual)
-          api.get('/transactions/', {
-            params: {
-              date_from: startDate,
-              date_to: endDate,
-              limit: 500,
-              include_future: isCurrentM,
-            },
-          }),                                         // 0
-          analyticsApi.getDailyExpenses(year, month), // 1
-          analyticsApi.getMonthlyCommitment(),        // 2
-          // Saldos históricos (apenas para meses passados)
-          !isCurrentM
-            ? api.get(`/analytics/account-balances-history?year=${year}&month=${month}`)
-            : Promise.resolve(null),                  // 3
-        ]);
-
-        if (results[0].status === 'fulfilled') {
-          setMonthTransactions(results[0].value.data.items || []);
-        }
-        if (results[1].status === 'fulfilled') {
-          setDailyExpenses(results[1].value.data);
-        }
-        if (results[2].status === 'fulfilled') {
-          setMonthlyCommitment(results[2].value.data);
-        }
-        if (!isCurrentM && results[3].status === 'fulfilled' && results[3].value) {
-          setHistoricalBalances(results[3].value.data);
-        } else {
-          setHistoricalBalances(null);
-        }
-
-        results.forEach((r, i) => {
-          if (r.status === 'rejected') console.error(`fetchMonthData[${i}] failed`, r.reason);
-        });
-      } catch (err) {
-        console.error('fetchMonthData unexpected error', err);
-        toast.error('Erro inesperado ao carregar dados do mês.');
-      } finally {
-        setLoading(false);
+      if (results[0].status === 'fulfilled') setMonthTransactions(results[0].value.data.items || []);
+      if (results[1].status === 'fulfilled') setDailyExpenses(results[1].value.data);
+      if (!isCurrent && results[2].status === 'fulfilled' && results[2].value) {
+        setHistoricalBalances(results[2].value.data);
+      } else {
+        setHistoricalBalances(null);
       }
-    },
-    []
-  );
+    } catch (err) {
+      console.error('fetchMonthData error', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // ── Efeitos ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -231,53 +162,43 @@ const Dashboard = () => {
     fetchMonthData(selectedYear, selectedMonth);
   }, [selectedYear, selectedMonth, fetchMonthData]);
 
-  // ── Derived: resumo do mês selecionado a partir de operationalMonthly ─────
+  // Escuta evento global de nova transação (vindo do quick-add no MainLayout)
   useEffect(() => {
-    const found = operationalMonthly.find((d) => {
-      const dDate = new Date(d.month);
-      return (
-        dDate.getUTCFullYear() === selectedYear &&
-        dDate.getUTCMonth() + 1 === selectedMonth
-      );
-    });
-    setSelectedMonthData(
-      found || { total_income: 0, total_expenses: 0, net_result: 0 }
-    );
-  }, [operationalMonthly, selectedYear, selectedMonth]);
+    const handler = () => {
+      fetchStaticData();
+      fetchMonthData(selectedYear, selectedMonth);
+    };
+    window.addEventListener('transaction:created', handler);
+    return () => window.removeEventListener('transaction:created', handler);
+  }, [selectedYear, selectedMonth, fetchStaticData, fetchMonthData]);
 
-  const totalAssets = assetsLiabilities.find((a) => a.classification === 'asset')?.total || 0;
-  const totalLiabilities = assetsLiabilities.find((a) => a.classification === 'liability')?.total || 0;
+  const totalAssets      = assetsLiabilities.find(a => a.classification === 'asset')?.total || 0;
+  const totalLiabilities = assetsLiabilities.find(a => a.classification === 'liability')?.total || 0;
 
-  // ── Navegação de mês ──────────────────────────────────────────────────────
   const handlePrevMonth = () => {
     const { year, month } = prevMonth(selectedYear, selectedMonth);
-    setSelectedYear(year);
-    setSelectedMonth(month);
+    setSelectedYear(year); setSelectedMonth(month);
   };
-
   const handleNextMonth = () => {
     if (isCurrentMonth) return;
     const { year, month } = nextMonth(selectedYear, selectedMonth);
-    setSelectedYear(year);
-    setSelectedMonth(month);
+    setSelectedYear(year); setSelectedMonth(month);
   };
 
-  // ── Refresh após nova transação ───────────────────────────────────────────
   const handleTransactionCreated = () => {
     fetchStaticData();
     fetchMonthData(selectedYear, selectedMonth);
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
         <div>
           <h1 className="text-4xl font-bold tracking-tight">{greeting}</h1>
-          <p className="text-muted-foreground mt-1 text-base">
-            Consolidado da sua saúde financeira.
-          </p>
+          <p className="text-muted-foreground mt-1 text-base">Controle da sua saúde financeira.</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <MonthSelector
@@ -287,44 +208,33 @@ const Dashboard = () => {
             onNext={handleNextMonth}
             isCurrentMonth={isCurrentMonth}
           />
-          <Button
-            variant="outline"
-            onClick={() => navigate('/transactions')}
-            className="rounded-xl"
-          >
+          <Button variant="outline" onClick={() => navigate('/transactions')} className="rounded-xl">
             <List className="mr-2 h-4 w-4" /> Extrato
           </Button>
-          <Button
-            onClick={() => setIsModalOpen(true)}
-            className="rounded-xl shadow-lg shadow-primary/20"
-          >
+          <Button onClick={() => setIsModalOpen(true)} className="rounded-xl shadow-lg shadow-primary/20">
             <Plus className="mr-2 h-5 w-5" /> Nova Transação
           </Button>
         </div>
       </div>
 
-      {/* ── Resumo do Mês ─────────────────────────────────────────────────── */}
+      {/* ── BLOCO 1: Situação do Mês + Patrimônio ── */}
       <div className="flex items-center gap-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">
-          Resumo do Mês
-        </h2>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Situação do mês</h2>
         <div className="flex-1 h-px bg-border" />
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <MonthlySummaryCard
-          data={{
-            totalIncome: selectedMonthData.total_income,
-            totalExpense: selectedMonthData.total_expenses,
-          }}
-          loading={loading}
-        />
-        <BurnRateCard
-          avgMonthlyExpense={burnRate.avg_monthly_expense_last_3m}
-          trend={burnRate.trend}
-          previousAvg={burnRate.previous_3m_avg}
-          loading={loading}
-        />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* MonthOverviewCard ocupa 2/3 */}
+        <div className="lg:col-span-2">
+          <MonthOverviewCard
+            accounts={accounts}
+            transactions={monthTransactions}
+            loading={loading}
+            selectedYear={selectedYear}
+            selectedMonth={selectedMonth}
+            historicalBalances={historicalBalances}
+          />
+        </div>
+        {/* NetWorthCard ocupa 1/3 */}
         <NetWorthCard
           netWorth={netWorth}
           assets={totalAssets}
@@ -333,67 +243,28 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* ── Comprometimento Mensal ─────────────────────────────────────────── */}
+      {/* ── BLOCO 2: Ritmo de Gastos ── */}
       <div className="flex items-center gap-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">
-          Comprometimento Mensal
-        </h2>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Ritmo de gastos</h2>
         <div className="flex-1 h-px bg-border" />
       </div>
-      <div className="grid grid-cols-1 gap-8">
-        <MonthlyCommitmentCard data={monthlyCommitment} loading={loading} />
-      </div>
+      <SpendingPaceCard
+        data={dailyExpenses}
+        loading={loading}
+        year={selectedYear}
+        month={selectedMonth}
+      />
 
-      {/* ── Visão do Mês ──────────────────────────────────────────────────── */}
+      {/* ── BLOCO 3: Evolução Patrimonial ── */}
       <div className="flex items-center gap-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">
-          Visão do Mês
-        </h2>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Evolução patrimonial</h2>
         <div className="flex-1 h-px bg-border" />
       </div>
-      <div className="grid grid-cols-1 gap-8">
-        <MonthOverviewCard
-          accounts={accounts}
-          transactions={monthTransactions}
-          loading={loading}
-          selectedYear={selectedYear}
-          selectedMonth={selectedMonth}
-          historicalBalances={historicalBalances}
-        />
-      </div>
+      <EvolutionChart data={operationalMonthly} loading={loading} />
 
-      {/* ── Ritmo de Gastos ────────────────────────────────────────────────── */}
+      {/* ── BLOCO 4: Metas + Atividade recente ── */}
       <div className="flex items-center gap-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">
-          Ritmo de Gastos
-        </h2>
-        <div className="flex-1 h-px bg-border" />
-      </div>
-      <div className="grid grid-cols-1 gap-8">
-        <SpendingPaceCard
-          data={dailyExpenses}
-          loading={loading}
-          year={selectedYear}
-          month={selectedMonth}
-        />
-      </div>
-
-      {/* ── Evolução Patrimonial ──────────────────────────────────────────── */}
-      <div className="flex items-center gap-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">
-          Evolução Patrimonial
-        </h2>
-        <div className="flex-1 h-px bg-border" />
-      </div>
-      <div className="grid grid-cols-1 gap-8">
-        <EvolutionChart data={operationalMonthly} loading={loading} />
-      </div>
-
-      {/* ── Metas e Atividade Recente ─────────────────────────────────────── */}
-      <div className="flex items-center gap-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">
-          Metas e Atividade Recente
-        </h2>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Metas e atividade recente</h2>
         <div className="flex-1 h-px bg-border" />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -401,7 +272,7 @@ const Dashboard = () => {
         <RecentTransactionsCard />
       </div>
 
-      {/* ── Transaction Modal ─────────────────────────────────────────────── */}
+      {/* Modal Nova Transação */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
