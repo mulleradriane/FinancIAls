@@ -21,6 +21,7 @@ import GoalsCard from '@/components/dashboard/GoalsCard';
 import RecentTransactionsCard from '@/components/dashboard/RecentTransactionsCard';
 import UpcomingExpensesCard from '@/components/dashboard/UpcomingExpensesCard';
 import MonthOverviewCard from '@/components/MonthOverviewCard';
+import GettingStarted from '@/components/GettingStarted';
 
 // ── Utilitários de navegação de mês ───────────────────────────────────────────
 const MONTH_NAMES = [
@@ -259,6 +260,14 @@ const Dashboard = () => {
           </div>
         );
       })()}
+
+      {/* Onboarding checklist */}
+      <GettingStarted
+        accounts={accounts}
+        categories={categories}
+        goals={goals}
+        onNewTransaction={() => setIsModalOpen(true)}
+      />
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
