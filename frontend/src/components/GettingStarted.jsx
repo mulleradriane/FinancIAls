@@ -26,16 +26,16 @@ const STEPS = [
     },
   },
   {
-    id: 'category_budget',
+    id: 'category',
     icon: Tag,
-    title: 'Defina limites de orçamento',
-    description: 'Estabeleça quanto pode gastar por categoria todo mês.',
+    title: 'Crie ou personalize suas categorias',
+    description: 'Categorias organizam seus gastos. Você precisa de pelo menos uma para lançar transações.',
     action: { label: 'Ir para Categorias', path: '/categories' },
     required: true,
-    check: ({ categories }) => categories?.some(c => c.monthly_budget > 0),
+    check: ({ categories }) => categories?.length > 0,
     doneText: (data) => {
-      const n = data.categories?.filter(c => c.monthly_budget > 0).length || 0;
-      return `${n} categoria${n !== 1 ? 's' : ''} com orçamento definido`;
+      const n = data.categories?.length || 0;
+      return `${n} categoria${n !== 1 ? 's' : ''} disponível${n !== 1 ? 'is' : ''}`;
     },
   },
   {
@@ -46,7 +46,7 @@ const STEPS = [
     actions: [
       { label: 'Importar extrato', path: '/importacao', variant: 'outline' },
     ],
-    onboardingAction: 'new_transaction', // handled by parent
+    onboardingAction: 'new_transaction',
     required: true,
     check: ({ hasTransactions }) => hasTransactions,
     doneText: () => 'Você já tem transações registradas',
