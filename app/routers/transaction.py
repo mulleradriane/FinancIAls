@@ -1,9 +1,6 @@
 from __future__ import annotations
 import uuid
-import csv
-import io
-import re
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 from datetime import date, datetime
@@ -28,7 +25,10 @@ from app.core.database import get_db
 from app.routers.auth import get_current_user
 from app.models.user import User
 from app.services.transaction_service import create_unified_transaction
-from app.services.similarity_service import detect_recurring_matches
+from app.services.similarity_service import detect_recurring_matches, check_recurring_for_preview
+from app.services.import_service import (
+    parse_csv_ronromia, parse_csv_c6, parse_ofx, parse_pdf, detect_file_format
+)
 
 router = APIRouter()
 
@@ -36,200 +36,105 @@ router = APIRouter()
 def preview_import_csv(
     file: UploadFile = File(...),
     account_id: UUID = Form(...),
-    file_type: str = Form(...), # "conta" ou "cartao"
+    file_type: str = Form(...),   # "conta" | "cartao" | "ofx" | "pdf"
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    content = file.file.read().decode("utf-8-sig")
-    file.file.seek(0)
+    raw_content = file.file.read()
 
-    # Ownership check
     acc = crud_account.get_by_user(db, id=account_id, user_id=current_user.id)
     if not acc:
         raise HTTPException(status_code=404, detail="Account not found")
 
-    to_import = []
-    duplicates = []
-    errors = []
+    # Auto-detect OFX / PDF by file extension (overrides file_type from frontend)
+    detected = detect_file_format(file.filename or '', file.content_type or '')
+    if detected in ('ofx', 'pdf'):
+        file_type = detected
 
-    # Get user categories for fallback and matching
+    # ── Parse ──────────────────────────────────────────────────────────────────
+    errors: list = []
+    try:
+        if file_type == 'ofx':
+            text = raw_content.decode('utf-8-sig', errors='replace')
+            parsed_rows, errors = parse_ofx(text)
+        elif file_type == 'pdf':
+            parsed_rows, parse_errors = parse_pdf(raw_content)
+            errors.extend(parse_errors)
+        elif file_type == 'cartao':
+            text = raw_content.decode('utf-8-sig', errors='replace')
+            parsed_rows, errors = parse_csv_c6(text)
+        else:  # conta – Ronromia template
+            text = raw_content.decode('utf-8-sig', errors='replace')
+            parsed_rows, errors = parse_csv_ronromia(text)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    # ── Categories lookup ──────────────────────────────────────────────────────
     user_categories = db.scalars(
         select(Category).filter(
             or_(Category.user_id == current_user.id, Category.is_system == True)
         )
     ).all()
 
-    def find_category_name(csv_cat_name):
-        if not csv_cat_name:
+    def find_category_name(name: str) -> str:
+        if not name:
             return "Outros"
         for cat in user_categories:
-            if cat.name.lower() == csv_cat_name.lower():
+            if cat.name.lower() == name.lower():
                 return cat.name
         return "Outros"
 
-    if file_type == "conta":
-        # data,titulo,entrada,saida,categoria,descricao
-        reader = csv.DictReader(io.StringIO(content))
-        for row_idx, row in enumerate(reader, start=2):
-            try:
-                dt_str = row.get("data")
-                titulo = row.get("titulo", "")
-                entrada_str = row.get("entrada", "").replace(".", "").replace(",", ".")
-                saida_str = row.get("saida", "").replace(".", "").replace(",", ".")
-                categoria_csv = row.get("categoria", "")
-                descricao_csv = row.get("descricao", "")
+    # ── Recurring match check (before committing anything) ─────────────────────
+    recurring_map = check_recurring_for_preview(db, current_user.id, parsed_rows)
 
-                if not dt_str:
-                    errors.append({"row_index": row_idx, "message": "Data ausente"})
-                    continue
+    # ── Duplicate check + assemble preview rows ────────────────────────────────
+    to_import: list = []
+    duplicates: list = []
 
-                dt = datetime.strptime(dt_str, "%d/%m/%Y").date()
-                try:
-                    entrada = Decimal(entrada_str) if entrada_str else Decimal(0)
-                    saida = Decimal(saida_str) if saida_str else Decimal(0)
-                except InvalidOperation:
-                    errors.append({"row_index": row_idx, "message": "Valor inválido em entrada/saída"})
-                    continue
+    for row in parsed_rows:
+        preview_row = ImportPreviewRow(
+            row_index=row.row_index,
+            date=row.date,
+            description=row.description,
+            amount=row.amount,
+            nature=row.nature,
+            categoria=find_category_name(row.categoria),
+            is_installment=row.is_installment,
+            installment_info=row.installment_info,
+            is_transfer=row.is_transfer,
+        )
 
-                if entrada > 0 and saida > 0:
-                    errors.append({"row_index": row_idx, "message": "Entrada e Saída preenchidas simultaneamente"})
-                    continue
+        # Recurring match info
+        if row.row_index in recurring_map:
+            rm = recurring_map[row.row_index]
+            preview_row.is_recurring_match = True
+            preview_row.recurring_description = rm['recurring_description']
+            preview_row.recurring_similarity = rm['similarity']
 
-                if entrada == 0 and saida == 0:
-                    continue
+        # Exact duplicate in DB?
+        existing = db.execute(
+            select(TransactionModel.id).filter(
+                TransactionModel.account_id == account_id,
+                TransactionModel.date == preview_row.date,
+                func.abs(TransactionModel.amount) == abs(preview_row.amount),
+                TransactionModel.description == preview_row.description,
+                TransactionModel.nature == preview_row.nature,
+                TransactionModel.deleted_at == None,
+            )
+        ).scalar()
 
-                nature = "INCOME" if entrada > 0 else "EXPENSE"
-                amount = entrada if entrada > 0 else -saida
-
-                # Installment detection
-                is_installment = False
-                installment_info = None
-                match = re.search(r'(\d+/\d+)', titulo)
-                if match:
-                    is_installment = True
-                    installment_info = match.group(1)
-
-                parsed_row = ImportPreviewRow(
-                    row_index=row_idx,
-                    date=dt,
-                    description=titulo,
-                    amount=amount,
-                    nature=nature,
-                    categoria=find_category_name(categoria_csv),
-                    is_installment=is_installment,
-                    installment_info=installment_info
-                )
-
-                # Duplicate check - Including nature
-                existing = db.execute(
-                    select(TransactionModel.id)
-                    .filter(
-                        TransactionModel.account_id == account_id,
-                        TransactionModel.date == parsed_row.date,
-                        func.abs(TransactionModel.amount) == abs(parsed_row.amount),
-                        TransactionModel.description == parsed_row.description,
-                        TransactionModel.nature == parsed_row.nature,
-                        TransactionModel.deleted_at == None
-                    )
-                ).scalar()
-
-                if existing:
-                    parsed_row.is_duplicate = True
-                    parsed_row.existing_transaction_id = existing
-                    duplicates.append(parsed_row)
-                else:
-                    to_import.append(parsed_row)
-
-            except Exception as e:
-                errors.append({"row_index": row_idx, "message": str(e)})
-
-    elif file_type == "cartao":
-        # C6 format uses semicolon
-        reader = csv.DictReader(io.StringIO(content), delimiter=';')
-        for row_idx, row in enumerate(reader, start=2):
-            try:
-                dt_str = row.get("Data de Compra")
-                desc_csv = row.get("Descrição")
-                categoria_csv = row.get("Categoria")
-                parcela_csv = row.get("Parcela")
-                valor_str = row.get("Valor (em R$)", "").replace(".", "").replace(",", ".")
-
-                if not dt_str or not valor_str:
-                    continue
-
-                dt = datetime.strptime(dt_str, "%d/%m/%Y").date()
-                try:
-                    amount_raw = Decimal(valor_str)
-                except InvalidOperation:
-                    errors.append({"row_index": row_idx, "message": "Valor inválido"})
-                    continue
-
-                if amount_raw == 0:
-                    continue
-
-                nature = "EXPENSE"
-                amount = -amount_raw
-                is_transfer = False
-
-                if amount_raw < 0:
-                    desc_lower = desc_csv.lower() if desc_csv else ""
-                    payment_keywords = ["inclusão de pagamento", "pagamento", "pagto", "payment"]
-                    if any(kw in desc_lower for kw in payment_keywords):
-                        nature = "TRANSFER"
-                        amount = abs(amount_raw)
-                        is_transfer = True
-                    else:
-                        nature = "INCOME"
-                        amount = abs(amount_raw)
-
-                description = desc_csv if desc_csv else categoria_csv
-
-                is_installment = False
-                installment_info = None
-                if parcela_csv and '/' in parcela_csv:
-                    is_installment = True
-                    installment_info = parcela_csv
-
-                parsed_row = ImportPreviewRow(
-                    row_index=row_idx,
-                    date=dt,
-                    description=description,
-                    amount=amount,
-                    nature=nature,
-                    categoria=find_category_name(categoria_csv),
-                    is_installment=is_installment,
-                    installment_info=installment_info,
-                    is_transfer=is_transfer
-                )
-
-                # Duplicate check - Including nature
-                existing = db.execute(
-                    select(TransactionModel.id)
-                    .filter(
-                        TransactionModel.account_id == account_id,
-                        TransactionModel.date == parsed_row.date,
-                        func.abs(TransactionModel.amount) == abs(parsed_row.amount),
-                        TransactionModel.description == parsed_row.description,
-                        TransactionModel.nature == parsed_row.nature,
-                        TransactionModel.deleted_at == None
-                    )
-                ).scalar()
-
-                if existing:
-                    parsed_row.is_duplicate = True
-                    parsed_row.existing_transaction_id = existing
-                    duplicates.append(parsed_row)
-                else:
-                    to_import.append(parsed_row)
-
-            except Exception as e:
-                errors.append({"row_index": row_idx, "message": str(e)})
+        if existing:
+            preview_row.is_duplicate = True
+            preview_row.existing_transaction_id = existing
+            duplicates.append(preview_row)
+        else:
+            to_import.append(preview_row)
 
     return {
         "to_import": to_import,
         "duplicates": duplicates,
         "errors": errors,
-        "file_type": file_type
+        "file_type": file_type,
     }
 
 @router.post("/import-csv/confirm")

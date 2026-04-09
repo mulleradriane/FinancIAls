@@ -1,7 +1,8 @@
 from decimal import Decimal
-from typing import List
+from typing import List, Dict, Any
 from uuid import UUID
 from difflib import SequenceMatcher
+from datetime import date
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 from app.models.transaction import Transaction as TransactionModel, TransactionNature
@@ -83,5 +84,62 @@ def detect_recurring_matches(db: Session, user_id: UUID, transactions: List[Tran
                 "recurring_amount": abs(Decimal(str(re.amount))),
                 "similarity": round(similarity, 2)
             })
+
+    return matches
+
+
+def check_recurring_for_preview(db: Session, user_id: UUID, parsed_rows) -> Dict[int, Dict[str, Any]]:
+    """
+    For each parsed row, check if it matches an active recurring expense
+    that hasn't been linked yet in the same month/year.
+    Returns a dict of {row_index: {recurring_description, similarity}}.
+    """
+    results = db.execute(
+        select(RecurringExpense, Category)
+        .join(Category, RecurringExpense.category_id == Category.id)
+        .filter(RecurringExpense.user_id == user_id, RecurringExpense.active == True)
+    ).all()
+
+    recurring_data = [(re_obj, cat) for re_obj, cat in results]
+    matches: Dict[int, Dict[str, Any]] = {}
+
+    for row in parsed_rows:
+        if row.nature == 'TRANSFER':
+            continue
+
+        for re_obj, cat in recurring_data:
+            # Amount check (1% tolerance or R$0.02)
+            row_abs = abs(Decimal(str(row.amount)))
+            re_abs = abs(Decimal(str(re_obj.amount)))
+            tolerance = max(Decimal("0.02"), re_abs * Decimal("0.01"))
+            if abs(row_abs - re_abs) > tolerance:
+                continue
+
+            # Description similarity
+            s1 = row.description.lower().strip()
+            s2 = re_obj.description.lower().strip()
+            similarity = SequenceMatcher(None, s1, s2).ratio()
+            if not ((s1 in s2 or s2 in s1) or similarity >= 0.75):
+                continue
+
+            # Check if already linked in same month/year
+            existing = db.execute(
+                select(TransactionModel.id).filter(
+                    TransactionModel.user_id == user_id,
+                    TransactionModel.recurring_expense_id == re_obj.id,
+                    func.extract('month', TransactionModel.date) == row.date.month,
+                    func.extract('year', TransactionModel.date) == row.date.year,
+                    TransactionModel.deleted_at == None,
+                )
+            ).scalar()
+
+            if existing:
+                continue
+
+            matches[row.row_index] = {
+                'recurring_description': re_obj.description,
+                'similarity': round(similarity, 2),
+            }
+            break
 
     return matches
