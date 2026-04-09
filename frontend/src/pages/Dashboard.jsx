@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/api/api';
 import analyticsApi from '@/api/analyticsApi';
-import { Plus, List, ChevronLeft, ChevronRight, AlertTriangle, FlaskConical } from 'lucide-react';
+import { Plus, List, ChevronLeft, ChevronRight, AlertTriangle, FlaskConical, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -198,13 +198,67 @@ const Dashboard = () => {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
       {/* Banner de versão beta */}
-      <div className="flex items-center gap-3 rounded-2xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-amber-700 dark:text-amber-400">
-        <FlaskConical className="h-5 w-5 shrink-0" />
-        <div className="flex-1 text-sm">
-          <span className="font-semibold">Versão de teste (v1.1.0 · 9 de abril de 2026)</span>
-          <span className="ml-2 text-amber-600/80 dark:text-amber-400/70">— alguns recursos ainda estão sendo aprimorados. Feedbacks são bem-vindos!</span>
-        </div>
-      </div>
+      {(() => {
+        const [open, setOpen] = React.useState(false);
+        const changelog = [
+          {
+            category: '🗂️ Categorias',
+            items: [
+              'Nova tela de categorias com cards visuais por cor e ícone',
+              'Suporte a subcategorias dentro de cada categoria pai',
+              'Barra de progresso de orçamento mensal nos cards',
+              'Botões de ação sempre visíveis (editar, orçamento, excluir)',
+            ],
+          },
+          {
+            category: '💳 Transações',
+            items: [
+              'Subcategorias aparecem agrupadas nos seletores de categoria',
+              'Filtro de categoria na tela de transações com hierarquia',
+              'Transações futuras ocultadas por padrão na listagem principal',
+            ],
+          },
+          {
+            category: '⚙️ Melhorias gerais',
+            items: [
+              'Correções nos totais dos cards de resumo do mês',
+              'Estabilidade e correções de bugs no backend',
+            ],
+          },
+        ];
+        return (
+          <div className="rounded-2xl border border-amber-400/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 overflow-hidden">
+            <button
+              className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-amber-500/10 transition-colors"
+              onClick={() => setOpen(v => !v)}
+            >
+              <FlaskConical className="h-5 w-5 shrink-0" />
+              <div className="flex-1 text-sm">
+                <span className="font-semibold">Versão de teste — v1.1.0 · 9 de abril de 2026</span>
+                <span className="ml-2 text-amber-600/80 dark:text-amber-400/70">Alguns recursos ainda estão sendo aprimorados. Feedbacks são bem-vindos!</span>
+              </div>
+              <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform duration-200', open && 'rotate-180')} />
+            </button>
+            {open && (
+              <div className="px-4 pb-4 pt-1 border-t border-amber-400/20 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {changelog.map(section => (
+                  <div key={section.category}>
+                    <p className="text-xs font-semibold uppercase tracking-wider mb-2 opacity-80">{section.category}</p>
+                    <ul className="space-y-1">
+                      {section.items.map(item => (
+                        <li key={item} className="flex items-start gap-1.5 text-xs opacity-75">
+                          <span className="mt-0.5 shrink-0">·</span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
