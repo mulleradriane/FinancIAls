@@ -14,7 +14,7 @@ import { usePrivacy } from '@/context/PrivacyContext';
 import PrivateValue from '@/components/ui/PrivateValue';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import InfoTooltip from '@/components/ui/InfoTooltip';
 
 const SpendingPaceCard = ({ data, loading, year, month }) => {
@@ -57,13 +57,6 @@ const SpendingPaceCard = ({ data, loading, year, month }) => {
 
   const diff = lastActual - prevMonthSameDay;
   const paceStatus = diff > 0 ? 'ABOVE' : 'BELOW';
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
 
   return (
     <Card className="border-none shadow-md rounded-2xl h-full">

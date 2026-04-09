@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '@/api/api';
 import analyticsApi from '@/api/analyticsApi';
 import {
-  PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend,
+  ResponsiveContainer, Tooltip as RechartsTooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Line, ComposedChart
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,8 +13,8 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
-  TrendingUp, TrendingDown, PieChartIcon, BarChart3,
-  ArrowUpRight, ArrowDownRight, ChevronRight, Calculator, AlertCircle,
+  TrendingUp, TrendingDown, PieChartIcon,
+  Calculator, AlertCircle,
   ChevronDown, ChevronUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -22,8 +22,109 @@ import { toast } from 'sonner';
 import PrivateValue from '@/components/ui/PrivateValue';
 import InfoTooltip from '@/components/ui/InfoTooltip';
 import { usePrivacy } from '@/context/PrivacyContext';
-import SankeyDiagram from '@/components/reports/SankeyDiagram';
 
+// ── Utilitários de nível de módulo ─────────────────────────────────────────────
+const formatCurrency = (value) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value ?? 0);
+
+const formatDate = (dateStr) =>
+  new Intl.DateTimeFormat('pt-BR', { month: 'short', year: '2-digit' }).format(new Date(dateStr));
+
+// ── Componentes auxiliares (fora do pai para evitar remontagem a cada render) ──
+const SummaryCard = ({ title, value, variant = 'neutral', isPercentage = false }) => {
+  const variants = {
+    success: 'bg-success/10 text-success font-bold',
+    danger:  'bg-destructive/10 text-destructive font-bold',
+    neutral: 'bg-secondary/30 text-foreground font-bold',
+  };
+  return (
+    <Card className="border-none shadow-md overflow-hidden">
+      <CardContent className={cn('p-6', variants[variant])}>
+        <p className="text-xs font-semibold uppercase tracking-widest opacity-70">{title}</p>
+        <h3 className="text-2xl font-black mt-1">
+          <PrivateValue value={isPercentage ? `${(value || 0).toFixed(1)}%` : formatCurrency(value || 0)} />
+        </h3>
+      </CardContent>
+    </Card>
+  );
+};
+
+const TopCategoriesList = ({ items = [], initialLimit = 6, loading = false }) => {
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? items : items.slice(0, initialLimit);
+
+  if (loading) return (
+    <div className="space-y-3">
+      {[...Array(initialLimit)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
+    </div>
+  );
+
+  if (items.length === 0) return (
+    <p className="text-sm text-muted-foreground italic py-4 text-center">Nenhum dado disponível.</p>
+  );
+
+  return (
+    <div className="space-y-3">
+      {visible.map((cat, i) => {
+        const diff     = cat.total - cat.previous_total;
+        const diffPerc = cat.previous_total > 0 ? (diff / cat.previous_total) * 100 : 0;
+        return (
+          <div key={i} className="p-3.5 rounded-xl bg-secondary/20 hover:bg-secondary/30 transition-all">
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-base border flex-shrink-0"
+                  style={{ backgroundColor: `${cat.category_color}15`, borderColor: `${cat.category_color}30` }}
+                >
+                  {cat.category_icon || '💰'}
+                </div>
+                <div>
+                  <p className="font-bold text-sm leading-tight">{cat.category_name}</p>
+                  <p className="text-xs text-muted-foreground font-medium">
+                    {cat.percentage.toFixed(1)}% do total
+                  </p>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="font-black text-sm">
+                  <PrivateValue value={formatCurrency(cat.total)} />
+                </p>
+                {cat.previous_total > 0 && (
+                  <div className={cn(
+                    'flex items-center justify-end gap-0.5 text-[10px] font-bold',
+                    diff > 0 ? 'text-red-500' : 'text-emerald-500'
+                  )}>
+                    {diff > 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                    {Math.abs(diffPerc).toFixed(0)}% vs anterior
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="h-1.5 w-full bg-secondary/50 rounded-full overflow-hidden">
+              <div
+                className="h-full transition-all duration-700"
+                style={{ width: `${cat.percentage}%`, backgroundColor: cat.category_color || '#2563eb' }}
+              />
+            </div>
+          </div>
+        );
+      })}
+      {items.length > initialLimit && (
+        <button
+          onClick={() => setShowAll((v) => !v)}
+          className="w-full text-xs font-bold text-muted-foreground hover:text-foreground transition-colors py-2 flex items-center justify-center gap-1"
+        >
+          {showAll
+            ? <><ChevronUp size={14} /> Mostrar menos</>
+            : <><ChevronDown size={14} /> Ver mais {items.length - initialLimit} categorias</>
+          }
+        </button>
+      )}
+    </div>
+  );
+};
+
+// ── Página ──────────────────────────────────────────────────────────────────────
 const Relatorios = () => {
   const { isPrivate } = usePrivacy();
   const today = new Date();
@@ -46,11 +147,12 @@ const Relatorios = () => {
   const [isInfoExpanded, setIsInfoExpanded] = useState(false);
 
   // Constants
+  const currentYear = today.getFullYear();
+  const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
   const monthNames = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ];
-  const COLORS = ['#2563EB', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6'];
 
   const fetchData = async () => {
     setLoading(true);
@@ -112,113 +214,6 @@ const Relatorios = () => {
     fetchProjection();
   }, [activeTab, projectionMonths]);
 
-  // Dados para o gráfico de pizza - com tratamento seguro
-  const chartData = useMemo(() => {
-    // Verifica se existe expenses_by_category e se é um objeto
-    if (!summary?.expenses_by_category || typeof summary.expenses_by_category !== 'object') {
-      return [];
-    }
-    
-    return Object.entries(summary.expenses_by_category)
-      .map(([name, value]) => ({
-        name,
-        value: Math.abs(parseFloat(value || 0))
-      }))
-      .filter(item => item.value > 0); // Remove categorias com valor zero
-  }, [summary]);
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
-
-  const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    return new Intl.DateTimeFormat('pt-BR', { month: 'short', year: '2-digit' }).format(date);
-  };
-
-  const SummaryCard = ({ title, value, variant = 'neutral', isPercentage = false }) => {
-    const variants = {
-      success: 'bg-success/10 text-success font-bold',
-      danger: 'bg-destructive/10 text-destructive font-bold',
-      neutral: 'bg-secondary/30 text-foreground font-bold',
-    };
-
-    return (
-      <Card className="border-none shadow-md overflow-hidden">
-        <CardContent className={cn("p-6", variants[variant])}>
-          <p className="text-xs font-semibold uppercase tracking-widest opacity-70">{title}</p>
-          <h3 className="text-2xl font-black mt-1">
-            <PrivateValue value={isPercentage ? `${(value || 0).toFixed(1)}%` : formatCurrency(value || 0)} />
-          </h3>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const TopCategoriesList = ({ items = [], limit = 9 }) => {
-    if (loading) return (
-      <div className="space-y-4">
-        {[...Array(limit)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
-      </div>
-    );
-
-    return (
-      <div className="space-y-4">
-        {items.slice(0, limit).map((cat, i) => {
-          const diff = cat.total - cat.previous_total;
-          const diffPerc = cat.previous_total > 0 ? (diff / cat.previous_total) * 100 : 0;
-
-          return (
-            <div key={i} className="p-4 rounded-2xl bg-secondary/20 hover:bg-secondary/30 transition-all group">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-lg border"
-                    style={{ backgroundColor: `${cat.category_color}15`, borderColor: `${cat.category_color}30` }}
-                  >
-                    {cat.category_icon || '💰'}
-                  </div>
-                  <div>
-                    <p className="font-bold text-sm leading-tight">{cat.category_name}</p>
-                    <p className="text-xs text-muted-foreground font-medium">
-                      {cat.percentage.toFixed(1)}% do total
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-black text-sm">
-                    <PrivateValue value={formatCurrency(cat.total)} />
-                  </p>
-                  {cat.previous_total > 0 && (
-                    <div className={cn(
-                          "flex items-center justify-end gap-0.5 text-[10px] font-bold uppercase", /* design-token: manter */
-                      diff > 0 ? "text-red-500" : "text-emerald-500"
-                    )}>
-                      {diff > 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                      {Math.abs(diffPerc).toFixed(0)}%
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="h-2 w-full bg-secondary/50 rounded-full overflow-hidden">
-                <div
-                  className="h-full transition-all duration-1000"
-                  style={{
-                    width: `${cat.percentage}%`,
-                    backgroundColor: cat.category_color || '#2563eb'
-                  }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
   return (
     <div className="space-y-8 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -274,7 +269,7 @@ const Relatorios = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[2024, 2025, 2026].map(y => (
+                {yearOptions.map(y => (
                   <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
                 ))}
               </SelectContent>
@@ -284,15 +279,6 @@ const Relatorios = () => {
       </Card>
       )}
 
-      {/* SankeyDiagram is hidden for now */}
-      {/*
-      {!loading && activeTab === 'mensal' && sankeyData && (
-        <div className="w-full">
-          <SankeyDiagram data={sankeyData} />
-        </div>
-      )}
-      */}
-
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-2xl" />)}
@@ -300,18 +286,34 @@ const Relatorios = () => {
       ) : (
         <Tabs value={activeTab} className="w-full space-y-8">
           <TabsContent value="mensal" className="space-y-8 animate-in fade-in slide-in-from-bottom-2">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <SummaryCard title="Receitas" value={periodSummary?.totals.total_income} variant="success" />
-              <SummaryCard title="Despesas" value={periodSummary?.totals.total_expense} variant="danger" />
-              <SummaryCard
-                title="Saldo Líquido"
-                value={periodSummary?.totals.net_result}
-                variant={(periodSummary?.totals.net_result || 0) >= 0 ? 'success' : 'danger'}
-              />
-            </div>
+            {(() => {
+              const income  = periodSummary?.totals.total_income  || 0;
+              const expense = periodSummary?.totals.total_expense || 0;
+              const net     = periodSummary?.totals.net_result    || 0;
+              const savingsRate = income > 0 ? (net / income) * 100 : null;
+              return (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <SummaryCard title="Receitas" value={income} variant="success" />
+                  <SummaryCard title="Despesas" value={expense} variant="danger" />
+                  <SummaryCard
+                    title="Saldo Líquido"
+                    value={net}
+                    variant={net >= 0 ? 'success' : 'danger'}
+                  />
+                  <Card className="border-none shadow-md overflow-hidden">
+                    <CardContent className={cn('p-6', savingsRate !== null && savingsRate >= 0 ? 'bg-success/10 text-success font-bold' : 'bg-secondary/30 text-foreground font-bold')}>
+                      <p className="text-xs font-semibold uppercase tracking-widest opacity-70">Taxa de Poupança</p>
+                      <h3 className="text-2xl font-black mt-1">
+                        {savingsRate !== null ? `${savingsRate.toFixed(1)}%` : '—'}
+                      </h3>
+                    </CardContent>
+                  </Card>
+                </div>
+              );
+            })()}
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <Card className="border-none shadow-md rounded-3xl lg:col-span-1">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+              <Card className="border-none shadow-md rounded-3xl lg:col-span-2">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div>
@@ -323,112 +325,52 @@ const Relatorios = () => {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="pt-4">
-                  <TopCategoriesList items={periodSummary?.top_categories} limit={500} />
+                <CardContent className="pt-2">
+                  <TopCategoriesList items={periodSummary?.top_categories ?? []} loading={loading} />
                 </CardContent>
               </Card>
 
-              <Card className="border-none shadow-md rounded-3xl">
+              <Card className="border-none shadow-md rounded-3xl lg:col-span-3">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <div className="space-y-1">
                     <CardTitle className="text-xl font-black">Maiores Saídas</CardTitle>
-                    <CardDescription>Transações individuais</CardDescription>
+                    <CardDescription>Transações individuais do mês</CardDescription>
                   </div>
                   <div className="p-2 bg-red-500/10 rounded-xl">
                     <TrendingDown className="h-5 w-5 text-red-500" />
                   </div>
                 </CardHeader>
-                <CardContent className="pt-4 space-y-4">
+                <CardContent className="pt-2 space-y-3">
                   {summary?.top_transactions && summary.top_transactions.length > 0 ? (
                     summary.top_transactions.map((t, i) => {
                       const category = categories.find(c => c.name === t.category_name);
                       return (
-                        <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-secondary/20 hover:bg-secondary/30 transition-all">
-                          <div className="flex items-center gap-4">
+                        <div key={i} className="flex items-center justify-between p-3.5 rounded-xl bg-secondary/20 hover:bg-secondary/30 transition-all gap-4">
+                          <div className="flex items-center gap-3 min-w-0">
                             <div
-                              className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl border"
+                              className="w-10 h-10 rounded-xl flex items-center justify-center text-lg border flex-shrink-0"
                               style={{ backgroundColor: `${category?.color}15`, borderColor: `${category?.color}30` }}
                             >
                               {category?.icon || '💰'}
                             </div>
-                            <div>
-                              <p className="font-bold text-sm leading-tight">{t.description}</p>
-                              <Badge variant="outline" className="text-[10px] font-black uppercase h-5 px-2 mt-1 border-secondary/50">{/* design-token: manter */}
+                            <div className="min-w-0">
+                              <p className="font-bold text-sm leading-tight truncate">{t.description}</p>
+                              <Badge variant="outline" className="text-[10px] font-bold uppercase h-5 px-2 mt-1 border-secondary/50">
                                 {t.category_name}
                               </Badge>
                             </div>
                           </div>
-                          <p className="font-black text-red-500">
+                          <p className="font-black text-red-500 flex-shrink-0">
                             <PrivateValue value={formatCurrency(t.amount)} />
                           </p>
                         </div>
                       );
                     })
                   ) : (
-                    <div className="text-center py-20 text-muted-foreground italic">
+                    <div className="text-center py-8 text-muted-foreground italic text-sm">
                       Nenhum gasto registrado.
                     </div>
                   )}
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-md rounded-3xl">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <div className="space-y-1">
-                    <CardTitle className="text-xl font-black">Distribuição</CardTitle>
-                    <CardDescription>Visão geral dos gastos</CardDescription>
-                  </div>
-                  <div className="p-2 bg-primary/10 rounded-xl">
-                    <BarChart3 className="h-5 w-5 text-primary" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[350px] w-full relative pt-4">
-                    {chartData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={chartData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={70}
-                            outerRadius={90}
-                            paddingAngle={8}
-                            dataKey="value"
-                          >
-                            {chartData.map((entry, index) => {
-                              const category = categories.find(c => c.name === entry.name);
-                              return <Cell key={`cell-${index}`} fill={category?.color || COLORS[index % COLORS.length]} stroke="none" />;
-                            })}
-                          </Pie>
-                          <Legend verticalAlign="bottom" height={36} />
-                          <RechartsTooltip
-                            content={({ active, payload }) => {
-                              if (active && payload && payload.length) {
-                                return (
-                                  <Card className="p-4 shadow-2xl border-none bg-background/95 backdrop-blur-md rounded-2xl">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: payload[0].payload.fill }} />
-                                      <span className="font-black text-sm">{payload[0].name}</span>
-                                    </div>
-                                    <p className="font-black text-lg">
-                                      {isPrivate ? '•••••' : formatCurrency(payload[0].value)}
-                                    </p>
-                                  </Card>
-                                );
-                              }
-                              return null;
-                            }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
-                        <BarChart3 size={40} className="opacity-10" />
-                        <p className="italic text-sm">Nenhum dado disponível.</p>
-                      </div>
-                    )}
-                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -506,7 +448,7 @@ const Relatorios = () => {
                   <CardDescription>Gastos acumulados no trimestre</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <TopCategoriesList items={periodSummary?.top_categories} limit={500} />
+                  <TopCategoriesList items={periodSummary?.top_categories ?? []} loading={loading} />
                 </CardContent>
               </Card>
             </div>
@@ -580,12 +522,10 @@ const Relatorios = () => {
             <Card className="border-none shadow-md rounded-3xl">
               <CardHeader>
                 <CardTitle className="text-xl font-black">Maiores Categorias do Ano</CardTitle>
-                <CardDescription>Distribuição acumulada de gastos</CardDescription>
+                <CardDescription>Distribuição acumulada de gastos em {year}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                  <TopCategoriesList items={periodSummary?.top_categories} limit={500} />
-                </div>
+                <TopCategoriesList items={periodSummary?.top_categories ?? []} initialLimit={8} loading={loading} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -628,27 +568,27 @@ const Relatorios = () => {
                   </Alert>
                 )}
 
-                <div className="border border-blue-500/20 bg-blue-500/5 rounded-2xl p-4">
+                <div className="border border-primary/20 bg-primary/5 rounded-2xl p-4">
                   <button
                     onClick={() => setIsInfoExpanded(!isInfoExpanded)}
-                    className="flex items-center justify-between w-full text-blue-800 font-bold"
+                    className="flex items-center justify-between w-full text-foreground font-bold"
                   >
-                    <span className="flex items-center gap-2">
-                      <span>ℹ️</span> Como funciona esta projeção?
+                    <span className="flex items-center gap-2 text-primary">
+                      <Calculator size={16} /> Como funciona esta projeção?
                     </span>
-                    {isInfoExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    {isInfoExpanded ? <ChevronUp size={18} className="text-muted-foreground" /> : <ChevronDown size={18} className="text-muted-foreground" />}
                   </button>
 
                   {isInfoExpanded && (
-                    <div className="mt-4 text-sm text-blue-700/80 space-y-2 animate-in fade-in slide-in-from-top-2">
+                    <div className="mt-4 text-sm text-muted-foreground space-y-2 animate-in fade-in slide-in-from-top-2">
                       <p>Esta projeção estima sua evolução financeira com base em:</p>
                       <ul className="space-y-1 ml-1">
-                        <li>• <strong>Receita:</strong> suas recorrências de receita cadastradas ou, se não houver, a média dos últimos 3 meses de receitas reais.</li>
-                        <li>• <strong>Despesas fixas:</strong> assinaturas e parcelamentos ativos cadastrados em Recorrentes.</li>
-                        <li>• <strong>Despesas variáveis:</strong> média dos seus gastos variáveis dos últimos 3 meses.</li>
-                        <li>• <strong>Saldo inicial:</strong> saldo atual consolidado de todas as suas contas.</li>
+                        <li>• <strong className="text-foreground">Receita:</strong> suas recorrências de receita cadastradas ou, se não houver, a média dos últimos 3 meses de receitas reais.</li>
+                        <li>• <strong className="text-foreground">Despesas fixas:</strong> assinaturas e parcelamentos ativos cadastrados em Recorrentes.</li>
+                        <li>• <strong className="text-foreground">Despesas variáveis:</strong> média dos seus gastos variáveis dos últimos 3 meses.</li>
+                        <li>• <strong className="text-foreground">Saldo inicial:</strong> saldo atual consolidado de todas as suas contas.</li>
                       </ul>
-                      <p className="pt-2 font-medium">Os valores são estimativas. Quanto mais recorrências você cadastrar, mais precisa será a projeção.</p>
+                      <p className="pt-2 font-medium text-foreground/70">Os valores são estimativas. Quanto mais recorrências você cadastrar, mais precisa será a projeção.</p>
                     </div>
                   )}
                 </div>

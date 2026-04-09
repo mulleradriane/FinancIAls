@@ -4,14 +4,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CircleArrowUp, CircleArrowDown, Scale, PiggyBank } from 'lucide-react';
 import InfoTooltip from '@/components/ui/InfoTooltip';
 import PrivateValue from '@/components/ui/PrivateValue';
+import { formatCurrency } from '@/lib/utils';
 
 const MonthlySummaryCard = ({ data, loading }) => {
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value || 0);
-  };
 
   const calculateSavingsRate = () => {
     if (!data) return 0;

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import PrivateValue from '@/components/ui/PrivateValue';
 import InfoTooltip from '@/components/ui/InfoTooltip';
+import { formatCurrency, parseLocalDate } from '@/lib/utils';
 
 const GoalItem = ({ goal }) => {
   // Ensure percentage is between 0 and 100 for the Progress component
@@ -23,7 +24,7 @@ const GoalItem = ({ goal }) => {
             <div className="flex items-center gap-2 mt-1">
               <Clock className="h-3 w-3 text-muted-foreground" />
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">{/* design-token: manter */}
-                Prazo: {new Date(goal.target_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                Prazo: {parseLocalDate(goal.target_date)?.toLocaleDateString('pt-BR') ?? goal.target_date}
               </p>
             </div>
           </div>
@@ -47,9 +48,9 @@ const GoalItem = ({ goal }) => {
           <div className="flex flex-col items-end text-right">
             <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Acumulado / Alvo</span>
             <span className="text-sm font-medium">
-              <PrivateValue value={`R$ ${parseFloat(goal.current_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} /> /
+              <PrivateValue value={formatCurrency(goal.current_amount)} /> /
               <span className="text-primary ml-1">
-                <PrivateValue value={`R$ ${parseFloat(goal.target_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
+                <PrivateValue value={formatCurrency(goal.target_amount)} />
               </span>
             </span>
           </div>

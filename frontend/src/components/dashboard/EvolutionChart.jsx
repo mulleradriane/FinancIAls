@@ -13,18 +13,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { usePrivacy } from '@/context/PrivacyContext';
 import InfoTooltip from '@/components/ui/InfoTooltip';
-import { parseLocalDate } from '@/lib/utils';
+import { formatCurrency, parseLocalDate } from '@/lib/utils';
 
 const EvolutionChart = ({ data, loading }) => {
   const { isPrivate } = usePrivacy();
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
 
   const formatDate = (dateStr) => {
     const date = parseLocalDate(dateStr);
@@ -44,11 +36,10 @@ const EvolutionChart = ({ data, loading }) => {
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
+  // Only show months up to and including current month (no future months)
   const filteredData = (data || []).filter(item => {
     const itemDate = parseLocalDate(item.month);
     if (!itemDate) return true;
-    // Include if year is less than current year OR
-    // if year is same and month is less than or equal to current month
     return itemDate.getFullYear() < currentYear ||
            (itemDate.getFullYear() === currentYear && itemDate.getMonth() <= currentMonth);
   });

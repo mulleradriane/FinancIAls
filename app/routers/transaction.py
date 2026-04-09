@@ -3,6 +3,7 @@ import uuid
 import csv
 import io
 import re
+from decimal import Decimal, InvalidOperation
 from typing import Optional
 from uuid import UUID
 from datetime import date, datetime
@@ -83,8 +84,12 @@ def preview_import_csv(
                     continue
 
                 dt = datetime.strptime(dt_str, "%d/%m/%Y").date()
-                entrada = float(entrada_str) if entrada_str else 0.0
-                saida = float(saida_str) if saida_str else 0.0
+                try:
+                    entrada = Decimal(entrada_str) if entrada_str else Decimal(0)
+                    saida = Decimal(saida_str) if saida_str else Decimal(0)
+                except InvalidOperation:
+                    errors.append({"row_index": row_idx, "message": "Valor inválido em entrada/saída"})
+                    continue
 
                 if entrada > 0 and saida > 0:
                     errors.append({"row_index": row_idx, "message": "Entrada e Saída preenchidas simultaneamente"})
@@ -153,7 +158,11 @@ def preview_import_csv(
                     continue
 
                 dt = datetime.strptime(dt_str, "%d/%m/%Y").date()
-                amount_raw = float(valor_str)
+                try:
+                    amount_raw = Decimal(valor_str)
+                except InvalidOperation:
+                    errors.append({"row_index": row_idx, "message": "Valor inválido"})
+                    continue
 
                 if amount_raw == 0:
                     continue

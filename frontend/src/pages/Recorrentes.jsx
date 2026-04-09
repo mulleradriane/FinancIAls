@@ -15,7 +15,8 @@ import {
   Plus,
   Repeat,
   StopCircle,
-  Pencil
+  Pencil,
+  Bell,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -53,11 +54,55 @@ import {
   ResponsiveContainer,
   Tooltip as RechartsTooltip
 } from 'recharts';
-import { cn, parseLocalDate } from '@/lib/utils';
+import { cn, parseLocalDate, localDateStr } from '@/lib/utils';
 import PrivateValue from '@/components/ui/PrivateValue';
 
 import RecurringExpenseForm from '@/components/RecurringExpenseForm';
 import InfoTooltip from '@/components/ui/InfoTooltip';
+
+const UpcomingItem = ({ item }) => {
+  const formatCurrency = (val) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+  const isExpense = item.nature === 'EXPENSE';
+
+  const dayLabel =
+    item.days_until === 0 ? 'Hoje'
+    : item.days_until === 1 ? 'Amanhã'
+    : `em ${item.days_until} dias`;
+  const dayColor =
+    item.days_until === 0 ? 'bg-red-500/10 text-red-600 border-red-500/20'
+    : item.days_until === 1 ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+    : 'bg-secondary text-muted-foreground border-border';
+
+  const dateFormatted = parseLocalDate(item.date).toLocaleDateString('pt-BR', {
+    day: '2-digit', month: 'short',
+  });
+
+  return (
+    <div className="flex items-center justify-between gap-3 py-3 border-b last:border-0 border-border/50">
+      <div className="flex items-center gap-3 min-w-0">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-base"
+          style={{ backgroundColor: `${item.category_color}20` }}
+        >
+          {item.category_icon}
+        </div>
+        <div className="min-w-0">
+          <p className="font-semibold text-sm truncate">{item.description}</p>
+          <p className="text-[11px] text-muted-foreground">{item.category_name} · {dateFormatted}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <Badge variant="outline" className={cn('text-[10px] font-bold px-2 border', dayColor)}>
+          {dayLabel}
+        </Badge>
+        <span className={cn('font-black text-sm', isExpense ? 'text-destructive' : 'text-emerald-600')}>
+          <PrivateValue value={formatCurrency(Math.abs(Number(item.amount)))} />
+        </span>
+      </div>
+    </div>
+  );
+};
 
 const RecurringCard = ({ item, type, onEdit, onTerminate, onDelete }) => {
   const isInstallment = item.type === 'installment';
@@ -210,18 +255,21 @@ const Recorrentes = () => {
     commitment_percentage: 0
   });
   const [loading, setLoading] = useState(true);
+  const [upcomingItems, setUpcomingItems] = useState([]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const categoryType = activeTab === 'despesas' ? 'expense' : 'income';
-      const [expensesRes, summaryRes] = await Promise.all([
+      const [expensesRes, summaryRes, , upcomingRes] = await Promise.all([
         api.get(`/recurring-expenses/?category_type=${categoryType}`),
         api.get('/recurring-expenses/summary'),
-        fetchDependencies()
+        fetchDependencies(),
+        api.get('/recurring-expenses/upcoming'),
       ]);
       setRecurringExpenses(expensesRes.data);
       setSummary(summaryRes.data);
+      setUpcomingItems(upcomingRes.data ?? []);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -290,7 +338,7 @@ const Recorrentes = () => {
     const nextMonth = new Date();
     nextMonth.setMonth(nextMonth.getMonth() + 1);
     nextMonth.setDate(1);
-    return nextMonth.toISOString().split('T')[0];
+    return localDateStr(nextMonth);
   });
   const [categories, setCategories] = useState([]);
   const [accounts, setAccounts] = useState([]);
@@ -391,7 +439,7 @@ const Recorrentes = () => {
                          const nextMonth = new Date();
                          nextMonth.setMonth(nextMonth.getMonth() + 1);
                          nextMonth.setDate(1);
-                         handlePropagate(nextMonth.toISOString().split('T')[0]);
+                         handlePropagate(localDateStr(nextMonth));
                        }}>
                     <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600 border border-amber-500/20">
                       <Calendar size={20} />
@@ -447,94 +495,128 @@ const Recorrentes = () => {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2 border-none shadow-md rounded-2xl overflow-hidden">
-          <CardContent className="p-8 flex flex-col md:flex-row items-center gap-10">
-            <div className="w-40 h-40 relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={chartData.length > 0 ? chartData : [{ name: 'Empty', value: 1, color: '#e5e7eb' }]}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={75}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {chartData.length > 0 ? chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                    )) : <Cell fill="#e5e7eb" stroke="none" />}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <p className="text-2xl font-black">{summary.commitment_percentage}%</p>
-                <p className="text-[10px] text-muted-foreground font-bold uppercase">{/* design-token: manter */}Comprometido</p>
-              </div>
+      {chartData.length === 0 && !loading ? (
+        <Card className="border-none shadow-md rounded-2xl overflow-hidden">
+          <CardContent className="p-10 flex flex-col items-center justify-center gap-4 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Repeat size={32} className="text-primary" />
             </div>
-
-            <div className="flex-1 space-y-6">
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Comprometimento Mensal</p>
-                  <InfoTooltip content="Percentual da sua renda mensal já comprometido com despesas recorrentes fixas. Calculado sobre a média de receita dos últimos 3 meses. Abaixo de 30% é considerado saudável." />
-                </div>
-                <h2 className="text-4xl font-black mt-1 text-primary"><PrivateValue value={formatCurrency(summary.total_recurring)} /></h2>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-amber-500" />
-                      <span className="text-xs font-bold text-muted-foreground uppercase">Parcelas</span>
-                      <InfoTooltip content="Valor já pago em parcelamentos este mês vs total esperado de parcelas no mês." />
-                    </div>
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-black"><PrivateValue value={formatCurrency(summary.installments_paid)} /></span>
-                    <span className="text-xs text-muted-foreground font-medium">de <PrivateValue value={formatCurrency(summary.installments_total)} /></span>
-                  </div>
-                  <Progress value={(summary.installments_paid / (summary.installments_total || 1)) * 100} className="h-1 bg-amber-500/10" />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-blue-500" />
-                      <span className="text-xs font-bold text-muted-foreground uppercase">Assinaturas</span>
-                      <InfoTooltip content="Valor já debitado em assinaturas este mês vs total esperado de assinaturas no mês." />
-                    </div>
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-black"><PrivateValue value={formatCurrency(summary.subscriptions_paid)} /></span>
-                    <span className="text-xs text-muted-foreground font-medium">de <PrivateValue value={formatCurrency(summary.subscriptions_total)} /></span>
-                  </div>
-                  <Progress value={(summary.subscriptions_paid / (summary.subscriptions_total || 1)) * 100} className="h-1 bg-blue-500/10" />
-                </div>
-              </div>
+            <div>
+              <p className="font-bold text-lg">Nenhuma recorrência cadastrada</p>
+              <p className="text-sm text-muted-foreground mt-1 max-w-xs">
+                Registre assinaturas, financiamentos e parcelamentos para acompanhar seus compromissos fixos.
+              </p>
             </div>
           </CardContent>
         </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <Card className="lg:col-span-2 border-none shadow-md rounded-2xl overflow-hidden">
+            <CardContent className="p-8 flex flex-col md:flex-row items-center gap-10">
+              <div className="w-40 h-40 relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={chartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={75}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <p className="text-2xl font-black">{summary.commitment_percentage}%</p>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase">Comprometido</p>
+                </div>
+              </div>
 
-        <Card className="border-none shadow-md rounded-2xl bg-primary/5">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Info size={18} className="text-primary" />
-              Insight
+              <div className="flex-1 space-y-6">
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Comprometimento Mensal</p>
+                    <InfoTooltip content="Percentual da sua renda mensal já comprometido com despesas recorrentes fixas. Calculado sobre a média de receita dos últimos 3 meses. Abaixo de 30% é considerado saudável." />
+                  </div>
+                  <h2 className="text-4xl font-black mt-1 text-primary"><PrivateValue value={formatCurrency(summary.total_recurring)} /></h2>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-amber-500" />
+                        <span className="text-xs font-bold text-muted-foreground uppercase">Parcelas</span>
+                        <InfoTooltip content="Valor já pago em parcelamentos este mês vs total esperado de parcelas no mês." />
+                      </div>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xl font-black"><PrivateValue value={formatCurrency(summary.installments_paid)} /></span>
+                      <span className="text-xs text-muted-foreground font-medium">de <PrivateValue value={formatCurrency(summary.installments_total)} /></span>
+                    </div>
+                    <Progress value={(summary.installments_paid / (summary.installments_total || 1)) * 100} className="h-1 bg-amber-500/10" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-blue-500" />
+                        <span className="text-xs font-bold text-muted-foreground uppercase">Assinaturas</span>
+                        <InfoTooltip content="Valor já debitado em assinaturas este mês vs total esperado de assinaturas no mês." />
+                      </div>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xl font-black"><PrivateValue value={formatCurrency(summary.subscriptions_paid)} /></span>
+                      <span className="text-xs text-muted-foreground font-medium">de <PrivateValue value={formatCurrency(summary.subscriptions_total)} /></span>
+                    </div>
+                    <Progress value={(summary.subscriptions_paid / (summary.subscriptions_total || 1)) * 100} className="h-1 bg-blue-500/10" />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-md rounded-2xl bg-primary/5">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Info size={18} className="text-primary" />
+                Insight
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Suas despesas recorrentes representam <strong>{summary.commitment_percentage}%</strong> da sua média de renda.
+                {summary.commitment_percentage > 30 ?
+                  " Considere revisar assinaturas que você não utiliza com frequência." :
+                  " Seu nível de comprometimento está saudável (abaixo de 30%)."}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {upcomingItems.length > 0 && (
+        <Card className="border-none shadow-md rounded-2xl overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Bell size={18} className="text-amber-500" />
+              Próximos Vencimentos
+              <Badge variant="secondary" className="rounded-full text-xs ml-1">{upcomingItems.length}</Badge>
             </CardTitle>
+            <CardDescription>Recorrências que vencem nos próximos 7 dias</CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Suas despesas recorrentes representam <strong>{summary.commitment_percentage}%</strong> da sua média de renda.
-              {summary.commitment_percentage > 30 ?
-                " Considere revisar assinaturas que você não utiliza com frequência." :
-                " Seu nível de comprometimento está saudável (abaixo de 30%)."}
-            </p>
+          <CardContent className="px-6 pb-4">
+            {upcomingItems.map((item) => (
+              <UpcomingItem key={item.transaction_id} item={item} />
+            ))}
           </CardContent>
         </Card>
-      </div>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-secondary/30 p-1 rounded-xl h-12">

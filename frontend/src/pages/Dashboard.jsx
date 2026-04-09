@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/api/api';
 import analyticsApi from '@/api/analyticsApi';
-import { Plus, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, List, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -12,13 +12,14 @@ import {
 } from '@/components/ui/dialog';
 import TransactionForm from '@/components/TransactionForm';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 import NetWorthCard from '@/components/dashboard/NetWorthCard';
 import SpendingPaceCard from '@/components/dashboard/SpendingPaceCard';
 import EvolutionChart from '@/components/dashboard/EvolutionChart';
 import GoalsCard from '@/components/dashboard/GoalsCard';
 import RecentTransactionsCard from '@/components/dashboard/RecentTransactionsCard';
+import UpcomingExpensesCard from '@/components/dashboard/UpcomingExpensesCard';
 import MonthOverviewCard from '@/components/MonthOverviewCard';
 
 // ── Utilitários de navegação de mês ───────────────────────────────────────────
@@ -100,7 +101,9 @@ const Dashboard = () => {
   // ── Fetch dados estáticos ─────────────────────────────────────────────────
   const fetchStaticData = useCallback(async () => {
     // Gera recorrências silenciosamente — sem bloquear o carregamento
-    api.post('/recurring-expenses/generate').catch(() => {});
+    api.post('/recurring-expenses/generate').catch((err) => {
+      console.warn('Falha ao gerar recorrências:', err?.response?.data ?? err.message);
+    });
 
     const results = await Promise.allSettled([
       analyticsApi.getNetWorth(),           // 0
@@ -111,12 +114,12 @@ const Dashboard = () => {
       api.get('/categories/'),              // 5
     ]);
 
-    if (results[0].status === 'fulfilled') setNetWorth(results[0].value.data.net_worth);
-    if (results[1].status === 'fulfilled') setAssetsLiabilities(results[1].value.data);
-    if (results[2].status === 'fulfilled') setOperationalMonthly(results[2].value.data);
-    if (results[3].status === 'fulfilled') setGoals(results[3].value.data);
-    if (results[4].status === 'fulfilled') setAccounts(results[4].value.data);
-    if (results[5].status === 'fulfilled') setCategories(results[5].value.data);
+    if (results[0].status === 'fulfilled') setNetWorth(results[0].value.data?.net_worth ?? 0);
+    if (results[1].status === 'fulfilled') setAssetsLiabilities(results[1].value.data ?? []);
+    if (results[2].status === 'fulfilled') setOperationalMonthly(results[2].value.data ?? []);
+    if (results[3].status === 'fulfilled') setGoals(results[3].value.data ?? []);
+    if (results[4].status === 'fulfilled') setAccounts(results[4].value.data ?? []);
+    if (results[5].status === 'fulfilled') setCategories(results[5].value.data ?? []);
   }, []);
 
   // ── Fetch dados do mês selecionado ────────────────────────────────────────
@@ -262,15 +265,61 @@ const Dashboard = () => {
       </div>
       <EvolutionChart data={operationalMonthly} loading={loading} />
 
-      {/* ── BLOCO 4: Metas + Atividade recente ── */}
+      {/* ── Alertas de orçamento (só no mês atual, só se houver categorias no limite) ── */}
+      {isCurrentMonth && (() => {
+        const overBudget = categories.filter((c) => {
+          const limit = parseFloat(c.monthly_budget || 0);
+          const spent = parseFloat(c.current_spending || 0);
+          return limit > 0 && c.type === 'expense' && spent / limit >= 0.8;
+        });
+        if (overBudget.length === 0) return null;
+        return (
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 flex flex-wrap items-start gap-3">
+            <div className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              <span className="text-xs font-bold uppercase tracking-wider">Atenção ao orçamento</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {overBudget.map((c) => {
+                const pct = Math.round((parseFloat(c.current_spending) / parseFloat(c.monthly_budget)) * 100);
+                const isOver = pct >= 100;
+                return (
+                  <span
+                    key={c.id}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-0.5',
+                      isOver
+                        ? 'bg-destructive/10 text-destructive'
+                        : 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+                    )}
+                  >
+                    <span>{c.icon || '💰'}</span>
+                    {c.name}
+                    <span className="opacity-70">{pct}%</span>
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── BLOCO 4: Metas + Próximas despesas + Atividade recente ── */}
       <div className="flex items-center gap-3">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Metas e atividade recente</h2>
         <div className="flex-1 h-px bg-border" />
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <GoalsCard goals={goals} loading={loading} />
         <RecentTransactionsCard />
       </div>
+
+      {/* ── BLOCO 5: Próximas despesas ── */}
+      <div className="flex items-center gap-3">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Próximas despesas</h2>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+      <UpcomingExpensesCard />
 
       {/* Modal Nova Transação */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

@@ -6,19 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import PrivateValue from '@/components/ui/PrivateValue';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency, parseLocalDate } from '@/lib/utils';
 
 const UpcomingExpensesCard = () => {
   const [upcoming, setUpcoming] = useState([]);
   const [totalNext30, setTotalNext30] = useState(0);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-
-  const parseISO = (dateStr) => {
-    if (!dateStr) return new Date();
-    const [year, month, day] = dateStr.split('-').map(Number);
-    return new Date(year, month - 1, day);
-  };
 
   const fetchRecurring = async () => {
     try {
@@ -44,7 +38,7 @@ const UpcomingExpensesCard = () => {
           // For installments, the backend creates all transactions upfront.
           // We find the first one that hasn't happened yet (is today or in the future).
           const futureTransactions = expense.transactions
-            ?.map(t => ({ ...t, dateObj: parseISO(t.date) }))
+            ?.map(t => ({ ...t, dateObj: parseLocalDate(t.date) }))
             .filter(t => t.dateObj >= today)
             .sort((a, b) => a.dateObj - b.dateObj);
 
@@ -54,7 +48,7 @@ const UpcomingExpensesCard = () => {
         } else {
           // For subscriptions, the backend only creates the first transaction.
           // We calculate the next occurrence date.
-          const startDate = parseISO(expense.start_date);
+          const startDate = parseLocalDate(expense.start_date);
           nextDate = new Date(startDate);
 
           while (nextDate < today) {
@@ -92,13 +86,6 @@ const UpcomingExpensesCard = () => {
   useEffect(() => {
     fetchRecurring();
   }, []);
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(amount);
-  };
 
   const formatDatePTBR = (date) => {
     const options = { weekday: 'short', day: 'numeric', month: 'short' };

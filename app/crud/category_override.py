@@ -62,7 +62,9 @@ def apply_override(category: Any, override: Optional[CategoryOverride]) -> dict:
             "color": category.color,
             "is_system": category.is_system,
             "monthly_budget": category.monthly_budget,
-            "current_spending": getattr(category, "current_spending", 0)
+            "parent_id": getattr(category, "parent_id", None),
+            "current_spending": getattr(category, "current_spending", 0),
+            "subcategories": [],
         }
     else:
         result = dict(category)

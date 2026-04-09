@@ -32,6 +32,8 @@ export function CategoryForm({ category, onSaved, onClose }) {
   const [icon, setIcon] = useState('💰');
   const [color, setColor] = useState('#2563eb');
   const [monthlyBudget, setMonthlyBudget] = useState('');
+  const [parentId, setParentId] = useState('');
+  const [parentCategories, setParentCategories] = useState([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -40,12 +42,24 @@ export function CategoryForm({ category, onSaved, onClose }) {
   const hasOverride = category?.has_override;
 
   useEffect(() => {
+    // Load parent category candidates (top-level only, same type)
+    api.get('/categories/').then((res) => {
+      // Only top-level categories (no parent) can be parents, excluding self
+      const tops = (res.data || []).filter(
+        (c) => !c.parent_id && c.id !== category?.id && !c.is_system
+      );
+      setParentCategories(tops);
+    }).catch(() => {});
+  }, [category?.id]);
+
+  useEffect(() => {
     if (category) {
       setName(category.name || '');
       setType(category.type || 'expense');
       setIcon(category.icon || '💰');
       setColor(category.color || '#2563eb');
       setMonthlyBudget(category.monthly_budget || '');
+      setParentId(category.parent_id || '');
     }
   }, [category]);
 
@@ -58,7 +72,8 @@ export function CategoryForm({ category, onSaved, onClose }) {
       type,
       icon,
       color,
-      monthly_budget: monthlyBudget === '' ? null : parseFloat(monthlyBudget)
+      monthly_budget: monthlyBudget === '' ? null : parseFloat(monthlyBudget),
+      parent_id: parentId || null,
     };
 
     try {
@@ -118,10 +133,10 @@ export function CategoryForm({ category, onSaved, onClose }) {
              {/* Preview Card Simulation */}
              <div className="flex items-center gap-4 p-4 rounded-2xl bg-secondary/20 border border-border/50 min-w-[240px]">
                 <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow-sm border"
+                  className="w-14 h-14 rounded-full flex items-center justify-center text-3xl shadow-sm"
                   style={{
-                    backgroundColor: `${color}15`,
-                    borderColor: `${color}30`
+                    backgroundColor: `${color}20`,
+                    boxShadow: `0 0 0 3px ${color}18`,
                   }}
                 >
                   {icon}
@@ -201,6 +216,32 @@ export function CategoryForm({ category, onSaved, onClose }) {
               </SelectContent>
             </Select>
             {isEditing && <p className="text-[10px] text-muted-foreground px-1">O tipo não pode ser alterado após a criação.</p>}
+          </div>
+        )}
+
+        {/* Parent category selector — only for non-system categories */}
+        {!isSystem && parentCategories.filter(c => c.type === type).length > 0 && (
+          <div className="grid gap-2">
+            <Label htmlFor="cat-parent">Categoria Pai (opcional)</Label>
+            <Select value={parentId || 'none'} onValueChange={(v) => setParentId(v === 'none' ? '' : v)}>
+              <SelectTrigger className="bg-secondary/30 border-none h-11 rounded-xl focus:ring-primary/30">
+                <SelectValue placeholder="Nenhuma (categoria principal)" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-border/50 shadow-xl">
+                <SelectItem value="none" className="rounded-lg">
+                  <span className="text-muted-foreground">Nenhuma (categoria principal)</span>
+                </SelectItem>
+                {parentCategories.filter(c => c.type === type).map((c) => (
+                  <SelectItem key={c.id} value={c.id} className="rounded-lg">
+                    <span className="flex items-center gap-2">
+                      <span>{c.icon || '💰'}</span>
+                      <span>{c.name}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground px-1">Subcategorias aparecem agrupadas sob a categoria pai.</p>
           </div>
         )}
 

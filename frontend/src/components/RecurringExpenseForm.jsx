@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { localDateStr } from '@/lib/utils';
 import api from '@/api/api';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -27,7 +28,7 @@ const RecurringExpenseForm = ({ categories = [], accounts = [], initialData, onS
     description: initialData?.description || '',
     amount: initialData?.amount || 0,
     displayAmount: initialData ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(initialData.amount) : '',
-    date: initialData?.start_date || new Date().toISOString().split('T')[0],
+    date: initialData?.start_date || localDateStr(),
     categoryId: initialData?.category_id || '',
     accountId: getDefaultAccountId(),
     type: initialData?.type || 'subscription', // 'subscription' or 'installment'

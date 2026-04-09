@@ -78,9 +78,10 @@ class FinancialEngine:
                 assets += balance
             elif acc.type in liability_types:
                 if balance < 0:
+                    # Saldo negativo = dívida (ex: cartão com compras)
                     liabilities += abs(balance)
-                else:
-                    liabilities -= balance
+                # Saldo >= 0 = sem passivo (ex: cartão quitado ou com crédito)
+                # Não subtrair de liabilities para não distorcer o patrimônio
 
         return {
             "assets": assets,

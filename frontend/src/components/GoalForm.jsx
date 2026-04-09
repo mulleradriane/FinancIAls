@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { goalsApi } from '@/api/api';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { localDateStr } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,9 +12,9 @@ const GoalForm = ({ goal, onGoalCreated, onClose }) => {
   const [formData, setFormData] = useState({
     name: '',
     target_amount: '',
-    start_date: new Date().toISOString().split('T')[0],
+    start_date: localDateStr(),
     target_date: '',
-    goal_type: 'SAVINGS'
+    goal_type: 'SAVINGS',
   });
 
   useEffect(() => {
@@ -23,7 +24,7 @@ const GoalForm = ({ goal, onGoalCreated, onClose }) => {
         target_amount: goal.target_amount.toString(),
         start_date: goal.start_date,
         target_date: goal.target_date,
-        goal_type: goal.goal_type
+        goal_type: goal.goal_type,
       });
     }
   }, [goal]);
@@ -31,17 +32,16 @@ const GoalForm = ({ goal, onGoalCreated, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
+    const payload = {
+      ...formData,
+      target_amount: parseFloat(formData.target_amount),
+    };
     try {
       if (goal) {
-        // Update not explicitly requested but good to have if we want to support it
-        // await api.put(`/goals/${goal.id}`, formData);
-        // toast.success('Meta atualizada!');
+        await goalsApi.updateGoal(goal.id, payload);
+        toast.success('Meta atualizada!');
       } else {
-        await goalsApi.createGoal({
-          ...formData,
-          target_amount: parseFloat(formData.target_amount)
-        });
+        await goalsApi.createGoal(payload);
         toast.success('Meta criada com sucesso!');
       }
       onGoalCreated();
@@ -134,7 +134,7 @@ const GoalForm = ({ goal, onGoalCreated, onClose }) => {
           Cancelar
         </Button>
         <Button type="submit" disabled={loading} className="rounded-xl px-8">
-          {loading ? 'Salvando...' : 'Criar Meta'}
+          {loading ? 'Salvando...' : goal ? 'Salvar Alterações' : 'Criar Meta'}
         </Button>
       </div>
     </form>

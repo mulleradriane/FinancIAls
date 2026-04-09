@@ -4,6 +4,7 @@ import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import select, delete, extract, func
+from sqlalchemy.exc import IntegrityError
 from app.crud.base import CRUDBase
 from app.crud.account import account as crud_account
 from app.models.recurring_expense import RecurringExpense
@@ -29,7 +30,6 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
     ) -> List[RecurringExpense]:
         query = select(self.model).options(
             joinedload(RecurringExpense.category),
-            selectinload(RecurringExpense.transactions)
         ).filter(RecurringExpense.user_id == user_id, RecurringExpense.active == True)
 
         if category_type:
@@ -39,12 +39,18 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
             query.offset(skip).limit(limit)
         ).unique().all()
 
-        # Update current_installment on the fly for display
+        # Update current_installment via SQL COUNT (avoids loading all transactions into memory)
         today = datetime.date.today()
         for r in results:
             if r.type == "installment":
-                completed = len([t for t in r.transactions if t.date <= today and t.deleted_at is None])
-                r.current_installment = completed
+                completed = db.scalar(
+                    select(func.count()).filter(
+                        Transaction.recurring_expense_id == r.id,
+                        Transaction.date <= today,
+                        Transaction.deleted_at.is_(None),
+                    )
+                )
+                r.current_installment = completed or 0
 
         return results
 
@@ -209,8 +215,9 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
         import calendar
         from dateutil.relativedelta import relativedelta
 
+        MONTHS_TO_GENERATE_AHEAD = 3  # mês atual + 2 meses à frente
         today = datetime.date.today()
-        target_months = [today.replace(day=1) + relativedelta(months=i) for i in range(3)]
+        target_months = [today.replace(day=1) + relativedelta(months=i) for i in range(MONTHS_TO_GENERATE_AHEAD)]
 
         recurrings = db.scalars(
             select(RecurringExpense)
@@ -303,7 +310,14 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
                     affected_account_ids.add(r.account_id)
 
         if needs_commit:
-            db.commit()
+            try:
+                db.commit()
+            except IntegrityError:
+                # Requisições paralelas podem tentar criar a mesma transação simultaneamente.
+                # O índice único uq_recurring_transaction_month bloqueia a duplicata —
+                # rollback silencioso é o comportamento correto aqui.
+                db.rollback()
+                return 0
 
         for acc_id in affected_account_ids:
             balance = crud_account.get_balance(db, acc_id)
@@ -311,6 +325,51 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
 
         return created_count
 
+
+    def get_upcoming(self, db: Session, *, user_id: UUID, days: int = 7) -> list[dict]:
+        """Retorna transações de recorrências nos próximos `days` dias (incluindo hoje)."""
+        today = datetime.date.today()
+        end_date = today + datetime.timedelta(days=days)
+
+        rows = db.execute(
+            select(
+                Transaction.id,
+                Transaction.description,
+                Transaction.amount,
+                Transaction.date,
+                Transaction.nature,
+                Category.name.label("category_name"),
+                Category.color.label("category_color"),
+                Category.icon.label("category_icon"),
+                RecurringExpense.id.label("recurring_expense_id"),
+            )
+            .join(RecurringExpense, Transaction.recurring_expense_id == RecurringExpense.id)
+            .outerjoin(Category, RecurringExpense.category_id == Category.id)
+            .filter(
+                Transaction.user_id == user_id,
+                Transaction.date >= today,
+                Transaction.date <= end_date,
+                Transaction.deleted_at.is_(None),
+                Transaction.recurring_expense_id.isnot(None),
+            )
+            .order_by(Transaction.date.asc())
+        ).all()
+
+        return [
+            {
+                "transaction_id": str(row.id),
+                "description": row.description,
+                "amount": row.amount,
+                "date": row.date.isoformat(),
+                "days_until": (row.date - today).days,
+                "nature": row.nature.value,
+                "category_name": row.category_name or "Sem Categoria",
+                "category_color": row.category_color or "#64748b",
+                "category_icon": row.category_icon or "💰",
+                "recurring_expense_id": str(row.recurring_expense_id),
+            }
+            for row in rows
+        ]
 
     def get_summary(self, db: Session, *, user_id: UUID) -> dict:
         from app.services.financial_engine import financial_engine

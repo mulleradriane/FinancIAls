@@ -40,15 +40,21 @@ def _invoice_window(closing_day: int, ref_date: date | None = None) -> tuple[dat
         _, last_day_next = calendar.monthrange(next_year, next_month)
         period_end = date(next_year, next_month, min(closing_day, last_day_next))
 
-    # Início: (closing_day + 1) do mês anterior ao period_end
+    # Início: dia após o fechamento efetivo do mês anterior ao period_end
     if period_end.month == 1:
         prev_year, prev_month = period_end.year - 1, 12
     else:
         prev_year, prev_month = period_end.year, period_end.month - 1
 
     _, last_day_prev = calendar.monthrange(prev_year, prev_month)
-    start_day = min(closing_day + 1, last_day_prev)
-    period_start = date(prev_year, prev_month, start_day)
+    effective_closing = min(closing_day, last_day_prev)
+
+    if effective_closing < last_day_prev:
+        # O dia seguinte ao fechamento existe no mês anterior
+        period_start = date(prev_year, prev_month, effective_closing + 1)
+    else:
+        # Fechamento caiu no último dia do mês anterior → período começa no dia 1 do mês atual
+        period_start = date(period_end.year, period_end.month, 1)
 
     return period_start, period_end
 

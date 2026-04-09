@@ -16,11 +16,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { CreditCard, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency, localDateStr } from '@/lib/utils';
 import PrivateValue from '@/components/ui/PrivateValue';
-
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value ?? 0);
 
 const toDisplay = (value) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -50,7 +47,7 @@ const InvoicePaymentForm = ({
   const [displayAmount, setDisplayAmount]   = useState(toDisplay(totalInvoice));
   const [amount, setAmount]                 = useState(totalInvoice);
   const [debitAccountId, setDebitAccountId] = useState('');
-  const [date, setDate]                     = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate]                     = useState(localDateStr());
   const [submitting, setSubmitting]         = useState(false);
 
   // Pré-seleciona conta padrão de débito
@@ -219,10 +216,11 @@ const InvoicePaymentForm = ({
           type="text"
           placeholder="R$ 0,00"
           value={displayAmount}
+          disabled={selectedPreset !== 'custom'}
           onChange={(e) => { setSelectedPreset('custom'); handleAmountChange(e); }}
           className={cn(
             'bg-secondary/30 border-none h-12 rounded-xl font-bold text-lg text-center',
-            selectedPreset !== 'custom' && 'opacity-60'
+            selectedPreset !== 'custom' && 'opacity-60 cursor-not-allowed'
           )}
         />
       </div>
@@ -252,14 +250,24 @@ const InvoicePaymentForm = ({
         </div>
       </div>
 
-      {/* Aviso saldo insuficiente */}
-      {isInsufficient && (
-        <div className="flex items-start gap-2 bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-sm text-amber-700">
-          <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
-          <span>
-            Saldo insuficiente em <strong>{debitAccount.name}</strong>{' '}
-            (<PrivateValue value={formatCurrency(debitAccount.balance)} />).
-            O pagamento ainda pode ser registrado.
+      {/* Preview saldo após pagamento */}
+      {debitAccount && amount > 0 && (
+        <div className={cn(
+          'flex items-center justify-between rounded-xl px-4 py-3 text-sm',
+          isInsufficient
+            ? 'bg-amber-500/5 border border-amber-500/20 text-amber-700'
+            : 'bg-secondary/40 text-muted-foreground'
+        )}>
+          {isInsufficient && <AlertCircle size={15} className="flex-shrink-0 mr-2 mt-0.5" />}
+          <span className="flex-1">
+            {isInsufficient
+              ? <>Saldo insuficiente em <strong>{debitAccount.name}</strong>. O pagamento ainda pode ser registrado.</>
+              : <>{debitAccount.name}</>
+            }
+          </span>
+          <span className="font-semibold tabular-nums ml-4">
+            <PrivateValue value={formatCurrency(Number(debitAccount.balance ?? 0) - amount)} />
+            {' '}após pagamento
           </span>
         </div>
       )}

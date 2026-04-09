@@ -90,6 +90,14 @@ def generate_future_transactions(
     count = crud_recurring_expense.generate_future_transactions(db, user_id=current_user.id)
     return {"message": f"{count} transações geradas com sucesso"}
 
+@router.get("/upcoming")
+def get_upcoming_transactions(
+    days: int = 7,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return crud_recurring_expense.get_upcoming(db, user_id=current_user.id, days=days)
+
 @router.get("/summary")
 def get_recurring_summary(
     db: Session = Depends(get_db),

@@ -48,6 +48,7 @@ export const goalsApi = {
   getGoals: () => api.get('/goals/'),
   getGoal: (id) => api.get(`/goals/${id}`),
   createGoal: (goal) => api.post('/goals/', goal),
+  updateGoal: (id, data) => api.put(`/goals/${id}`, data),
   deleteGoal: (id) => api.delete(`/goals/${id}`),
 };
 

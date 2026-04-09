@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import InfoTooltip from '@/components/ui/InfoTooltip';
 
@@ -27,6 +28,7 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
   );
   const [closingDay, setClosingDay] = useState(account?.closing_day || '');
   const [dueDay, setDueDay] = useState(account?.due_day || '');
+  const [dayErrors, setDayErrors] = useState({ closing: '', due: '' });
   const [creditLimit, setCreditLimit] = useState(account?.credit_limit || 0);
   const [displayCreditLimit, setDisplayCreditLimit] = useState(account?.credit_limit ?
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(account.credit_limit) : ''
@@ -57,8 +59,23 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
     setDisplayVal(formatted);
   };
 
+  const validateDay = (value, field) => {
+    const n = parseInt(value, 10);
+    if (value && (isNaN(n) || n < 1 || n > 31)) {
+      setDayErrors((prev) => ({ ...prev, [field]: 'Informe um dia entre 1 e 31.' }));
+      return false;
+    }
+    setDayErrors((prev) => ({ ...prev, [field]: '' }));
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (type === 'cartao_credito') {
+      const closingOk = validateDay(closingDay, 'closing');
+      const dueOk     = validateDay(dueDay, 'due');
+      if (!closingOk || !dueOk) return;
+    }
     try {
       const payload = {
         name,
@@ -137,10 +154,11 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
                   min="1"
                   max="31"
                   value={closingDay}
-                  onChange={(e) => setClosingDay(e.target.value)}
+                  onChange={(e) => { setClosingDay(e.target.value); validateDay(e.target.value, 'closing'); }}
                   placeholder="Ex: 10"
-                  className="bg-secondary/30 border-none h-11 rounded-xl"
+                  className={cn('bg-secondary/30 border-none h-11 rounded-xl', dayErrors.closing && 'ring-2 ring-destructive')}
                 />
+                {dayErrors.closing && <p className="text-xs text-destructive mt-1">{dayErrors.closing}</p>}
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center gap-2">
@@ -153,10 +171,11 @@ const AccountForm = ({ account, onAccountCreated, onClose }) => {
                   min="1"
                   max="31"
                   value={dueDay}
-                  onChange={(e) => setDueDay(e.target.value)}
+                  onChange={(e) => { setDueDay(e.target.value); validateDay(e.target.value, 'due'); }}
                   placeholder="Ex: 25"
-                  className="bg-secondary/30 border-none h-11 rounded-xl"
+                  className={cn('bg-secondary/30 border-none h-11 rounded-xl', dayErrors.due && 'ring-2 ring-destructive')}
                 />
+                {dayErrors.due && <p className="text-xs text-destructive mt-1">{dayErrors.due}</p>}
               </div>
             </div>
             <div className="grid gap-2">

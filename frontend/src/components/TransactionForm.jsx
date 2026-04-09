@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '@/api/api';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, localDateStr } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +18,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Search } from "lucide-react";
+import { Search, Star } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from '@/components/ui/card';
 
@@ -91,13 +91,20 @@ const TransactionForm = ({
       };
     }
 
+    // Conta padrão: usa prefill, depois favorita, depois primeira da lista
+    const defaultAccountId =
+      prefill?.accountId ||
+      accountsProp.find((a) => a.is_default)?.id ||
+      accountsProp[0]?.id ||
+      '';
+
     return {
       description:   prefill?.description   || '',
       amount:        prefill?.amount        || 0,
       displayAmount: prefill?.amount        ? fmtCurrency(prefill.amount) : '',
-      date:          prefill?.date          || new Date().toISOString().split('T')[0],
+      date:          prefill?.date          || localDateStr(),
       categoryId:    prefill?.categoryId    || '',
-      accountId:     prefill?.accountId     || '',
+      accountId:     defaultAccountId,
       isRecurring:   false,
       recurring: { type: 'subscription', frequency: 'monthly', totalInstallments: '' },
     };
@@ -137,16 +144,28 @@ const TransactionForm = ({
   const [openSuggestions, setOpenSuggestions] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+    const controller = new AbortController();
+
     const fetchSuggestions = async () => {
       try {
-        const response = await api.get('/transactions/descriptions/');
-        setSuggestions(response.data || []);
-      } catch { /* silencioso */ }
+        const response = await api.get('/transactions/descriptions/', { signal: controller.signal });
+        if (mounted) setSuggestions(response.data || []);
+      } catch (err) {
+        // Ignora cancelamento (AbortError/CanceledError do axios)
+        if (err?.code !== 'ERR_CANCELED' && err?.name !== 'AbortError') {
+          console.error('Erro ao buscar sugestões:', err);
+        }
+      }
     };
     fetchSuggestions();
 
     const timer = setTimeout(() => descriptionRef.current?.focus(), 100);
-    return () => clearTimeout(timer);
+    return () => {
+      mounted = false;
+      controller.abort();
+      clearTimeout(timer);
+    };
   }, []);
 
   useEffect(() => {
@@ -166,7 +185,7 @@ const TransactionForm = ({
   const applySuggestion = useCallback(async (desc) => {
     if (!desc || fullTransaction) return;
     try {
-      const response = await api.get(`/transactions/suggest/?description=${encodeURIComponent(desc)}`);
+      const response = await api.get(`/transactions/suggestion?description=${encodeURIComponent(desc)}`);
       if (response.data) {
         setFormData((prev) => ({
           ...prev,
@@ -196,9 +215,8 @@ const TransactionForm = ({
   useEffect(() => {
     if (!fullTransaction && accounts.length > 0 && !prefill?.accountId) {
       const defaultAccount = accounts.find((a) => a.is_default) || accounts[0];
-      const accountExists  = accounts.some((a) => a.id === formData.accountId);
-      if (!formData.accountId || !accountExists) {
-        setFormData((prev) => ({ ...prev, accountId: defaultAccount?.id || '' }));
+      if (defaultAccount?.id) {
+        setFormData((prev) => ({ ...prev, accountId: defaultAccount.id }));
       }
     }
   }, [accounts, fullTransaction, prefill?.accountId]);
@@ -245,7 +263,11 @@ const TransactionForm = ({
 
     try {
       const selectedCategory = categories.find((c) => c.id === formData.categoryId);
-      const nature = selectedCategory?.type === 'income' ? 'INCOME' : 'EXPENSE';
+      if (!selectedCategory) {
+        toast.error('Categoria não encontrada — tente novamente');
+        return;
+      }
+      const nature = selectedCategory.type === 'income' ? 'INCOME' : 'EXPENSE';
 
       const payload = {
         description: formData.description,
@@ -276,6 +298,21 @@ const TransactionForm = ({
       }
 
       toast.success(fullTransaction ? 'Transação atualizada!' : 'Transação criada!');
+
+      // Reseta o formulário após criação para evitar valores stale ao reabrir
+      if (!fullTransaction) {
+        setFormData({
+          description: '', amount: 0, displayAmount: '',
+          date: localDateStr(),
+          categoryId: '', accountId: '',
+          isRecurring: false,
+          recurring: { type: 'subscription', frequency: 'monthly', totalInstallments: '' },
+        });
+      }
+
+      // Notifica toda a app (Dashboard, etc.) sobre a mutação
+      window.dispatchEvent(new CustomEvent('transaction:created'));
+
       if (onTransactionCreated) onTransactionCreated(response.data);
       if (onClose) onClose();
     } catch (error) {
@@ -427,20 +464,42 @@ const TransactionForm = ({
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories
-                    .filter(
+                  {(() => {
+                    const filtered = categories.filter(
                       (cat) =>
                         cat.is_system === false &&
                         !['investimento', 'investimentos'].includes(cat.name.toLowerCase())
-                    )
-                    .map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{cat.icon || '💰'}</span>
-                          <span>{cat.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
+                    );
+                    const topLevel = filtered.filter((c) => !c.parent_id);
+                    const subMap = filtered.filter((c) => c.parent_id).reduce((acc, c) => {
+                      if (!acc[c.parent_id]) acc[c.parent_id] = [];
+                      acc[c.parent_id].push(c);
+                      return acc;
+                    }, {});
+                    const items = [];
+                    topLevel.forEach((cat) => {
+                      items.push(
+                        <SelectItem key={cat.id} value={cat.id}>
+                          <div className="flex items-center gap-2">
+                            <span>{cat.icon || '💰'}</span>
+                            <span>{cat.name}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                      (subMap[cat.id] || []).forEach((sub) => {
+                        items.push(
+                          <SelectItem key={sub.id} value={sub.id}>
+                            <div className="flex items-center gap-2 pl-3">
+                              <span className="text-muted-foreground text-xs">↳</span>
+                              <span>{sub.icon || '💰'}</span>
+                              <span>{sub.name}</span>
+                            </div>
+                          </SelectItem>
+                        );
+                      });
+                    });
+                    return items;
+                  })()}
                 </SelectContent>
               </Select>
             ) : (
@@ -468,7 +527,13 @@ const TransactionForm = ({
                 <SelectContent>
                   {accounts.map((acc) => (
                     <SelectItem key={acc.id} value={acc.id}>
-                      {acc.name} ({formatCurrencySimple(acc.balance)})
+                      <div className="flex items-center gap-2">
+                        {acc.is_default && (
+                          <Star size={11} className="fill-amber-500 text-amber-500 flex-shrink-0" />
+                        )}
+                        <span>{acc.name}</span>
+                        <span className="text-muted-foreground text-xs">({formatCurrencySimple(acc.balance)})</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>

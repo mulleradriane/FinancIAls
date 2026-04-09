@@ -3,16 +3,9 @@ import { Wallet, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import PrivateValue from '@/components/ui/PrivateValue';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 const MonthlyCommitmentCard = ({ data, loading }) => {
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value || 0);
-  };
-
   if (loading || !data) {
     return (
       <Card className="border-none shadow-md rounded-2xl overflow-hidden">
@@ -96,7 +89,7 @@ const MonthlyCommitmentCard = ({ data, loading }) => {
             {isOverBudget && (
               <span className="text-xs font-bold text-destructive flex items-center gap-1 animate-pulse">
                 <AlertTriangle size={14} />
-                ⚠️ Acima da receita
+                Acima da receita
               </span>
             )}
           </div>

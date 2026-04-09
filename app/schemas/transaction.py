@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import BaseModel, ConfigDict, condecimal
+from pydantic import BaseModel, ConfigDict, condecimal, model_validator
 from uuid import UUID
 import datetime
 from decimal import Decimal
@@ -49,6 +49,19 @@ class UnifiedTransactionCreate(BaseModel):
     frequency: FrequencyType | None = None
     total_installments: int | None = None
 
+    @model_validator(mode='after')
+    def validate_recurring_fields(self) -> 'UnifiedTransactionCreate':
+        if self.is_recurring:
+            if not self.recurring_type:
+                raise ValueError("recurring_type é obrigatório quando is_recurring=True")
+            if self.recurring_type == RecurringType.installment:
+                if not self.total_installments or self.total_installments < 1:
+                    raise ValueError("total_installments é obrigatório e deve ser >= 1 para parcelamentos")
+            if self.recurring_type == RecurringType.subscription:
+                if not self.frequency:
+                    raise ValueError("frequency é obrigatória para assinaturas")
+        return self
+
 
 class TransactionUpdate(BaseModel):
     description: str | None = None
@@ -87,9 +100,6 @@ class UnifiedTransactionResponse(BaseModel):
     account_id: UUID | None = None
     account_name: str | None = None
     account_type: str | None = None
-    # For transfers, we might want to know from/to names in the response
-    from_account_name: str | None = None
-    to_account_name: str | None = None
     # Recurring indicators
     is_recurring: bool = False
     recurring_type: str | None = None

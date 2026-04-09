@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import List
 from uuid import UUID
 from difflib import SequenceMatcher
@@ -41,10 +42,10 @@ def detect_recurring_matches(db: Session, user_id: UUID, transactions: List[Tran
             if tx_nature_mapped != cat.type:
                 continue
 
-            # 2. Amount check (float with 0.01 tolerance)
+            # 2. Amount check (Decimal with 0.01 tolerance)
             # Use absolute values for comparison as transactions might be negative (EXPENSE)
             # while recurring expense master records might be stored as positive.
-            if abs(abs(float(tx.amount)) - abs(float(re.amount))) > 0.01:
+            if abs(abs(Decimal(str(tx.amount))) - abs(Decimal(str(re.amount)))) > Decimal("0.01"):
                 continue
 
             # 3. Description check
@@ -76,10 +77,10 @@ def detect_recurring_matches(db: Session, user_id: UUID, transactions: List[Tran
             matches.append({
                 "transaction_id": str(tx.id),
                 "transaction_description": tx.description,
-                "transaction_amount": abs(float(tx.amount)),
+                "transaction_amount": abs(Decimal(str(tx.amount))),
                 "recurring_expense_id": str(re.id),
                 "recurring_description": re.description,
-                "recurring_amount": abs(float(re.amount)),
+                "recurring_amount": abs(Decimal(str(re.amount))),
                 "similarity": round(similarity, 2)
             })
 

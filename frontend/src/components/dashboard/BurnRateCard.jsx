@@ -2,18 +2,11 @@ import React from 'react';
 import { Flame, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import PrivateValue from '@/components/ui/PrivateValue';
 import InfoTooltip from '@/components/ui/InfoTooltip';
 
 const BurnRateCard = ({ avgMonthlyExpense, trend, previousAvg, loading }) => {
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
-
   if (loading) {
     return (
       <Card className="border-none shadow-md overflow-hidden h-full">

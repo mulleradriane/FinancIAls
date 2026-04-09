@@ -20,7 +20,7 @@ class Transaction(Base):
     description = Column(String, nullable=False)
     category_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("categories.id"),
+        ForeignKey("categories.id", ondelete="SET NULL"),
         nullable=True
     )
     amount = Column(Numeric(12, 2), nullable=False)

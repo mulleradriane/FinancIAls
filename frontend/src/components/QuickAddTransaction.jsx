@@ -20,7 +20,7 @@ import {
   ArrowDownCircle, ArrowUpCircle, Plus, ExternalLink,
   Loader2, Sparkles,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, localDateStr } from '@/lib/utils';
 
 // ── Utilitários ────────────────────────────────────────────────────────────────
 const toDisplay = (value) =>
@@ -34,7 +34,7 @@ const QuickAddTransaction = ({ open, onOpenChange, onCreated, onOpenFull }) => {
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId]   = useState('');
   const [accountId, setAccountId]     = useState('');
-  const [date, setDate]               = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate]               = useState(localDateStr());
   const [submitting, setSubmitting]   = useState(false);
 
   // Dados carregados uma vez
@@ -83,7 +83,8 @@ const QuickAddTransaction = ({ open, onOpenChange, onCreated, onOpenFull }) => {
       setAmount(0);
       setDescription('');
       setCategoryId('');
-      setDate(new Date().toISOString().split('T')[0]);
+      setAccountId('');
+      setDate(localDateStr());
     }
   }, [open]);
 
@@ -110,7 +111,7 @@ const QuickAddTransaction = ({ open, onOpenChange, onCreated, onOpenFull }) => {
     if (!desc || desc.length < 3) return;
     setSuggestLoading(true);
     try {
-      const res = await api.get(`/transactions/suggest/?description=${encodeURIComponent(desc)}`);
+      const res = await api.get(`/transactions/suggestion?description=${encodeURIComponent(desc)}`);
       if (res.data?.category_id && !categoryId) {
         setCategoryId(res.data.category_id);
       }
@@ -283,14 +284,37 @@ const QuickAddTransaction = ({ open, onOpenChange, onCreated, onOpenFull }) => {
                 <SelectValue placeholder="Categoria" />
               </SelectTrigger>
               <SelectContent>
-                {filteredCategories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    <span className="flex items-center gap-1.5">
-                      <span>{c.icon || '💰'}</span>
-                      <span>{c.name}</span>
-                    </span>
-                  </SelectItem>
-                ))}
+                {(() => {
+                  const topLevel = filteredCategories.filter((c) => !c.parent_id);
+                  const subMap = filteredCategories.filter((c) => c.parent_id).reduce((acc, c) => {
+                    if (!acc[c.parent_id]) acc[c.parent_id] = [];
+                    acc[c.parent_id].push(c);
+                    return acc;
+                  }, {});
+                  const items = [];
+                  topLevel.forEach((c) => {
+                    items.push(
+                      <SelectItem key={c.id} value={c.id}>
+                        <span className="flex items-center gap-1.5">
+                          <span>{c.icon || '💰'}</span>
+                          <span>{c.name}</span>
+                        </span>
+                      </SelectItem>
+                    );
+                    (subMap[c.id] || []).forEach((sub) => {
+                      items.push(
+                        <SelectItem key={sub.id} value={sub.id}>
+                          <span className="flex items-center gap-1.5 pl-3">
+                            <span className="text-muted-foreground text-xs">↳</span>
+                            <span>{sub.icon || '💰'}</span>
+                            <span>{sub.name}</span>
+                          </span>
+                        </SelectItem>
+                      );
+                    });
+                  });
+                  return items;
+                })()}
               </SelectContent>
             </Select>
 

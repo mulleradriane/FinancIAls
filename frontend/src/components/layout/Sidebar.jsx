@@ -3,9 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   ArrowRightLeft,
-  BarChart3,
   Landmark,
-  TrendingUp,
   RefreshCw,
   Target,
   Tags,
@@ -22,26 +20,52 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { usePrivacy } from '@/context/PrivacyContext';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 // Importar as imagens
 import logoLight from '@/assets/images/logo-light.png';
 import logoDark from '@/assets/images/logo-dark.png';
 
-const menuItems = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { path: '/transactions', label: 'Transações', icon: ArrowRightLeft },
-  { path: '/contas', label: 'Contas', icon: Landmark },
-  { path: '/recorrentes', label: 'Recorrentes', icon: RefreshCw },
-  { path: '/categories', label: 'Categorias', icon: Tags },
-  { path: '/metas', label: 'Metas', icon: Target },
-  { path: '/relatorios', label: 'Relatórios', icon: FileText },
-  { path: '/importacao', label: 'Importar', icon: Upload },
+const menuGroups = [
+  {
+    label: 'Visão Geral',
+    items: [
+      { path: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+      { path: '/transactions', label: 'Transações', icon: ArrowRightLeft },
+      { path: '/relatorios', label: 'Relatórios', icon: FileText },
+    ],
+  },
+  {
+    label: 'Gestão',
+    items: [
+      { path: '/contas', label: 'Contas', icon: Landmark },
+      { path: '/recorrentes', label: 'Recorrentes', icon: RefreshCw },
+      { path: '/metas', label: 'Metas', icon: Target },
+    ],
+  },
+  {
+    label: 'Configurar',
+    items: [
+      { path: '/categories', label: 'Categorias', icon: Tags },
+      { path: '/importacao', label: 'Importar', icon: Upload },
+    ],
+  },
 ];
 
 export function Sidebar({ onNavigate, isMobile }) {
   const { theme, toggleTheme } = useTheme();
   const { isPrivate, togglePrivacy } = usePrivacy();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -182,46 +206,64 @@ export function Sidebar({ onNavigate, isMobile }) {
       <nav style={{
         flex: 1,
         padding: '1rem 0.75rem',
+        overflowY: 'auto',
       }}>
-        {menuItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            end={item.end}
-            onClick={() => onNavigate?.()}
-            style={({ isActive }) => ({
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              padding: isCollapsed ? '0.625rem 0' : '0.625rem 0.75rem',
-              borderRadius: '0.75rem',
-              width: isCollapsed ? '2.5rem' : 'auto',
-              margin: isCollapsed ? '0 auto' : '0',
-              justifyContent: isCollapsed ? 'center' : 'flex-start',
-              backgroundColor: isActive ? currentStyle.active : 'transparent',
-              color: isActive ? currentStyle.activeText : currentStyle.text,
-              textDecoration: 'none',
-              transition: 'all 0.2s',
-              marginBottom: '0.25rem',
-            })}
-            onMouseEnter={(e) => {
-              if (!e.currentTarget.style.backgroundColor.includes(currentStyle.active)) {
-                e.currentTarget.style.backgroundColor = currentStyle.hover;
-                e.currentTarget.style.color = currentStyle.text;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!e.currentTarget.style.backgroundColor.includes(currentStyle.active)) {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = currentStyle.text;
-              }
-            }}
-          >
-            <item.icon size={20} />
+        {menuGroups.map((group, gi) => (
+          <div key={group.label} style={{ marginBottom: gi < menuGroups.length - 1 ? '1rem' : 0 }}>
             {!isCollapsed && (
-              <span style={{ fontWeight: 500 }}>{item.label}</span>
+              <p style={{
+                fontSize: '0.6rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                color: currentStyle.textMuted,
+                padding: '0 0.75rem',
+                marginBottom: '0.25rem',
+              }}>
+                {group.label}
+              </p>
             )}
-          </NavLink>
+            {group.items.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                end={item.end}
+                onClick={() => onNavigate?.()}
+                style={({ isActive }) => ({
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: isCollapsed ? '0.625rem 0' : '0.625rem 0.75rem',
+                  borderRadius: '0.75rem',
+                  width: isCollapsed ? '2.5rem' : 'auto',
+                  margin: isCollapsed ? '0 auto' : '0',
+                  justifyContent: isCollapsed ? 'center' : 'flex-start',
+                  backgroundColor: isActive ? currentStyle.active : 'transparent',
+                  color: isActive ? currentStyle.activeText : currentStyle.text,
+                  textDecoration: 'none',
+                  transition: 'all 0.2s',
+                  marginBottom: '0.25rem',
+                })}
+                onMouseEnter={(e) => {
+                  if (!e.currentTarget.style.backgroundColor.includes(currentStyle.active)) {
+                    e.currentTarget.style.backgroundColor = currentStyle.hover;
+                    e.currentTarget.style.color = currentStyle.text;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!e.currentTarget.style.backgroundColor.includes(currentStyle.active)) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = currentStyle.text;
+                  }
+                }}
+              >
+                <item.icon size={20} />
+                {!isCollapsed && (
+                  <span style={{ fontWeight: 500 }}>{item.label}</span>
+                )}
+              </NavLink>
+            ))}
+          </div>
         ))}
       </nav>
 
@@ -334,7 +376,7 @@ export function Sidebar({ onNavigate, isMobile }) {
 
         {/* Botão de Logout */}
         <button
-          onClick={handleLogout}
+          onClick={() => setIsLogoutDialogOpen(true)}
           style={{
             width: isCollapsed ? '2.5rem' : '100%',
             height: '2.5rem',
@@ -364,6 +406,26 @@ export function Sidebar({ onNavigate, isMobile }) {
           )}
         </button>
       </div>
+
+      <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+        <AlertDialogContent className="rounded-2xl border-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sair da conta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você será redirecionado para a tela de login.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLogout}
+              className="rounded-xl bg-destructive hover:bg-destructive/90 text-white"
+            >
+              Sair
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </aside>
   );
 }

@@ -53,14 +53,14 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
     def get_by_user(self, db: Session, id: UUID, user_id: UUID) -> Optional[Transaction]:
         return db.scalars(
             select(Transaction)
-            .filter(Transaction.id == id, Transaction.user_id == user_id, Transaction.deleted_at == None)
+            .filter(Transaction.id == id, Transaction.user_id == user_id, Transaction.deleted_at.is_(None))
             .options(joinedload(Transaction.category))
         ).first()
 
     def get_multi_by_user(self, db: Session, *, user_id: UUID, skip: int = 0, limit: int = 100) -> list[Transaction]:
         query = select(Transaction).filter(
             Transaction.user_id == user_id,
-            Transaction.deleted_at == None
+            Transaction.deleted_at.is_(None)
         ).options(joinedload(Transaction.category)).order_by(Transaction.date.desc()).offset(skip)
 
         if limit != -1:

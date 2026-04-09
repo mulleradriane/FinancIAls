@@ -4,12 +4,9 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowRight, CreditCard, Landmark, Wallet, PiggyBank, Briefcase, CheckCircle2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ArrowRight, CreditCard, Landmark, Wallet, PiggyBank, Briefcase, CheckCircle2, AlertCircle } from 'lucide-react';
+import { cn, formatCurrency, localDateStr } from '@/lib/utils';
 import PrivateValue from '@/components/ui/PrivateValue';
-
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value ?? 0);
 
 const getAccountIcon = (type, size = 16) => {
   const props = { size, strokeWidth: 1.75 };
@@ -90,17 +87,20 @@ const AccountPicker = ({ label, accounts, selectedId, onSelect }) => {
 };
 
 // ── TransferForm ───────────────────────────────────────────────────────────────
-const TransferForm = ({ accounts, onTransferCreated, onClose }) => {
-  const [fromAccountId, setFromAccountId] = useState('');
+const TransferForm = ({ accounts, onTransferCreated, onClose, initialFromAccountId = '' }) => {
+  const [fromAccountId, setFromAccountId] = useState(initialFromAccountId);
   const [toAccountId, setToAccountId]     = useState('');
   const [displayAmount, setDisplayAmount] = useState('');
   const [amount, setAmount]               = useState(0);
-  const [date, setDate]                   = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate]                   = useState(localDateStr());
   const [description, setDescription]     = useState('');
   const [step, setStep]                   = useState('form'); // 'form' | 'confirm'
 
   const fromAccount = accounts.find((a) => a.id === fromAccountId);
   const toAccount   = accounts.find((a) => a.id === toAccountId);
+
+  const sameAccount       = fromAccountId && toAccountId && fromAccountId === toAccountId;
+  const isInsufficient    = fromAccount && amount > 0 && Number(fromAccount.balance ?? 0) < amount;
 
   const handleAmountChange = (e) => {
     const value = e.target.value.replace(/\D/g, '');
@@ -260,11 +260,31 @@ const TransferForm = ({ accounts, onTransferCreated, onClose }) => {
         />
       </div>
 
+      {/* Avisos inline */}
+      {sameAccount && (
+        <div className="flex items-center gap-2 bg-destructive/5 border border-destructive/20 rounded-xl px-4 py-3 text-sm text-destructive">
+          <AlertCircle size={15} className="flex-shrink-0" />
+          Conta de origem e destino devem ser diferentes.
+        </div>
+      )}
+      {isInsufficient && !sameAccount && (
+        <div className="flex items-center gap-2 bg-amber-500/5 border border-amber-500/20 rounded-xl px-4 py-3 text-sm text-amber-700">
+          <AlertCircle size={15} className="flex-shrink-0" />
+          Saldo insuficiente em <strong className="ml-1">{fromAccount.name}</strong>
+          <span className="ml-1">(<PrivateValue value={formatCurrency(fromAccount.balance)} />)</span>
+        </div>
+      )}
+
       <div className="flex gap-3 pt-1">
         <Button type="button" variant="ghost" onClick={onClose} className="flex-1 h-11 rounded-xl">
           Cancelar
         </Button>
-        <Button type="button" className="flex-1 h-11 rounded-xl font-bold shadow-lg shadow-primary/20" onClick={handlePreview}>
+        <Button
+          type="button"
+          disabled={sameAccount}
+          className="flex-1 h-11 rounded-xl font-bold shadow-lg shadow-primary/20"
+          onClick={handlePreview}
+        >
           Revisar transferência
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>

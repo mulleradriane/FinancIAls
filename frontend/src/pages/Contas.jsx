@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '@/api/api';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -27,20 +28,37 @@ import {
 import AccountForm from '@/components/AccountForm';
 import TransferForm from '@/components/TransferForm';
 import InvoicePaymentForm from '@/components/InvoicePaymentForm';
+import TransactionForm from '@/components/TransactionForm';
 import {
   Plus, ArrowLeftRight, CreditCard, Landmark, Wallet, PiggyBank,
   Briefcase, Pencil, Trash2, Star, ArrowRight, CalendarClock,
-  TrendingUp, AlertCircle, ChevronRight,
+  AlertCircle, ChevronRight, MoreVertical, ExternalLink,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency, localDateStr } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import PrivateValue from '@/components/ui/PrivateValue';
 import { Progress } from '@/components/ui/progress';
 
 // ── Utilitários ────────────────────────────────────────────────────────────────
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value ?? 0);
+const TYPE_LABEL = {
+  banco:           'Conta bancária',
+  carteira:        'Carteira',
+  poupanca:        'Poupança',
+  investimento:    'Investimento',
+  cartao_credito:  'Cartão de crédito',
+  outros_ativos:   'Outros ativos',
+  outros_passivos: 'Outros passivos',
+};
+
+const getTypeLabel = (type) => TYPE_LABEL[type] ?? type.replace(/_/g, ' ');
 
 const getAccountIcon = (type, size = 20) => {
   const props = { size, strokeWidth: 1.75 };
@@ -67,16 +85,32 @@ const ACCOUNT_ACCENT = {
 
 const getAccent = (type) => ACCOUNT_ACCENT[type] ?? ACCOUNT_ACCENT.banco;
 
+const ACCOUNT_COLOR = {
+  banco:           '#3b82f6',
+  carteira:        '#10b981',
+  poupanca:        '#14b8a6',
+  investimento:    '#8b5cf6',
+  cartao_credito:  '#f43f5e',
+  outros_ativos:   '#f59e0b',
+  outros_passivos: '#f97316',
+};
+
 // ── Card de conta bancária / carteira / poupança / investimento ────────────────
-const AccountCard = ({ account, onSelect, onEdit, onDelete, onSetDefault }) => {
+const AccountCard = ({ account, onSelect, onEdit, onDelete, onSetDefault, onTransfer }) => {
   const accent = getAccent(account.type);
+  const accentColor = ACCOUNT_COLOR[account.type] ?? '#94a3b8';
   const isPositive = Number(account.balance ?? 0) >= 0;
 
   return (
     <div
       onClick={() => onSelect(account)}
-      className="group relative flex items-center gap-4 bg-card border border-border/50 hover:border-border rounded-2xl px-5 py-4 cursor-pointer transition-all hover:shadow-md"
+      className="group relative flex items-center gap-4 bg-card border border-border/50 hover:border-border rounded-2xl px-5 py-4 cursor-pointer transition-all hover:shadow-md overflow-hidden"
     >
+      {/* Barra de acento esquerda */}
+      <div
+        className="absolute left-0 top-0 bottom-0 w-[3px]"
+        style={{ backgroundColor: accentColor }}
+      />
       {/* Ícone */}
       <div className={cn('flex-shrink-0 p-3 rounded-xl border', accent.bg, accent.text, accent.border)}>
         {getAccountIcon(account.type, 20)}
@@ -85,13 +119,13 @@ const AccountCard = ({ account, onSelect, onEdit, onDelete, onSetDefault }) => {
       {/* Info principal */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="font-semibold text-sm truncate">{account.name}</p>
+          <p className="font-semibold text-sm truncate" title={account.name}>{account.name}</p>
           {account.is_default && (
-            <Star size={12} className="text-amber-500 fill-amber-500 flex-shrink-0" />
+            <Star size={12} className="text-amber-500 fill-amber-500 flex-shrink-0" aria-label="Conta padrão" />
           )}
         </div>
-        <p className="text-xs text-muted-foreground capitalize mt-0.5">
-          {account.type.replace('_', ' ')}
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {getTypeLabel(account.type)}
         </p>
       </div>
 
@@ -102,30 +136,70 @@ const AccountCard = ({ account, onSelect, onEdit, onDelete, onSetDefault }) => {
         </p>
       </div>
 
-      {/* Ações (aparecem no hover) */}
-      <div
-        className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          onClick={(e) => { e.stopPropagation(); onSetDefault(e, account.id); }}
-          className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-amber-500 transition-colors"
-          title="Definir como padrão"
-        >
-          <Star size={14} className={account.is_default ? 'fill-amber-500 text-amber-500' : ''} />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onEdit(account); }}
-          className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground transition-colors"
-        >
-          <Pencil size={14} />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(account.id); }}
-          className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-        >
-          <Trash2 size={14} />
-        </button>
+      {/* Ações — hover no desktop, dropdown sempre visível */}
+      <div className="flex items-center gap-1 ml-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+        {/* Botões inline — visíveis no hover em desktop */}
+        <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            aria-label="Transferir desta conta"
+            onClick={(e) => { e.stopPropagation(); onTransfer(account); }}
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-primary transition-colors"
+          >
+            <ArrowLeftRight size={14} />
+          </button>
+          <button
+            aria-label="Definir como conta padrão"
+            onClick={(e) => { e.stopPropagation(); onSetDefault(e, account.id); }}
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-amber-500 transition-colors"
+          >
+            <Star size={14} className={account.is_default ? 'fill-amber-500 text-amber-500' : ''} />
+          </button>
+          <button
+            aria-label="Editar conta"
+            onClick={(e) => { e.stopPropagation(); onEdit(account); }}
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground transition-colors"
+          >
+            <Pencil size={14} />
+          </button>
+          <button
+            aria-label="Excluir conta"
+            onClick={(e) => { e.stopPropagation(); onDelete(account); }}
+            className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+
+        {/* Dropdown — apenas no mobile */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              aria-label="Ações da conta"
+              onClick={(e) => e.stopPropagation()}
+              className="sm:hidden p-1.5 rounded-lg hover:bg-secondary text-muted-foreground"
+            >
+              <MoreVertical size={15} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onTransfer(account); }}>
+              <ArrowLeftRight size={14} className="mr-2" /> Transferir
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSetDefault(e, account.id); }}>
+              <Star size={14} className="mr-2" /> Definir como padrão
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(account); }}>
+              <Pencil size={14} className="mr-2" /> Editar
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={(e) => { e.stopPropagation(); onDelete(account); }}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 size={14} className="mr-2" /> Excluir
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <ChevronRight size={14} className="text-muted-foreground/40 ml-1 flex-shrink-0" />
@@ -171,33 +245,73 @@ const CreditCardCard = ({ account, invoiceAmount, onSelect, onEdit, onDelete, on
             <p className="text-xs text-muted-foreground mt-0.5">Cartão de crédito</p>
           </div>
         </div>
-        <div
-          className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit(account); }}
-            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground transition-colors"
-          >
-            <Pencil size={13} />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(account.id); }}
-            className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-          >
-            <Trash2 size={13} />
-          </button>
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              aria-label="Editar cartão"
+              onClick={(e) => { e.stopPropagation(); onEdit(account); }}
+              className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground transition-colors"
+            >
+              <Pencil size={13} />
+            </button>
+            <button
+              aria-label="Excluir cartão"
+              onClick={(e) => { e.stopPropagation(); onDelete(account); }}
+              className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                aria-label="Ações do cartão"
+                onClick={(e) => e.stopPropagation()}
+                className="sm:hidden p-1.5 rounded-lg hover:bg-secondary text-muted-foreground"
+              >
+                <MoreVertical size={15} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(account); }}>
+                <Pencil size={14} className="mr-2" /> Editar
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={(e) => { e.stopPropagation(); onDelete(account); }}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 size={14} className="mr-2" /> Excluir
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      {/* Valor da fatura */}
-      <div className="mb-3">
-        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
-          Fatura atual
-        </p>
-        <p className="text-2xl font-bold tabular-nums">
-          <PrivateValue value={formatCurrency(used)} />
-        </p>
+      {/* Fatura + Disponível lado a lado */}
+      <div className={cn('mb-4', limit > 0 ? 'grid grid-cols-2 gap-3' : '')}>
+        <div>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
+            Fatura atual
+          </p>
+          <p className="text-xl font-bold tabular-nums">
+            <PrivateValue value={formatCurrency(used)} />
+          </p>
+        </div>
+        {limit > 0 && available !== null && (
+          <div>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
+              Disponível
+            </p>
+            <p className={cn(
+              'text-xl font-bold tabular-nums',
+              available <= 0 ? 'text-destructive' :
+              urgency === 'high' ? 'text-amber-500' : 'text-emerald-600'
+            )}>
+              <PrivateValue value={formatCurrency(available)} />
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Barra de uso */}
@@ -205,7 +319,7 @@ const CreditCardCard = ({ account, invoiceAmount, onSelect, onEdit, onDelete, on
         <div className="mb-4">
           <div className="flex justify-between items-center mb-1.5">
             <span className="text-xs text-muted-foreground">
-              <PrivateValue value={formatCurrency(available)} /> disponível
+              Limite: <PrivateValue value={formatCurrency(limit)} />
             </span>
             <span className={cn(
               'text-xs font-semibold',
@@ -264,10 +378,11 @@ const CreditCardCard = ({ account, invoiceAmount, onSelect, onEdit, onDelete, on
 // ── Seção com título ──────────────────────────────────────────────────────────
 const Section = ({ title, total, children, empty }) => (
   <div className="space-y-3">
-    <div className="flex items-center justify-between">
-      <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{title}</h2>
+    <div className="flex items-center gap-3">
+      <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">{title}</h2>
+      <div className="flex-1 h-px bg-border/60" />
       {total !== undefined && (
-        <span className="text-sm font-semibold tabular-nums">
+        <span className="text-sm font-semibold tabular-nums flex-shrink-0">
           <PrivateValue value={formatCurrency(total)} />
         </span>
       )}
@@ -282,31 +397,42 @@ const Section = ({ title, total, children, empty }) => (
 
 // ── Página Principal ──────────────────────────────────────────────────────────
 const Contas = () => {
+  const navigate = useNavigate();
+
   const [accounts, setAccounts]           = useState([]);
   const [transactions, setTransactions]   = useState([]);
+  const [categories, setCategories]       = useState([]);
   const [loading, setLoading]             = useState(true);
 
-  const [editingAccount, setEditingAccount]         = useState(null);
-  const [selectedAccount, setSelectedAccount]       = useState(null);
-  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
-  const [isDetailsOpen, setIsDetailsOpen]           = useState(false);
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget]             = useState(null);
+  const [editingAccount, setEditingAccount]               = useState(null);
+  const [selectedAccount, setSelectedAccount]             = useState(null);
+  const [isAccountModalOpen, setIsAccountModalOpen]       = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen]                 = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen]     = useState(false);
+  const [transferFromAccount, setTransferFromAccount]     = useState(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen]       = useState(false);
+  const [isAddTransactionOpen, setIsAddTransactionOpen]   = useState(false);
+  const [deleteTarget, setDeleteTarget]                   = useState(null);
+  const [sheetTransactions, setSheetTransactions]         = useState([]);
+  const [sheetLoading, setSheetLoading]                   = useState(false);
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchAccounts = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/accounts/');
+      const [res, catsRes] = await Promise.all([
+        api.get('/accounts/'),
+        api.get('/categories/'),
+      ]);
       setAccounts(res.data);
+      setCategories(catsRes.data ?? []);
 
       const creditCards = res.data.filter((a) => a.type === 'cartao_credito' && a.closing_day);
       if (creditCards.length > 0) {
         const ninetyDaysAgo = new Date();
         ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
         const params = new URLSearchParams();
-        params.append('start_date', ninetyDaysAgo.toISOString().split('T')[0]);
+        params.append('start_date', localDateStr(ninetyDaysAgo));
         params.append('limit', 1000);
         creditCards.forEach((cc) => params.append('account_id', cc.id));
         const txRes = await api.get('/transactions/', { params });
@@ -314,12 +440,24 @@ const Contas = () => {
       }
     } catch (err) {
       console.error(err);
+      toast.error('Erro ao carregar contas. Recarregue a página.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => { fetchAccounts(); }, []);
+
+  useEffect(() => {
+    if (!isDetailsOpen || !selectedAccount) { setSheetTransactions([]); return; }
+    let cancelled = false;
+    setSheetLoading(true);
+    api.get('/transactions/', { params: { account_id: selectedAccount.id, limit: 5 } })
+      .then((res) => { if (!cancelled) setSheetTransactions(res.data.items ?? []); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setSheetLoading(false); });
+    return () => { cancelled = true; };
+  }, [isDetailsOpen, selectedAccount?.id]);
 
   // ── Cálculo de fatura corrente ────────────────────────────────────────────
   const calculateCurrentInvoice = (account) => {
@@ -351,8 +489,8 @@ const Contas = () => {
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await api.delete(`/accounts/${deleteTarget}`);
-      toast.success('Conta excluída!');
+      await api.delete(`/accounts/${deleteTarget.id}`);
+      toast.success(`Conta "${deleteTarget.name}" excluída.`);
       setIsDetailsOpen(false);
       fetchAccounts();
     } catch (err) {
@@ -376,6 +514,12 @@ const Contas = () => {
   const handlePayInvoice = (account) => {
     setSelectedAccount(account);
     setIsPaymentModalOpen(true);
+  };
+
+  const handleQuickTransfer = (account) => {
+    setTransferFromAccount(account);
+    setIsDetailsOpen(false);
+    setIsTransferModalOpen(true);
   };
 
   // ── Agrupamento por tipo ──────────────────────────────────────────────────
@@ -416,17 +560,13 @@ const Contas = () => {
           <h1 className="text-3xl font-bold tracking-tight">Contas e Carteiras</h1>
           <p className="text-muted-foreground mt-1 text-sm">Organize onde seu dinheiro está guardado.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => setIsTransferModalOpen(true)} className="rounded-xl">
-            <ArrowLeftRight className="mr-2 h-4 w-4" /> Transferir
-          </Button>
-          <Button
-            onClick={() => { setEditingAccount(null); setIsAccountModalOpen(true); }}
-            className="rounded-xl shadow-lg shadow-primary/20"
-          >
-            <Plus className="mr-2 h-4 w-4" /> Nova Conta
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          onClick={() => { setEditingAccount(null); setIsAccountModalOpen(true); }}
+          className="rounded-xl"
+        >
+          <Plus className="mr-2 h-4 w-4" /> Nova Conta
+        </Button>
       </div>
 
       {accounts.length === 0 ? (
@@ -439,48 +579,104 @@ const Contas = () => {
       ) : (
         <div className="space-y-8">
           {/* Resumo rápido */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-card border border-border/50 rounded-2xl p-4">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Saldo líquido</p>
-              <p className={cn('text-xl font-bold tabular-nums', totalLiquido < 0 ? 'text-destructive' : '')}>
-                <PrivateValue value={formatCurrency(totalLiquido)} />
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">Banco + carteira + poupança</p>
-            </div>
-            <div className="bg-card border border-border/50 rounded-2xl p-4">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Investido</p>
-              <p className="text-xl font-bold tabular-nums text-violet-600">
-                <PrivateValue value={formatCurrency(totalInvestido)} />
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">Total em investimentos</p>
-            </div>
-            <div className="bg-card border border-border/50 rounded-2xl p-4">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Faturas abertas</p>
-              <p className={cn('text-xl font-bold tabular-nums', totalFaturas > 0 ? 'text-rose-600' : '')}>
-                <PrivateValue value={formatCurrency(totalFaturas)} />
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">Total de cartões de crédito</p>
-            </div>
-          </div>
+          {(() => {
+            const patrimonio = totalLiquido + totalInvestido - totalFaturas;
+            return (
+              <div className="space-y-3">
+                {/* Patrimônio — herói */}
+                <div className={cn(
+                  'rounded-2xl p-6 border',
+                  patrimonio >= 0
+                    ? 'bg-gradient-to-br from-primary/8 to-primary/4 border-primary/20'
+                    : 'bg-gradient-to-br from-destructive/8 to-destructive/4 border-destructive/20'
+                )}>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
+                    Patrimônio Líquido
+                  </p>
+                  <p className={cn(
+                    'text-4xl font-black tracking-tight tabular-nums',
+                    patrimonio < 0 ? 'text-destructive' : 'text-primary'
+                  )}>
+                    <PrivateValue value={formatCurrency(patrimonio)} />
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Saldo líquido + investimentos − faturas de cartão
+                  </p>
+                </div>
+
+                {/* 3 métricas secundárias */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-card border border-border/50 rounded-2xl p-4">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Saldo líquido</p>
+                    <p className={cn('text-base font-bold tabular-nums', totalLiquido < 0 ? 'text-destructive' : '')}>
+                      <PrivateValue value={formatCurrency(totalLiquido)} />
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">Banco · carteira · poupança</p>
+                  </div>
+                  <div className="bg-card border border-border/50 rounded-2xl p-4">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Investido</p>
+                    <p className="text-base font-bold tabular-nums text-violet-600">
+                      <PrivateValue value={formatCurrency(totalInvestido)} />
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">Total em investimentos</p>
+                  </div>
+                  <div className="bg-card border border-border/50 rounded-2xl p-4">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Faturas</p>
+                    <p className={cn('text-base font-bold tabular-nums', totalFaturas > 0 ? 'text-rose-600' : '')}>
+                      <PrivateValue value={formatCurrency(totalFaturas)} />
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">{cartoes.length} cartão{cartoes.length !== 1 ? 's' : ''}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Contas bancárias */}
           {bancos.length > 0 && (
             <Section title="Contas bancárias" total={bancos.reduce((s, a) => s + Number(a.balance ?? 0), 0)}>
-              {bancos.map((a) => (
-                <AccountCard
-                  key={a.id} account={a}
-                  onSelect={(acc) => { setSelectedAccount(acc); setIsDetailsOpen(true); }}
-                  onEdit={handleEdit}
-                  onDelete={setDeleteTarget}
-                  onSetDefault={handleSetDefault}
-                />
-              ))}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                {bancos.map((a) => (
+                  <AccountCard
+                    key={a.id} account={a}
+                    onSelect={(acc) => { setSelectedAccount(acc); setIsDetailsOpen(true); }}
+                    onEdit={handleEdit}
+                    onDelete={setDeleteTarget}
+                    onSetDefault={handleSetDefault}
+                    onTransfer={handleQuickTransfer}
+                  />
+                ))}
+              </div>
             </Section>
           )}
 
           {/* Cartões de crédito */}
-          {cartoes.length > 0 && (
+          {cartoes.length > 0 && (() => {
+            const today = new Date();
+            const urgentCards = cartoes.filter((a) => {
+              if (!a.closing_day) return false;
+              const invoice = calculateCurrentInvoice(a);
+              const limit = Number(a.credit_limit ?? 0);
+              const usage = limit > 0 ? (invoice / limit) * 100 : 0;
+              const closingThisMonth = new Date(today.getFullYear(), today.getMonth(), a.closing_day);
+              const closingNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, a.closing_day);
+              const target = today.getDate() >= a.closing_day ? closingNextMonth : closingThisMonth;
+              const days = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+              return days <= 3 && usage >= 75;
+            });
+            return (
             <Section title="Cartões de crédito">
+              {urgentCards.length > 0 && (
+                <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+                  <AlertCircle size={16} className="flex-shrink-0 mt-0.5 text-amber-500" />
+                  <span>
+                    {urgentCards.length === 1
+                      ? <><strong>{urgentCards[0].name}</strong> fecha em breve com alto uso — considere pagar a fatura.</>
+                      : <><strong>{urgentCards.length} cartões</strong> fecham em breve com alto uso.</>
+                    }
+                  </span>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {cartoes.map((a) => (
                   <CreditCardCard
@@ -494,53 +690,61 @@ const Contas = () => {
                 ))}
               </div>
             </Section>
-          )}
+            );
+          })()}
 
           {/* Investimentos */}
           {investimentos.length > 0 && (
             <Section title="Investimentos" total={totalInvestido}>
-              {investimentos.map((a) => (
-                <AccountCard
-                  key={a.id} account={a}
-                  onSelect={(acc) => { setSelectedAccount(acc); setIsDetailsOpen(true); }}
-                  onEdit={handleEdit}
-                  onDelete={setDeleteTarget}
-                  onSetDefault={handleSetDefault}
-                />
-              ))}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                {investimentos.map((a) => (
+                  <AccountCard
+                    key={a.id} account={a}
+                    onSelect={(acc) => { setSelectedAccount(acc); setIsDetailsOpen(true); }}
+                    onEdit={handleEdit}
+                    onDelete={setDeleteTarget}
+                    onSetDefault={handleSetDefault}
+                    onTransfer={handleQuickTransfer}
+                  />
+                ))}
+              </div>
             </Section>
           )}
 
-          {/* Carteiras + Poupança */}
           {(carteiras.length > 0 || poupancas.length > 0) && (
             <Section
               title="Carteira & Poupança"
               total={[...carteiras, ...poupancas].reduce((s, a) => s + Number(a.balance ?? 0), 0)}
             >
-              {[...carteiras, ...poupancas].map((a) => (
-                <AccountCard
-                  key={a.id} account={a}
-                  onSelect={(acc) => { setSelectedAccount(acc); setIsDetailsOpen(true); }}
-                  onEdit={handleEdit}
-                  onDelete={setDeleteTarget}
-                  onSetDefault={handleSetDefault}
-                />
-              ))}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                {[...carteiras, ...poupancas].map((a) => (
+                  <AccountCard
+                    key={a.id} account={a}
+                    onSelect={(acc) => { setSelectedAccount(acc); setIsDetailsOpen(true); }}
+                    onEdit={handleEdit}
+                    onDelete={setDeleteTarget}
+                    onSetDefault={handleSetDefault}
+                    onTransfer={handleQuickTransfer}
+                  />
+                ))}
+              </div>
             </Section>
           )}
 
-          {/* Outros */}
           {outros.length > 0 && (
             <Section title="Outros">
-              {outros.map((a) => (
-                <AccountCard
-                  key={a.id} account={a}
-                  onSelect={(acc) => { setSelectedAccount(acc); setIsDetailsOpen(true); }}
-                  onEdit={handleEdit}
-                  onDelete={setDeleteTarget}
-                  onSetDefault={handleSetDefault}
-                />
-              ))}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                {outros.map((a) => (
+                  <AccountCard
+                    key={a.id} account={a}
+                    onSelect={(acc) => { setSelectedAccount(acc); setIsDetailsOpen(true); }}
+                    onEdit={handleEdit}
+                    onDelete={setDeleteTarget}
+                    onSetDefault={handleSetDefault}
+                    onTransfer={handleQuickTransfer}
+                  />
+                ))}
+              </div>
             </Section>
           )}
         </div>
@@ -550,15 +754,15 @@ const Contas = () => {
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent className="rounded-2xl border-none">
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir conta?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir "{deleteTarget?.name}"?</AlertDialogTitle>
             <AlertDialogDescription>
-              Todas as transações vinculadas perderão o vínculo. Esta ação não pode ser desfeita.
+              Todas as transações vinculadas perderão o vínculo com esta conta. Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="rounded-xl bg-destructive hover:bg-destructive/90 text-white">
-              Excluir
+              Excluir conta
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -573,6 +777,24 @@ const Contas = () => {
             account={editingAccount}
             onAccountCreated={fetchAccounts}
             onClose={() => { setIsAccountModalOpen(false); setEditingAccount(null); }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddTransactionOpen} onOpenChange={setIsAddTransactionOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              Nova Transação{selectedAccount ? ` — ${selectedAccount.name}` : ''}
+            </DialogTitle>
+          </DialogHeader>
+          <TransactionForm
+            key={selectedAccount?.id}
+            categories={categories}
+            accounts={accounts}
+            prefill={{ accountId: selectedAccount?.id ?? '' }}
+            onTransactionCreated={() => { setIsAddTransactionOpen(false); fetchAccounts(); }}
+            onClose={() => setIsAddTransactionOpen(false)}
           />
         </DialogContent>
       </Dialog>
@@ -594,15 +816,17 @@ const Contas = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
+      <Dialog open={isTransferModalOpen} onOpenChange={(open) => { setIsTransferModalOpen(open); if (!open) setTransferFromAccount(null); }}>
         <DialogContent className="max-w-lg rounded-2xl">
           <DialogHeader>
             <DialogTitle>Transferência entre Contas</DialogTitle>
           </DialogHeader>
           <TransferForm
+            key={transferFromAccount?.id ?? 'transfer'}
             accounts={accounts}
+            initialFromAccountId={transferFromAccount?.id ?? ''}
             onTransferCreated={fetchAccounts}
-            onClose={() => setIsTransferModalOpen(false)}
+            onClose={() => { setIsTransferModalOpen(false); setTransferFromAccount(null); }}
           />
         </DialogContent>
       </Dialog>
@@ -616,7 +840,7 @@ const Contas = () => {
                 <div className="flex items-center gap-2 text-muted-foreground mb-3">
                   {getAccountIcon(selectedAccount.type, 16)}
                   <span className="text-[10px] font-bold tracking-widest uppercase">
-                    {selectedAccount.type.replace('_', ' ')}
+                    {getTypeLabel(selectedAccount.type)}
                   </span>
                 </div>
                 <SheetTitle className="text-2xl font-black leading-tight">
@@ -643,39 +867,129 @@ const Contas = () => {
                 </div>
 
                 {/* Detalhes cartão */}
-                {selectedAccount.type === 'cartao_credito' && (
-                  <div className="space-y-3">
-                    {selectedAccount.credit_limit && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Limite total</span>
-                        <span className="font-semibold">
-                          <PrivateValue value={formatCurrency(selectedAccount.credit_limit)} />
-                        </span>
-                      </div>
-                    )}
-                    {selectedAccount.closing_day && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Fechamento</span>
-                        <span className="font-semibold">Dia {selectedAccount.closing_day}</span>
-                      </div>
-                    )}
-                    {selectedAccount.due_day && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Vencimento</span>
-                        <span className="font-semibold">Dia {selectedAccount.due_day}</span>
-                      </div>
-                    )}
-                    <Button
-                      className="w-full rounded-xl mt-2"
-                      onClick={() => { setIsDetailsOpen(false); handlePayInvoice(selectedAccount); }}
-                    >
-                      <ArrowRight className="mr-2 h-4 w-4" /> Pagar fatura
-                    </Button>
-                  </div>
-                )}
+                {selectedAccount.type === 'cartao_credito' && (() => {
+                  const invoice = calculateCurrentInvoice(selectedAccount);
+                  const limit   = Number(selectedAccount.credit_limit ?? 0);
+                  const avail   = limit > 0 ? limit - invoice : null;
+                  const usage   = limit > 0 ? Math.min((invoice / limit) * 100, 100) : 0;
+                  const urgency = usage >= 85 ? 'high' : usage >= 60 ? 'medium' : 'low';
+                  return (
+                    <div className="space-y-3">
+                      {limit > 0 && avail !== null && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-secondary/30 rounded-xl p-3">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Usado</p>
+                            <p className="font-bold text-sm tabular-nums text-destructive">
+                              <PrivateValue value={formatCurrency(invoice)} />
+                            </p>
+                          </div>
+                          <div className="bg-secondary/30 rounded-xl p-3">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Disponível</p>
+                            <p className={cn('font-bold text-sm tabular-nums', avail <= 0 ? 'text-destructive' : urgency === 'high' ? 'text-amber-500' : 'text-emerald-600')}>
+                              <PrivateValue value={formatCurrency(avail)} />
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {limit > 0 && (
+                        <div>
+                          <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                            <div
+                              className={cn('h-full rounded-full transition-all', urgency === 'high' ? 'bg-destructive' : urgency === 'medium' ? 'bg-amber-500' : 'bg-primary')}
+                              style={{ width: `${usage}%` }}
+                            />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            {usage.toFixed(0)}% de <PrivateValue value={formatCurrency(limit)} /> usados
+                          </p>
+                        </div>
+                      )}
+                      {selectedAccount.closing_day && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Fechamento</span>
+                          <span className="font-semibold">Dia {selectedAccount.closing_day}</span>
+                        </div>
+                      )}
+                      {selectedAccount.due_day && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Vencimento</span>
+                          <span className="font-semibold">Dia {selectedAccount.due_day}</span>
+                        </div>
+                      )}
+                      <Button
+                        className="w-full rounded-xl mt-2"
+                        onClick={() => { setIsDetailsOpen(false); handlePayInvoice(selectedAccount); }}
+                      >
+                        <ArrowRight className="mr-2 h-4 w-4" /> Pagar fatura
+                      </Button>
+                    </div>
+                  );
+                })()}
+
+                {/* Transações recentes */}
+                <div className="space-y-2 pt-2 border-t border-border/50">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    Últimas transações
+                  </p>
+                  {sheetLoading ? (
+                    <div className="space-y-2">
+                      {[1,2,3].map(i => <Skeleton key={i} className="h-10 w-full rounded-xl" />)}
+                    </div>
+                  ) : sheetTransactions.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic py-2">Nenhuma transação encontrada.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {sheetTransactions.map((t) => {
+                        const amount = Number(t.amount);
+                        const isExpense = amount < 0;
+                        return (
+                          <div key={t.id} className="flex items-center justify-between py-2 px-3 rounded-xl hover:bg-secondary/40 transition-colors gap-2">
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold truncate leading-tight">{t.description || '—'}</p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {new Date(t.date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                              </p>
+                            </div>
+                            <span className={cn(
+                              'text-xs font-bold tabular-nums flex-shrink-0',
+                              isExpense ? 'text-destructive' : 'text-emerald-600'
+                            )}>
+                              <PrivateValue value={formatCurrency(Math.abs(amount))} />
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
                 {/* Ações */}
                 <div className="space-y-2 pt-2 border-t border-border/50">
+                  <Button
+                    className="w-full rounded-xl justify-start gap-2 shadow-sm shadow-primary/20"
+                    onClick={() => { setIsDetailsOpen(false); setIsAddTransactionOpen(true); }}
+                  >
+                    <Plus size={14} /> Lançar nesta conta
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-xl justify-start gap-2"
+                    onClick={() => {
+                      setIsDetailsOpen(false);
+                      navigate(`/transactions?account_id=${selectedAccount.id}`);
+                    }}
+                  >
+                    <ExternalLink size={14} /> Ver extrato completo
+                  </Button>
+                  {selectedAccount.type !== 'cartao_credito' && (
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-xl justify-start gap-2"
+                      onClick={() => handleQuickTransfer(selectedAccount)}
+                    >
+                      <ArrowLeftRight size={14} /> Transferir desta conta
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     className="w-full rounded-xl justify-start gap-2"
@@ -686,7 +1000,7 @@ const Contas = () => {
                   <Button
                     variant="outline"
                     className="w-full rounded-xl justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/20"
-                    onClick={() => { setIsDetailsOpen(false); setDeleteTarget(selectedAccount.id); }}
+                    onClick={() => { setIsDetailsOpen(false); setDeleteTarget(selectedAccount); }}
                   >
                     <Trash2 size={14} /> Excluir conta
                   </Button>

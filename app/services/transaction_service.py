@@ -123,9 +123,9 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate, us
 
         transactions_to_create = []
         for i in range(1, num_installments + 1):
-            # Add the difference to the first installment
+            # Diferença de arredondamento vai para a última parcela (convenção financeira)
             current_installment_amount = base_installment
-            if i == 1:
+            if i == num_installments:
                 current_installment_amount += difference
 
             # Calculate date for each installment (monthly)
@@ -143,6 +143,9 @@ def create_unified_transaction(db: Session, obj_in: UnifiedTransactionCreate, us
                 user_id=user_id
             )
             transactions_to_create.append(db_transaction)
+
+        if not transactions_to_create:
+            raise ValueError("Nenhuma parcela foi criada — verifique total_installments")
 
         db.add_all(transactions_to_create)
         db.commit()

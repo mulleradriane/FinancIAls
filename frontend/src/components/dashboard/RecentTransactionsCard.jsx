@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import PrivateValue from '@/components/ui/PrivateValue';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 const RecentTransactionsCard = () => {
   const [transactions, setTransactions] = useState([]);
@@ -28,13 +28,6 @@ const RecentTransactionsCard = () => {
   useEffect(() => {
     fetchRecent();
   }, []);
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(amount);
-  };
 
   if (loading) {
     return (

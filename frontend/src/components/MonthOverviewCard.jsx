@@ -49,7 +49,7 @@ const MonthOverviewCard = ({
             ))}
           </div>
           <div className="h-px bg-border/50" />
-          <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border/50 bg-muted/20">
+          <div className="grid grid-cols-2 divide-x divide-border/50 bg-muted/20">
             {[4,5].map(i => (
               <div key={i} className="p-5 space-y-3">
                 <Skeleton className="h-4 w-24" />
@@ -169,7 +169,7 @@ const MonthOverviewCard = ({
         <div className="h-px bg-border/50" />
 
         {/* Linha 2: Ainda entra | Investido */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border/50 bg-muted/20">
+        <div className="grid grid-cols-2 divide-x divide-border/50 bg-muted/20">
           <MetricBlock
             icon={ArrowDownCircle}
             label="Ainda entra este mês"
@@ -235,7 +235,7 @@ const MonthOverviewCard = ({
       {saldoDisponivel !== null && (
         <>
           <div className="h-px bg-border/50" />
-          <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border/50 bg-muted/20">
+          <div className="grid grid-cols-2 divide-x divide-border/50 bg-muted/20">
             <MetricBlock
               icon={Wallet}
               label="Saldo disponível no fim do mês"
