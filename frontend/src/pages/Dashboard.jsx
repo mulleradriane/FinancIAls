@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/api/api';
 import analyticsApi from '@/api/analyticsApi';
-import { Plus, List, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Plus, List, ChevronLeft, ChevronRight, AlertTriangle, FlaskConical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -196,6 +196,15 @@ const Dashboard = () => {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+
+      {/* Banner de versão beta */}
+      <div className="flex items-center gap-3 rounded-2xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-amber-700 dark:text-amber-400">
+        <FlaskConical className="h-5 w-5 shrink-0" />
+        <div className="flex-1 text-sm">
+          <span className="font-semibold">Versão de teste (v1.1.0 · 9 de abril de 2026)</span>
+          <span className="ml-2 text-amber-600/80 dark:text-amber-400/70">— alguns recursos ainda estão sendo aprimorados. Feedbacks são bem-vindos!</span>
+        </div>
+      </div>
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
