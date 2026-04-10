@@ -39,18 +39,26 @@ class CRUDRecurringExpense(CRUDBase[RecurringExpense, RecurringExpenseCreate, Re
             query.offset(skip).limit(limit)
         ).unique().all()
 
-        # Update current_installment via SQL COUNT (avoids loading all transactions into memory)
+        # Recalculate current_installment for installments based on elapsed time.
+        # Using calendar time instead of transaction count so progress is always
+        # accurate even when transactions haven't been linked.
         today = datetime.date.today()
         for r in results:
-            if r.type == "installment":
-                completed = db.scalar(
-                    select(func.count()).filter(
-                        Transaction.recurring_expense_id == r.id,
-                        Transaction.date <= today,
-                        Transaction.deleted_at.is_(None),
+            if r.type == "installment" and r.start_date and r.total_installments:
+                if today < r.start_date:
+                    r.current_installment = 0
+                else:
+                    import calendar as _cal
+                    months_diff = (
+                        (today.year - r.start_date.year) * 12
+                        + (today.month - r.start_date.month)
                     )
-                )
-                r.current_installment = completed or 0
+                    # Count current month only if the due day has already passed
+                    _, last_day = _cal.monthrange(today.year, today.month)
+                    effective_due_day = min(r.start_date.day, last_day)
+                    if today.day >= effective_due_day:
+                        months_diff += 1
+                    r.current_installment = min(months_diff, r.total_installments)
 
         return results
 
