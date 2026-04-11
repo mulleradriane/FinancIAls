@@ -69,7 +69,7 @@ export default function FeedbackWidget() {
         onClick={handleOpen}
         className={cn(
           'fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full shadow-lg px-4 py-2.5',
-          'bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200',
+          'bg-secondary text-secondary-foreground border hover:bg-muted transition-all duration-200',
           'text-sm font-medium',
           open && 'opacity-0 pointer-events-none',
         )}
@@ -81,7 +81,7 @@ export default function FeedbackWidget() {
 
       {/* Panel */}
       {open && (
-        <div className="fixed bottom-6 right-6 z-50 w-80 rounded-2xl border bg-card shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="fixed bottom-6 right-6 z-[60] w-80 rounded-2xl border bg-card shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200">
           {/* Header */}
           <div className="flex items-center gap-2 px-4 py-3 border-b">
             <MessageSquarePlus className="w-4 h-4 text-primary shrink-0" />
