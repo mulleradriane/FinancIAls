@@ -24,6 +24,7 @@ import logoLight from '@/assets/images/logo-light.png';
 import logoDark from '@/assets/images/logo-dark.png';
 import QuickAddTransaction from '@/components/QuickAddTransaction';
 import TransactionForm from '@/components/TransactionForm';
+import FeedbackWidget from '@/components/FeedbackWidget';
 
 // ── Mobile bottom nav items ───────────────────────────────────────────────────
 const BOTTOM_NAV = [
@@ -179,11 +180,16 @@ export default function MainLayout() {
         </div>
       </main>
 
+      {/* ── Feedback widget — desktop only ─────────────────────────────────── */}
+      <div className="hidden md:block">
+        <FeedbackWidget />
+      </div>
+
       {/* ── FAB — desktop only ─────────────────────────────────────────────── */}
       <button
         onClick={() => setQuickAddOpen(true)}
         className={cn(
-          'fixed bottom-6 right-6 z-50',
+          'fixed bottom-20 right-6 z-50',
           'hidden md:flex items-center gap-2',
           'h-12 px-4 rounded-2xl',
           'bg-primary text-primary-foreground',

@@ -1,8 +1,9 @@
 from fastapi import APIRouter
-from app.routers import category, transaction, recurring_expense, summary, account, analytics, goals, auth
+from app.routers import category, transaction, recurring_expense, summary, account, analytics, goals, auth, feedback
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+api_router.include_router(feedback.router, prefix="/feedback", tags=["feedback"])
 api_router.include_router(category.router, prefix="/categories", tags=["categories"])
 api_router.include_router(transaction.router, prefix="/transactions", tags=["transactions"])
 api_router.include_router(recurring_expense.router, prefix="/recurring-expenses", tags=["recurring-expenses"])

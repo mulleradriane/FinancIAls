@@ -203,27 +203,27 @@ const Dashboard = () => {
         const [open, setOpen] = React.useState(false);
         const changelog = [
           {
-            category: '🗂️ Categorias',
+            category: '🚀 Novidades (11 abr)',
             items: [
-              'Nova tela de categorias com cards visuais por cor e ícone',
-              'Suporte a subcategorias dentro de cada categoria pai',
-              'Barra de progresso de orçamento mensal nos cards',
-              'Botões de ação sempre visíveis (editar, orçamento, excluir)',
+              'Widget de feedback flutuante — envie sugestões diretamente do app',
+              'Guia de primeiros passos no dashboard para novos usuários',
+              'Categorias padrão criadas automaticamente para novos usuários',
+              'Tela de importação redesenhada com guias por banco',
             ],
           },
           {
-            category: '💳 Transações',
+            category: '🔄 Recorrentes & Parcelamentos',
             items: [
-              'Subcategorias aparecem agrupadas nos seletores de categoria',
-              'Filtro de categoria na tela de transações com hierarquia',
-              'Transações futuras ocultadas por padrão na listagem principal',
+              'Progresso de parcelamentos calculado corretamente por tempo decorrido',
+              'Detecção de recorrentes ao importar extratos',
             ],
           },
           {
-            category: '⚙️ Melhorias gerais',
+            category: '🗂️ Versões anteriores',
             items: [
+              'Categorias com subcategorias, ícone e cor personalizados',
+              'Filtro de categoria e transações futuras ocultadas por padrão',
               'Correções nos totais dos cards de resumo do mês',
-              'Estabilidade e correções de bugs no backend',
             ],
           },
         ];
@@ -235,7 +235,7 @@ const Dashboard = () => {
             >
               <FlaskConical className="h-5 w-5 shrink-0" />
               <div className="flex-1 text-sm">
-                <span className="font-semibold">Versão de teste — v1.1.0 · 9 de abril de 2026</span>
+                <span className="font-semibold">Versão de teste — v1.2.0 · 11 de abril de 2026</span>
                 <span className="ml-2 text-amber-600/80 dark:text-amber-400/70">Alguns recursos ainda estão sendo aprimorados. Feedbacks são bem-vindos!</span>
               </div>
               <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform duration-200', open && 'rotate-180')} />
