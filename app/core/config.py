@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     INVITE_CODE: Optional[str] = os.getenv("INVITE_CODE")
 
     # Email / feedback
-    SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.office365.com")
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", 587))
     SMTP_USE_TLS: bool = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
     SMTP_USER: Optional[str] = os.getenv("SMTP_USER")
