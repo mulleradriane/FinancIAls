@@ -16,7 +16,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
-  LogOut
+  LogOut,
+  MessageSquare,
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { usePrivacy } from '@/context/PrivacyContext';
@@ -57,6 +58,7 @@ const menuGroups = [
     items: [
       { path: '/categories', label: 'Categorias', icon: Tags },
       { path: '/importacao', label: 'Importar', icon: Upload },
+      { path: '/admin/feedbacks', label: 'Feedbacks', icon: MessageSquare },
     ],
   },
 ];

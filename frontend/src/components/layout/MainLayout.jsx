@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/sonner';
 import {
   Plus, LayoutDashboard, ArrowRightLeft, Landmark,
   MoreHorizontal, RefreshCw, Target, Tags, FileText,
-  Upload, Settings, LogOut, Sun, Moon, Eye, EyeOff,
+  Upload, Settings, LogOut, Sun, Moon, Eye, EyeOff, MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -36,11 +36,12 @@ const BOTTOM_NAV = [
 
 // All other pages shown in the "More" sheet
 const MORE_PAGES = [
-  { path: '/recorrentes', label: 'Recorrentes',  icon: RefreshCw },
-  { path: '/categories',  label: 'Categorias',   icon: Tags },
-  { path: '/relatorios',  label: 'Relatórios',   icon: FileText },
-  { path: '/importacao',  label: 'Importar',     icon: Upload },
-  { path: '/settings',    label: 'Configurações',icon: Settings },
+  { path: '/recorrentes',      label: 'Recorrentes',  icon: RefreshCw },
+  { path: '/categories',       label: 'Categorias',   icon: Tags },
+  { path: '/relatorios',       label: 'Relatórios',   icon: FileText },
+  { path: '/importacao',       label: 'Importar',     icon: Upload },
+  { path: '/admin/feedbacks',  label: 'Feedbacks',    icon: MessageSquare },
+  { path: '/settings',         label: 'Configurações',icon: Settings },
 ];
 
 // ── Mobile More Sheet ─────────────────────────────────────────────────────────
