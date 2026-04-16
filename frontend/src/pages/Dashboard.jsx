@@ -203,6 +203,16 @@ const Dashboard = () => {
         const [open, setOpen] = React.useState(false);
         const changelog = [
           {
+            category: '🔧 Correções (16 abr)',
+            items: [
+              'Toasts de notificação não aparecem mais em duplicidade',
+              'Botão de calendário corrigido no modo escuro',
+              'Campo de data não aceita mais anos com mais de 4 dígitos',
+              'Validação do formulário de metas exibe mensagem abaixo do campo',
+              'Cards do resumo do mês não vazam mais em telas de notebook',
+            ],
+          },
+          {
             category: '🚀 Novidades (11 abr)',
             items: [
               'Widget de feedback flutuante — envie sugestões diretamente do app',
@@ -235,7 +245,7 @@ const Dashboard = () => {
             >
               <FlaskConical className="h-5 w-5 shrink-0" />
               <div className="flex-1 text-sm">
-                <span className="font-semibold">Versão de teste — v1.2.0 · 11 de abril de 2026</span>
+                <span className="font-semibold">Versão de teste — v1.2.1 · 16 de abril de 2026</span>
                 <span className="ml-2 text-amber-600/80 dark:text-amber-400/70">Alguns recursos ainda estão sendo aprimorados. Feedbacks são bem-vindos!</span>
               </div>
               <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform duration-200', open && 'rotate-180')} />

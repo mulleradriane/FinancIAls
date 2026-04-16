@@ -19,7 +19,6 @@ import { ThemeProvider } from './context/ThemeContext';
 import { PrivacyProvider } from './context/PrivacyContext';
 import { BudgetProvider } from './context/BudgetContext';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Toaster } from 'sonner';
 import './App.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -70,7 +69,6 @@ function App() {
       <PrivacyProvider>
         <BudgetProvider>
           <TooltipProvider>
-            <Toaster position="top-right" richColors />
             <Router>
               <AppContent />
             </Router>

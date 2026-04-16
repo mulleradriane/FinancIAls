@@ -7,19 +7,19 @@ import PrivateValue from '@/components/ui/PrivateValue';
 import { formatCurrency, cn, parseLocalDate } from '@/lib/utils';
 
 const MetricBlock = ({ icon: Icon, label, value, tooltip, colorClass, valueClass, size = 'md', suffix }) => (
-  <div className="flex flex-col gap-3 p-5">
-    <div className="flex items-center gap-2">
-      <div className={cn('p-1.5 rounded-lg', colorClass || 'bg-muted text-muted-foreground')}>
+  <div className="flex flex-col gap-3 p-5 min-w-0">
+    <div className="flex items-center gap-2 min-w-0">
+      <div className={cn('p-1.5 rounded-lg shrink-0', colorClass || 'bg-muted text-muted-foreground')}>
         <Icon className="h-4 w-4" />
       </div>
-      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider leading-none">
+      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider leading-none truncate">
         {label}
       </p>
       {tooltip && <InfoTooltip content={tooltip} />}
     </div>
     <p className={cn(
-      'font-bold tracking-tight tabular-nums leading-none',
-      size === 'lg' ? 'text-3xl' : 'text-xl',
+      'font-bold tracking-tight tabular-nums leading-none truncate',
+      size === 'lg' ? 'text-2xl xl:text-3xl' : 'text-lg xl:text-xl',
       valueClass,
     )}>
       <PrivateValue value={formatCurrency(value)} />
@@ -129,7 +129,7 @@ const MonthOverviewCard = ({
         {/* Linha 1: Saldo | Já gastei | A gastar */}
         <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-border/50">
           {/* Saldo — destaque */}
-          <div className="flex flex-col gap-3 p-5 lg:p-6">
+          <div className="flex flex-col gap-3 p-5 lg:p-6 min-w-0">
             <div className="flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
                 <Wallet className="h-4 w-4" />
@@ -138,7 +138,7 @@ const MonthOverviewCard = ({
               <InfoTooltip content="Soma dos saldos das contas bancárias agora. Não inclui cartão de crédito nem investimentos." />
             </div>
             {saldoDisponivel !== null ? (
-              <p className={cn('text-3xl font-bold tracking-tight tabular-nums', saldoDisponivel < 0 && 'text-destructive')}>
+              <p className={cn('text-2xl xl:text-3xl font-bold tracking-tight tabular-nums truncate', saldoDisponivel < 0 && 'text-destructive')}>
                 <PrivateValue value={formatCurrency(saldoDisponivel)} />
               </p>
             ) : (
